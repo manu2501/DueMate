@@ -13,7 +13,7 @@ class CsvExporter {
   static Future<void> exportAndShareAllTransactions({
     required List<LedgerTransaction> transactions,
     required Map<String, Person> personsMap,
-    String currencySymbol = 'â‚¹',
+    String currencySymbol = '₹',
   }) async {
     final List<List<dynamic>> rows = [];
 
@@ -59,7 +59,7 @@ class CsvExporter {
   static Future<void> exportAndSharePersonStatement({
     required PersonSummary summary,
     required List<LedgerTransaction> transactions,
-    String currencySymbol = 'â‚¹',
+    String currencySymbol = '₹',
   }) async {
     final List<List<dynamic>> rows = [];
 

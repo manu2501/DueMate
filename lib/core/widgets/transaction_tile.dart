@@ -73,7 +73,7 @@ class TransactionTile extends StatelessWidget {
                       ),
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 6),
-                        child: Text('Â·', style: TextStyle(color: cs.outline)),
+                        child: Text('•', style: TextStyle(color: cs.outline)),
                       ),
                       Text(
                         DateFormatter.formatRelative(transaction.transactionDate),
@@ -84,7 +84,7 @@ class TransactionTile extends StatelessWidget {
                       if (transaction.note != null && transaction.note!.trim().isNotEmpty) ...[
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 6),
-                          child: Text('Â·', style: TextStyle(color: cs.outline)),
+                          child: Text('•', style: TextStyle(color: cs.outline)),
                         ),
                         Expanded(
                           child: Text(

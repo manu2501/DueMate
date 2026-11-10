@@ -57,6 +57,16 @@ class PersonDetailsScreen extends ConsumerWidget {
     );
   }
 
+  void _navigateBack(BuildContext context) {
+    if (context.canPop()) {
+      context.pop();
+    } else if (Navigator.of(context).canPop()) {
+      Navigator.of(context).pop();
+    } else {
+      context.go('/people');
+    }
+  }
+
   void _confirmDeletePerson(BuildContext context, WidgetRef ref, String name) {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
@@ -79,7 +89,7 @@ class PersonDetailsScreen extends ConsumerWidget {
               Navigator.of(ctx).pop();
               await ref.read(personRepositoryProvider).deletePerson(personId);
               if (context.mounted) {
-                context.pop();
+                _navigateBack(context);
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(content: Text('$name deleted')),
                 );
@@ -104,9 +114,20 @@ class PersonDetailsScreen extends ConsumerWidget {
     return summaryAsync.when(
       data: (summary) {
         if (summary == null) {
-          return Scaffold(
-            appBar: AppBar(),
-            body: const Center(child: Text('Person not found')),
+          return PopScope(
+            canPop: false,
+            onPopInvokedWithResult: (didPop, _) {
+              if (!didPop) _navigateBack(context);
+            },
+            child: Scaffold(
+              appBar: AppBar(
+                leading: IconButton(
+                  icon: const Icon(Icons.arrow_back_rounded),
+                  onPressed: () => _navigateBack(context),
+                ),
+              ),
+              body: const Center(child: Text('Person not found')),
+            ),
           );
         }
 
@@ -122,40 +143,45 @@ class PersonDetailsScreen extends ConsumerWidget {
 
         final transactions = transactionsAsync.value ?? [];
 
-        return Scaffold(
-          appBar: PreferredSize(
-            preferredSize: const Size.fromHeight(64),
-            child: SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                child: Row(
-                  children: [
-                    // Back button in rounded white box (Screen 2 from screenshot)
-                    InkWell(
-                      onTap: () => context.pop(),
-                      borderRadius: BorderRadius.circular(14),
-                      child: Container(
-                        width: 42,
-                        height: 42,
-                        decoration: BoxDecoration(
-                          color: cs.surfaceContainerLow,
-                          borderRadius: BorderRadius.circular(14),
-                          border: Border.all(color: cs.outlineVariant),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.04),
-                              blurRadius: 8,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                        child: Icon(
-                          Icons.arrow_back_rounded,
-                          size: 20,
-                          color: cs.onSurface,
+        return PopScope(
+          canPop: false,
+          onPopInvokedWithResult: (didPop, _) {
+            if (!didPop) _navigateBack(context);
+          },
+          child: Scaffold(
+            appBar: PreferredSize(
+              preferredSize: const Size.fromHeight(64),
+              child: SafeArea(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                  child: Row(
+                    children: [
+                      // Back button in rounded white box (Screen 2 from screenshot)
+                      InkWell(
+                        onTap: () => _navigateBack(context),
+                        borderRadius: BorderRadius.circular(14),
+                        child: Container(
+                          width: 42,
+                          height: 42,
+                          decoration: BoxDecoration(
+                            color: cs.surfaceContainerLow,
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(color: cs.outlineVariant),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.04),
+                                blurRadius: 8,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: Icon(
+                            Icons.arrow_back_rounded,
+                            size: 20,
+                            color: cs.onSurface,
+                          ),
                         ),
                       ),
-                    ),
                     const Spacer(),
 
                     // Action buttons (Share reminder + Menu)
@@ -758,15 +784,38 @@ class PersonDetailsScreen extends ConsumerWidget {
               ],
             ),
           ),
-        );
-      },
-      loading: () => Scaffold(
-        appBar: AppBar(),
-        body: const Center(child: CircularProgressIndicator()),
+        ),
+      );
+    },
+      loading: () => PopScope(
+        canPop: false,
+        onPopInvokedWithResult: (didPop, _) {
+          if (!didPop) _navigateBack(context);
+        },
+        child: Scaffold(
+          appBar: AppBar(
+            leading: IconButton(
+              icon: const Icon(Icons.arrow_back_rounded),
+              onPressed: () => _navigateBack(context),
+            ),
+          ),
+          body: const Center(child: CircularProgressIndicator()),
+        ),
       ),
-      error: (err, _) => Scaffold(
-        appBar: AppBar(),
-        body: Center(child: Text('Error: $err')),
+      error: (err, _) => PopScope(
+        canPop: false,
+        onPopInvokedWithResult: (didPop, _) {
+          if (!didPop) _navigateBack(context);
+        },
+        child: Scaffold(
+          appBar: AppBar(
+            leading: IconButton(
+              icon: const Icon(Icons.arrow_back_rounded),
+              onPressed: () => _navigateBack(context),
+            ),
+          ),
+          body: Center(child: Text('Error: $err')),
+        ),
       ),
     );
   }

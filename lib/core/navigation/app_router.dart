@@ -7,7 +7,6 @@ import 'package:duemate/features/people/presentation/screens/add_edit_person_scr
 import 'package:duemate/features/people/presentation/screens/people_screen.dart';
 import 'package:duemate/features/people/presentation/screens/person_details_screen.dart';
 import 'package:duemate/features/reports/presentation/screens/reports_screen.dart';
-import 'package:duemate/features/notifications/presentation/screens/notifications_screen.dart';
 import 'package:duemate/features/settings/presentation/screens/settings_screen.dart';
 import 'package:duemate/features/welcome/presentation/screens/welcome_screen.dart';
 
@@ -111,14 +110,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
               child: const ReportsScreen(),
             ),
           ),
-          GoRoute(
-            path: '/notifications',
-            pageBuilder: (context, state) => _buildTabTransition(
-              context: context,
-              state: state,
-              child: const NotificationsScreen(),
-            ),
-          ),
         ],
       ),
       GoRoute(
@@ -165,7 +156,6 @@ class AppShell extends StatelessWidget {
     if (location == '/') return 0;
     if (location.startsWith('/people')) return 1;
     if (location.startsWith('/reports')) return 2;
-    if (location.startsWith('/notifications')) return 3;
     return 0;
   }
 
@@ -179,9 +169,6 @@ class AppShell extends StatelessWidget {
         break;
       case 2:
         context.go('/reports');
-        break;
-      case 3:
-        context.go('/notifications');
         break;
     }
   }
@@ -231,7 +218,6 @@ class _FloatingDockNavBar extends StatelessWidget {
       'Dashboard',
       'Directory',
       'Reports',
-      'Notifications',
     ];
 
     return SafeArea(

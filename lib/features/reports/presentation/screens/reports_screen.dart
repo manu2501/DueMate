@@ -282,7 +282,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> with SingleTicker
                                         style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
                                       ),
                                       subtitle: Text(
-                                        'Given: ${CurrencyFormatter.formatCompact(s.totalGiven, symbol: currencySymbol)} Â· Received: ${CurrencyFormatter.formatCompact(s.totalReceived, symbol: currencySymbol)}',
+                                        'Given: ${CurrencyFormatter.formatCompact(s.totalGiven, symbol: currencySymbol)} • Received: ${CurrencyFormatter.formatCompact(s.totalReceived, symbol: currencySymbol)}',
                                         style: theme.textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
                                       ),
                                       trailing: Text(

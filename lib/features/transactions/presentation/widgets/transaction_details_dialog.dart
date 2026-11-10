@@ -112,7 +112,7 @@ class TransactionDetailsDialog extends ConsumerWidget {
                     keyboardType: const TextInputType.numberWithOptions(decimal: true),
                     decoration: const InputDecoration(
                       labelText: 'Amount',
-                      prefixText: 'â‚¹ ',
+                      prefixText: '₹ ',
                     ),
                   ),
                   const SizedBox(height: 14),

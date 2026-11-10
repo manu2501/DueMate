@@ -39,7 +39,7 @@ void main() {
     expect(find.byTooltip('Dashboard'), findsOneWidget);
     expect(find.byTooltip('Directory'), findsOneWidget);
     expect(find.byTooltip('Reports'), findsOneWidget);
-    expect(find.byTooltip('Notifications'), findsOneWidget);
+    expect(find.byTooltip('Notifications'), findsNothing);
 
     // Tap on Directory tab to leave dashboard
     await tester.tap(find.byTooltip('Directory'));

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:uuid/uuid.dart';
 import 'package:duemate/core/utils/contacts_helper.dart';
@@ -75,6 +76,16 @@ class _AddEditPersonScreenState extends ConsumerState<AddEditPersonScreen> {
     }
   }
 
+  void _navigateBack() {
+    if (Navigator.of(context).canPop()) {
+      Navigator.of(context).pop();
+    } else if (context.canPop()) {
+      context.pop();
+    } else {
+      context.go('/people');
+    }
+  }
+
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -105,7 +116,7 @@ class _AddEditPersonScreenState extends ConsumerState<AddEditPersonScreen> {
       }
 
       if (mounted) {
-        Navigator.of(context).pop();
+        _navigateBack();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(isEditing ? 'Details updated' : 'Added to ledger'),
@@ -128,10 +139,19 @@ class _AddEditPersonScreenState extends ConsumerState<AddEditPersonScreen> {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(isEditing ? 'Edit Details' : 'New Person'),
-      ),
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) _navigateBack();
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back_rounded),
+            onPressed: _navigateBack,
+          ),
+          title: Text(isEditing ? 'Edit Details' : 'New Person'),
+        ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
         child: Form(
@@ -269,6 +289,7 @@ class _AddEditPersonScreenState extends ConsumerState<AddEditPersonScreen> {
             ],
           ),
         ),
+      ),
       ),
     );
   }

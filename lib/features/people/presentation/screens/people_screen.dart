@@ -56,7 +56,7 @@ class _PeopleScreenState extends ConsumerState<PeopleScreen> {
               content: Text('${existing.person.name} is already in your ledger'),
             ),
           );
-          context.go('/people/${existing.person.id}');
+          context.push('/people/${existing.person.id}');
         }
         return;
       }
@@ -80,7 +80,7 @@ class _PeopleScreenState extends ConsumerState<PeopleScreen> {
             content: Text('Added ${newPerson.name} to ledger'),
           ),
         );
-        context.go('/people/${newPerson.id}');
+        context.push('/people/${newPerson.id}');
       }
     } catch (e) {
       if (mounted) {
