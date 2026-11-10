@@ -248,7 +248,7 @@ class _PeopleScreenState extends ConsumerState<PeopleScreen> {
                 const SizedBox(width: 8),
                 _filterChip('Archived', PeopleFilter.archived, currentFilter),
                 const SizedBox(width: 8),
-                _filterChip('All Directory', PeopleFilter.all, currentFilter),
+                _filterChip('All', PeopleFilter.all, currentFilter),
               ],
             ),
           ),

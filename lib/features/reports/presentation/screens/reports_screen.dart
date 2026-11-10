@@ -90,7 +90,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> with SingleTicker
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Reports'),
+        title: const Text('Transactions'),
         actions: [
           IconButton(
             tooltip: 'Export CSV',

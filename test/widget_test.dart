@@ -37,12 +37,12 @@ void main() {
     expect(find.text('They owe you'), findsOneWidget);
     expect(find.text('You owe'), findsOneWidget);
     expect(find.byTooltip('Dashboard'), findsOneWidget);
-    expect(find.byTooltip('Directory'), findsOneWidget);
-    expect(find.byTooltip('Reports'), findsOneWidget);
+    expect(find.byTooltip('Ledger'), findsOneWidget);
+    expect(find.byTooltip('Transactions'), findsOneWidget);
     expect(find.byTooltip('Notifications'), findsNothing);
 
-    // Tap on Directory tab to leave dashboard
-    await tester.tap(find.byTooltip('Directory'));
+    // Tap on Ledger tab to leave dashboard
+    await tester.tap(find.byTooltip('Ledger'));
     await tester.pumpAndSettle();
     expect(find.text('Search people or notes...'), findsOneWidget);
 

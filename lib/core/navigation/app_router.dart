@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:duemate/core/widgets/screenshot_nav_icons.dart';
+import 'package:duemate/core/widgets/dock_nav_icon.dart';
 import 'package:duemate/features/dashboard/presentation/screens/dashboard_screen.dart';
 import 'package:duemate/features/people/presentation/screens/add_edit_person_screen.dart';
 import 'package:duemate/features/people/presentation/screens/people_screen.dart';
@@ -216,8 +216,8 @@ class _FloatingDockNavBar extends StatelessWidget {
 
     final labels = const [
       'Dashboard',
-      'Directory',
-      'Reports',
+      'Ledger',
+      'Transactions',
     ];
 
     return SafeArea(
@@ -280,7 +280,7 @@ class _FloatingDockNavBar extends StatelessWidget {
                             ]
                           : null,
                     ),
-                    child: ScreenshotNavIcon(
+                    child: DockNavIcon(
                       index: index,
                       isSelected: isSelected,
                       color: isSelected
