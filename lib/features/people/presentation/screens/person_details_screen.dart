@@ -382,7 +382,7 @@ class PersonDetailsScreen extends ConsumerWidget {
                           const SizedBox(height: 8),
                           Text(
                             owes
-                                ? 'Outstanding debt in your ledger. Use the action button below to record received payments.'
+                                ? 'Outstanding debt in your ledger. Use the action buttons below to record repayments or give more.'
                                 : 'Borrower has paid more than the initial principal. Credit available in your ledger.',
                             style: GoogleFonts.inter(
                               fontSize: 13,
@@ -564,35 +564,75 @@ class PersonDetailsScreen extends ConsumerWidget {
 
                         const SizedBox(height: 20),
 
-                        // Full-width Primary Action Button: "Pay Rs 265" / "Receive Rs 265"
-                        SizedBox(
-                          width: double.infinity,
-                          height: 52,
-                          child: FilledButton(
-                            onPressed: () {
-                              if (owes) {
-                                QuickReceiveSheet.show(context, personId: personId);
-                              } else {
-                                QuickGiveSheet.show(context, personId: personId);
-                              }
-                            },
-                            style: FilledButton.styleFrom(
-                              backgroundColor: cs.primary,
-                              foregroundColor: Colors.white,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(16),
+                        // Dual Action Buttons: Record Repayment & Give Money Again
+                        Row(
+                          children: [
+                            Expanded(
+                              child: SizedBox(
+                                height: 50,
+                                child: FilledButton.tonal(
+                                  onPressed: () => QuickReceiveSheet.show(context, personId: personId),
+                                  style: FilledButton.styleFrom(
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(16),
+                                    ),
+                                  ),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(Icons.south_west_rounded, size: 18, color: cs.primary),
+                                      const SizedBox(width: 6),
+                                      Flexible(
+                                        child: Text(
+                                          'Repayment',
+                                          style: GoogleFonts.inter(
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.w700,
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
                               ),
                             ),
-                            child: Text(
-                              owes
-                                  ? 'Record Repayment ${CurrencyFormatter.format(balance.abs(), symbol: currencySymbol)}'
-                                  : 'Give Advance / Loan',
-                              style: GoogleFonts.inter(
-                                fontSize: 15,
-                                fontWeight: FontWeight.w700,
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: SizedBox(
+                                height: 50,
+                                child: FilledButton(
+                                  onPressed: () => QuickGiveSheet.show(context, personId: personId),
+                                  style: FilledButton.styleFrom(
+                                    backgroundColor: cs.primary,
+                                    foregroundColor: Colors.white,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(16),
+                                    ),
+                                  ),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      const Icon(Icons.north_east_rounded, size: 18),
+                                      const SizedBox(width: 6),
+                                      Flexible(
+                                        child: Text(
+                                          'Give Money',
+                                          style: GoogleFonts.inter(
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.w700,
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
                               ),
                             ),
-                          ),
+                          ],
                         ),
                       ],
                     ),
@@ -741,7 +781,7 @@ class PersonDetailsScreen extends ConsumerWidget {
                     child: EmptyStateWidget(
                       icon: Icons.receipt_long_outlined,
                       title: 'No transactions yet',
-                      description: 'Tap the button above to record your first transaction with ${person.name}.',
+                      description: 'Tap Give Money or Repayment above to record your first transaction with ${person.name}.',
                       actionLabel: 'Give Money',
                       onActionPressed: () => QuickGiveSheet.show(context, personId: personId),
                     ),
