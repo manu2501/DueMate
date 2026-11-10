@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:uuid/uuid.dart';
 import 'package:smarava/core/utils/contacts_helper.dart';
 import 'package:smarava/core/utils/currency_formatter.dart';
@@ -76,7 +77,7 @@ class _PeopleScreenState extends ConsumerState<PeopleScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Added ${newPerson.name} from contacts'),
+            content: Text('Added ${newPerson.name} to ledger'),
           ),
         );
         context.go('/people/${newPerson.id}');
@@ -95,28 +96,27 @@ class _PeopleScreenState extends ConsumerState<PeopleScreen> {
   void _showSortMenu(BuildContext context) {
     final currentSort = ref.read(peopleSortProvider);
     final theme = Theme.of(context);
+    final cs = theme.colorScheme;
 
     showModalBottomSheet(
       context: context,
       showDragHandle: true,
       builder: (ctx) => SafeArea(
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
+          padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-                child: Text(
-                  'Sort People',
-                  style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
-                ),
+              Text(
+                'Sort People',
+                style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
               ),
-              _sortTile('Highest Outstanding', PeopleSort.highestOutstanding, currentSort, Icons.trending_up_rounded),
-              _sortTile('Recently Active', PeopleSort.recentlyActive, currentSort, Icons.history_rounded),
-              _sortTile('Alphabetical (A - Z)', PeopleSort.alphabetical, currentSort, Icons.sort_by_alpha_rounded),
-              _sortTile('Recently Added', PeopleSort.recentlyAdded, currentSort, Icons.schedule_rounded),
+              const SizedBox(height: 14),
+              _sortItem('Highest Outstanding', PeopleSort.highestOutstanding, currentSort, Icons.trending_up_rounded, cs),
+              _sortItem('Recently Active', PeopleSort.recentlyActive, currentSort, Icons.history_rounded, cs),
+              _sortItem('Alphabetical (A - Z)', PeopleSort.alphabetical, currentSort, Icons.sort_by_alpha_rounded, cs),
+              _sortItem('Recently Added', PeopleSort.recentlyAdded, currentSort, Icons.schedule_rounded, cs),
             ],
           ),
         ),
@@ -124,71 +124,68 @@ class _PeopleScreenState extends ConsumerState<PeopleScreen> {
     );
   }
 
-  Widget _sortTile(String title, PeopleSort sort, PeopleSort current, IconData icon) {
+  Widget _sortItem(String title, PeopleSort sort, PeopleSort current, IconData icon, ColorScheme cs) {
     final isSelected = sort == current;
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-
-    return Card(
-      elevation: 0,
-      color: isSelected ? colorScheme.primaryContainer : colorScheme.surfaceContainer,
-      margin: const EdgeInsets.symmetric(vertical: 4),
-      child: ListTile(
-        leading: Icon(
-          icon,
-          color: isSelected ? colorScheme.onPrimaryContainer : colorScheme.onSurfaceVariant,
-        ),
-        title: Text(
-          title,
-          style: TextStyle(
-            fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-            color: isSelected ? colorScheme.onPrimaryContainer : colorScheme.onSurface,
-          ),
-        ),
-        trailing: isSelected
-            ? Icon(Icons.check_rounded, color: colorScheme.onPrimaryContainer)
-            : null,
-        onTap: () {
-          ref.read(peopleSortProvider.notifier).setSort(sort);
-          Navigator.of(context).pop();
-        },
+    return ListTile(
+      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      tileColor: isSelected ? cs.primary.withValues(alpha: 0.08) : Colors.transparent,
+      leading: Icon(
+        icon,
+        color: isSelected ? cs.primary : cs.onSurfaceVariant,
+        size: 20,
       ),
+      title: Text(
+        title,
+        style: TextStyle(
+          fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+          color: isSelected ? cs.primary : cs.onSurface,
+        ),
+      ),
+      trailing: isSelected
+          ? Icon(Icons.check_rounded, color: cs.primary, size: 20)
+          : null,
+      onTap: () {
+        ref.read(peopleSortProvider.notifier).setSort(sort);
+        Navigator.of(context).pop();
+      },
     );
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
+    final cs = theme.colorScheme;
     final currencySymbol = ref.watch(currencySymbolProvider);
     final currentFilter = ref.watch(peopleFilterProvider);
     final people = ref.watch(filteredPersonSummariesProvider);
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('People Ledger'),
+        title: const Text('Ledger'),
         actions: [
           _isImporting
               ? const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 14.0),
+                  padding: EdgeInsets.symmetric(horizontal: 16.0),
                   child: Center(
                     child: SizedBox(
-                      width: 20,
-                      height: 20,
+                      width: 18,
+                      height: 18,
                       child: CircularProgressIndicator(strokeWidth: 2),
                     ),
                   ),
                 )
               : IconButton(
-                  tooltip: 'Import from Phone Contacts',
+                  tooltip: 'Import from Contacts',
                   icon: const Icon(Icons.contacts_rounded),
                   onPressed: _importFromContacts,
                 ),
           IconButton(
-            tooltip: 'Sort Options',
-            icon: const Icon(Icons.tune_rounded),
+            tooltip: 'Sort',
+            icon: const Icon(Icons.sort_rounded),
             onPressed: () => _showSortMenu(context),
           ),
+          const SizedBox(width: 4),
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
@@ -197,24 +194,27 @@ class _PeopleScreenState extends ConsumerState<PeopleScreen> {
             MaterialPageRoute(builder: (ctx) => const AddEditPersonScreen()),
           );
         },
-        icon: const Icon(Icons.person_add_rounded),
-        label: const Text('Add Person', style: TextStyle(fontWeight: FontWeight.w700)),
+        icon: const Icon(Icons.person_add_rounded, size: 20),
+        label: Text('Add Person', style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
       ),
       body: Column(
         children: [
-          // Material 3 Search Bar
+          // Search Field
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, 8),
             child: SearchBar(
               controller: _searchController,
               elevation: const WidgetStatePropertyAll(0),
-              backgroundColor: WidgetStatePropertyAll(colorScheme.surfaceContainerHigh),
-              hintText: 'Search people, notes...',
-              leading: const Icon(Icons.search_rounded),
+              backgroundColor: WidgetStatePropertyAll(cs.surfaceContainerHigh),
+              hintText: 'Search people or notes...',
+              hintStyle: WidgetStatePropertyAll(
+                TextStyle(color: cs.onSurfaceVariant, fontSize: 14),
+              ),
+              leading: Icon(Icons.search_rounded, size: 20, color: cs.onSurfaceVariant),
               trailing: [
                 if (_searchController.text.isNotEmpty)
                   IconButton(
-                    icon: const Icon(Icons.clear_rounded),
+                    icon: const Icon(Icons.clear_rounded, size: 18),
                     onPressed: () {
                       _searchController.clear();
                       ref.read(peopleSearchQueryProvider.notifier).setQuery('');
@@ -227,49 +227,33 @@ class _PeopleScreenState extends ConsumerState<PeopleScreen> {
             ),
           ),
 
-          // Material 3 Filter Chips Row
+          // Filter Chips
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
             child: Row(
               children: [
-                FilterChip(
-                  label: const Text('Active'),
-                  selected: currentFilter == PeopleFilter.active,
-                  onSelected: (_) => ref.read(peopleFilterProvider.notifier).setFilter(PeopleFilter.active),
-                ),
+                _filterChip('Active', PeopleFilter.active, currentFilter),
                 const SizedBox(width: 8),
-                FilterChip(
-                  label: const Text('Settled'),
-                  selected: currentFilter == PeopleFilter.settled,
-                  onSelected: (_) => ref.read(peopleFilterProvider.notifier).setFilter(PeopleFilter.settled),
-                ),
+                _filterChip('Settled', PeopleFilter.settled, currentFilter),
                 const SizedBox(width: 8),
-                FilterChip(
-                  label: const Text('Archived'),
-                  selected: currentFilter == PeopleFilter.archived,
-                  onSelected: (_) => ref.read(peopleFilterProvider.notifier).setFilter(PeopleFilter.archived),
-                ),
+                _filterChip('Archived', PeopleFilter.archived, currentFilter),
                 const SizedBox(width: 8),
-                FilterChip(
-                  label: const Text('All Directory'),
-                  selected: currentFilter == PeopleFilter.all,
-                  onSelected: (_) => ref.read(peopleFilterProvider.notifier).setFilter(PeopleFilter.all),
-                ),
+                _filterChip('All Directory', PeopleFilter.all, currentFilter),
               ],
             ),
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 8),
 
-          // List of People
+          // People List
           Expanded(
             child: people.isEmpty
                 ? EmptyStateWidget(
                     icon: Icons.people_outline_rounded,
-                    title: _searchController.text.isNotEmpty ? 'No matches found' : 'No records here',
+                    title: _searchController.text.isNotEmpty ? 'No matches' : 'No records yet',
                     description: _searchController.text.isNotEmpty
-                        ? 'Try searching with a different name or phone number.'
-                        : 'Add friends or contacts to start tracking balances.',
+                        ? 'Try searching with another name or phone number.'
+                        : 'Add someone to track balances and payments.',
                     actionLabel: _searchController.text.isNotEmpty ? null : 'Add Person',
                     onActionPressed: () {
                       Navigator.of(context).push(
@@ -277,9 +261,10 @@ class _PeopleScreenState extends ConsumerState<PeopleScreen> {
                       );
                     },
                   )
-                : ListView.builder(
-                    padding: const EdgeInsets.fromLTRB(16, 4, 16, 80),
+                : ListView.separated(
+                    padding: const EdgeInsets.fromLTRB(20, 4, 20, 96),
                     itemCount: people.length,
+                    separatorBuilder: (_, _) => const SizedBox(height: 8),
                     itemBuilder: (ctx, index) {
                       final summary = people[index];
                       final person = summary.person;
@@ -287,108 +272,87 @@ class _PeopleScreenState extends ConsumerState<PeopleScreen> {
                       final owes = summary.owesMoney;
                       final overpaid = summary.isOverpaid;
 
-                      Color badgeBg;
-                      Color badgeFg;
+                      Color badgeColor;
                       String badgeText;
                       if (owes) {
-                        badgeBg = colorScheme.errorContainer;
-                        badgeFg = colorScheme.onErrorContainer;
-                        badgeText = 'Owes ${CurrencyFormatter.format(balance, symbol: currencySymbol)}';
+                        badgeColor = cs.error;
+                        badgeText = CurrencyFormatter.format(balance, symbol: currencySymbol);
                       } else if (overpaid) {
-                        badgeBg = colorScheme.tertiaryContainer;
-                        badgeFg = colorScheme.onTertiaryContainer;
-                        badgeText = 'Overpaid ${CurrencyFormatter.format(balance.abs(), symbol: currencySymbol)}';
+                        badgeColor = cs.tertiary;
+                        badgeText = 'Over ${CurrencyFormatter.format(balance.abs(), symbol: currencySymbol)}';
                       } else {
-                        badgeBg = colorScheme.primaryContainer;
-                        badgeFg = colorScheme.onPrimaryContainer;
+                        badgeColor = cs.primary;
                         badgeText = 'Settled';
                       }
 
-                      return Card(
-                        elevation: 0,
-                        margin: const EdgeInsets.symmetric(vertical: 4),
-                        color: colorScheme.surfaceContainerLow,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                          side: BorderSide(color: colorScheme.outlineVariant.withValues(alpha: 0.3)),
-                        ),
-                        child: ListTile(
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                          onTap: () => context.push('/people/${person.id}'),
-                          leading: AvatarWidget(name: person.name, radius: 22),
-                          title: Text(
-                            person.name,
-                            style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+                      return InkWell(
+                        onTap: () => context.push('/people/${person.id}'),
+                        borderRadius: BorderRadius.circular(18),
+                        child: Container(
+                          padding: const EdgeInsets.all(14),
+                          decoration: BoxDecoration(
+                            color: cs.surfaceContainerLow,
+                            borderRadius: BorderRadius.circular(18),
                           ),
-                          subtitle: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                          child: Row(
                             children: [
-                              const SizedBox(height: 2),
-                              if (summary.lastTransaction != null)
-                                Text(
-                                  'Last: ${DateFormatter.formatRelative(summary.lastTransaction!.transactionDate)}',
-                                  style: theme.textTheme.bodySmall?.copyWith(color: colorScheme.onSurfaceVariant),
-                                )
-                              else if (person.phone != null && person.phone!.isNotEmpty)
-                                Text(
-                                  person.phone!,
-                                  style: theme.textTheme.bodySmall?.copyWith(color: colorScheme.onSurfaceVariant),
-                                )
-                              else
-                                Text(
-                                  'Added ${DateFormatter.formatShortDate(person.createdAt)}',
-                                  style: theme.textTheme.bodySmall?.copyWith(color: colorScheme.onSurfaceVariant),
-                                ),
-                            ],
-                          ),
-                          trailing: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            crossAxisAlignment: CrossAxisAlignment.end,
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                decoration: BoxDecoration(
-                                  color: badgeBg,
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Text(
-                                  badgeText,
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w700,
-                                    color: badgeFg,
-                                  ),
+                              AvatarWidget(name: person.name, radius: 22),
+                              const SizedBox(width: 14),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      person.name,
+                                      style: theme.textTheme.titleSmall?.copyWith(
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      summary.lastTransaction != null
+                                          ? 'Last: ${DateFormatter.formatRelative(summary.lastTransaction!.transactionDate)}'
+                                          : (person.phone != null && person.phone!.isNotEmpty)
+                                              ? person.phone!
+                                              : 'Added ${DateFormatter.formatShortDate(person.createdAt)}',
+                                      style: theme.textTheme.bodySmall?.copyWith(
+                                        color: cs.onSurfaceVariant,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
-                              if (owes) ...[
-                                const SizedBox(height: 4),
-                                InkWell(
-                                  onTap: () => QuickReceiveSheet.show(context, personId: person.id),
-                                  borderRadius: BorderRadius.circular(6),
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                    decoration: BoxDecoration(
-                                      color: colorScheme.primaryContainer.withValues(alpha: 0.6),
-                                      borderRadius: BorderRadius.circular(6),
-                                    ),
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Icon(Icons.arrow_downward_rounded, size: 11, color: colorScheme.primary),
-                                        const SizedBox(width: 3),
-                                        Text(
-                                          'Receive',
-                                          style: TextStyle(
-                                            fontSize: 10,
-                                            fontWeight: FontWeight.w700,
-                                            color: colorScheme.primary,
-                                          ),
-                                        ),
-                                      ],
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.end,
+                                children: [
+                                  Text(
+                                    badgeText,
+                                    style: GoogleFonts.inter(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w800,
+                                      color: badgeColor,
                                     ),
                                   ),
-                                ),
-                              ],
+                                  if (owes) ...[
+                                    const SizedBox(height: 4),
+                                    InkWell(
+                                      onTap: () => QuickReceiveSheet.show(context, personId: person.id),
+                                      borderRadius: BorderRadius.circular(8),
+                                      child: Padding(
+                                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                                        child: Text(
+                                          'Receive',
+                                          style: TextStyle(
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.w700,
+                                            color: cs.primary,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              ),
                             ],
                           ),
                         ),
@@ -398,6 +362,15 @@ class _PeopleScreenState extends ConsumerState<PeopleScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _filterChip(String label, PeopleFilter filter, PeopleFilter current) {
+    final isSelected = filter == current;
+    return ChoiceChip(
+      label: Text(label),
+      selected: isSelected,
+      onSelected: (_) => ref.read(peopleFilterProvider.notifier).setFilter(filter),
     );
   }
 }

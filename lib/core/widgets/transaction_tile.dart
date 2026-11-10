@@ -23,27 +23,29 @@ class TransactionTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
+    final cs = theme.colorScheme;
     final isReceived = transaction.type == TransactionType.paymentReceived;
 
-    final fgColor = isReceived ? colorScheme.primary : colorScheme.error;
-    final bgColor = isReceived ? colorScheme.primaryContainer : colorScheme.errorContainer;
+    final accentColor = isReceived ? cs.primary : cs.error;
 
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(16),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Leading Icon Avatar
-            CircleAvatar(
-              radius: 20,
-              backgroundColor: bgColor,
+            // Coloured dot indicator
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: accentColor.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
               child: Icon(
-                isReceived ? Icons.arrow_downward_rounded : Icons.arrow_upward_rounded,
-                color: fgColor,
+                isReceived ? Icons.south_west_rounded : Icons.north_east_rounded,
+                color: accentColor,
                 size: 18,
               ),
             ),
@@ -54,85 +56,42 @@ class TransactionTile extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    children: [
-                      if (person != null)
-                        Expanded(
-                          child: Text(
-                            person!.name,
-                            style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        )
-                      else
-                        Expanded(
-                          child: Text(
-                            transaction.type.label,
-                            style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
-                          ),
-                        ),
-                      // Amount
-                      Text(
-                        '${isReceived ? '+' : '-'}${CurrencyFormatter.format(transaction.amount, symbol: currencySymbol)}',
-                        style: theme.textTheme.titleSmall?.copyWith(
-                          color: fgColor,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                    ],
+                  Text(
+                    person?.name ?? transaction.type.label,
+                    style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  const SizedBox(height: 4),
-
-                  // Metadata row: Payment Method Chip, Date, Note
+                  const SizedBox(height: 3),
                   Row(
                     children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: colorScheme.surfaceContainerHighest,
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              transaction.paymentMethod.icon,
-                              size: 11,
-                              color: colorScheme.onSurfaceVariant,
-                            ),
-                            const SizedBox(width: 3),
-                            Text(
-                              transaction.paymentMethod.label,
-                              style: TextStyle(
-                                fontSize: 10,
-                                fontWeight: FontWeight.w600,
-                                color: colorScheme.onSurfaceVariant,
-                              ),
-                            ),
-                          ],
+                      Text(
+                        transaction.paymentMethod.label,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: cs.onSurfaceVariant,
                         ),
                       ),
-                      const SizedBox(width: 8),
-
-                      // Relative Date
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 6),
+                        child: Text('·', style: TextStyle(color: cs.outline)),
+                      ),
                       Text(
                         DateFormatter.formatRelative(transaction.transactionDate),
                         style: theme.textTheme.bodySmall?.copyWith(
-                          color: colorScheme.onSurfaceVariant,
-                          fontSize: 11,
+                          color: cs.onSurfaceVariant,
                         ),
                       ),
-
                       if (transaction.note != null && transaction.note!.trim().isNotEmpty) ...[
-                        const SizedBox(width: 8),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 6),
+                          child: Text('·', style: TextStyle(color: cs.outline)),
+                        ),
                         Expanded(
                           child: Text(
-                            '• "${transaction.note!.trim()}"',
+                            transaction.note!.trim(),
                             style: theme.textTheme.bodySmall?.copyWith(
-                              color: colorScheme.onSurfaceVariant,
+                              color: cs.onSurfaceVariant,
                               fontStyle: FontStyle.italic,
-                              fontSize: 11,
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
@@ -142,6 +101,16 @@ class TransactionTile extends StatelessWidget {
                     ],
                   ),
                 ],
+              ),
+            ),
+            const SizedBox(width: 12),
+
+            // Amount
+            Text(
+              '${isReceived ? '+' : '-'}${CurrencyFormatter.format(transaction.amount, symbol: currencySymbol)}',
+              style: theme.textTheme.titleSmall?.copyWith(
+                color: accentColor,
+                fontWeight: FontWeight.w800,
               ),
             ),
           ],

@@ -26,7 +26,7 @@ class PersonDetailsScreen extends ConsumerWidget {
         content: Text(
           isArchived
               ? '$name will be restored to your active list.'
-              : '$name will be hidden from the primary active list, but all transaction history and balance are preserved.',
+              : '$name will be hidden from the primary active list, but all records remain safe.',
         ),
         actions: [
           TextButton(
@@ -56,14 +56,14 @@ class PersonDetailsScreen extends ConsumerWidget {
 
   void _confirmDeletePerson(BuildContext context, WidgetRef ref, String name) {
     final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
+    final cs = theme.colorScheme;
 
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text('Delete $name?', style: TextStyle(color: colorScheme.error)),
+        title: Text('Delete $name?', style: TextStyle(color: cs.error)),
         content: Text(
-          'Are you sure you want to delete $name and ALL their transaction records? This action cannot be undone.',
+          'Are you sure you want to permanently delete $name and all associated transactions? This cannot be undone.',
         ),
         actions: [
           TextButton(
@@ -71,7 +71,7 @@ class PersonDetailsScreen extends ConsumerWidget {
             child: const Text('Cancel'),
           ),
           FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: colorScheme.error, foregroundColor: colorScheme.onError),
+            style: FilledButton.styleFrom(backgroundColor: cs.error, foregroundColor: cs.onError),
             onPressed: () async {
               Navigator.of(ctx).pop();
               await ref.read(personRepositoryProvider).deletePerson(personId);
@@ -92,7 +92,7 @@ class PersonDetailsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
+    final cs = theme.colorScheme;
     final currencySymbol = ref.watch(currencySymbolProvider);
     final summaryAsync = ref.watch(personSummaryProvider(personId));
     final transactionsAsync = ref.watch(personTransactionsProvider(personId));
@@ -114,27 +114,33 @@ class PersonDetailsScreen extends ConsumerWidget {
         Color balanceColor;
         String balanceLabel;
         if (owes) {
-          balanceColor = colorScheme.error;
+          balanceColor = cs.error;
           balanceLabel = 'Owes you';
         } else if (overpaid) {
-          balanceColor = colorScheme.tertiary;
+          balanceColor = cs.tertiary;
           balanceLabel = 'Overpaid you';
         } else {
-          balanceColor = colorScheme.primary;
-          balanceLabel = 'Settled';
+          balanceColor = cs.primary;
+          balanceLabel = 'All settled';
         }
+
+        // Repaid progress calculation
+        final double progress = summary.totalGiven > 0
+            ? (summary.totalReceived / summary.totalGiven).clamp(0.0, 1.0)
+            : 1.0;
+        final int percentRepaid = (progress * 100).toInt();
 
         return Scaffold(
           appBar: AppBar(
             title: Text(person.name),
             actions: [
               IconButton(
-                tooltip: 'Send Balance Reminder',
+                tooltip: 'Share Reminder',
                 icon: const Icon(Icons.share_outlined),
                 onPressed: () => ReminderHelper.shareReminder(summary, currencySymbol: currencySymbol),
               ),
               IconButton(
-                tooltip: 'Export Statement (CSV)',
+                tooltip: 'Export Statement',
                 icon: const Icon(Icons.receipt_long_outlined),
                 onPressed: () {
                   final txs = transactionsAsync.value ?? [];
@@ -184,9 +190,9 @@ class PersonDetailsScreen extends ConsumerWidget {
                     value: 'delete',
                     child: Row(
                       children: [
-                        Icon(Icons.delete_outline, size: 20, color: colorScheme.error),
-                        const SizedBox(width: 12),
-                        Text('Delete Person', style: TextStyle(color: colorScheme.error)),
+                        Icon(Icons.delete_outline, size: 20, color: cs.error),
+                        SizedBox(width: 12),
+                        Text('Delete Person', style: TextStyle(color: cs.error)),
                       ],
                     ),
                   ),
@@ -196,208 +202,228 @@ class PersonDetailsScreen extends ConsumerWidget {
           ),
           body: Column(
             children: [
-              // Person Hero Card
-              Card(
-                elevation: 0,
-                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                color: colorScheme.surfaceContainerLow,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(20),
-                  side: BorderSide(color: colorScheme.outlineVariant.withValues(alpha: 0.3)),
+              // Hero Summary Card
+              Container(
+                margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                padding: const EdgeInsets.all(22),
+                decoration: BoxDecoration(
+                  color: cs.surfaceContainerLow,
+                  borderRadius: BorderRadius.circular(24),
                 ),
-                child: Padding(
-                  padding: const EdgeInsets.all(20),
-                  child: Column(
-                    children: [
-                      Row(
-                        children: [
-                          AvatarWidget(name: person.name, radius: 26),
-                          const SizedBox(width: 16),
-                          Expanded(
+                child: Column(
+                  children: [
+                    Row(
+                      children: [
+                        AvatarWidget(name: person.name, radius: 28),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                person.name,
+                                style: theme.textTheme.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                              if (person.phone != null && person.phone!.isNotEmpty) ...[
+                                const SizedBox(height: 2),
+                                Text(
+                                  person.phone!,
+                                  style: theme.textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+                                ),
+                              ],
+                              if (person.notes != null && person.notes!.isNotEmpty) ...[
+                                const SizedBox(height: 2),
+                                Text(
+                                  person.notes!,
+                                  style: theme.textTheme.bodySmall?.copyWith(
+                                    color: cs.onSurfaceVariant,
+                                    fontStyle: FontStyle.italic,
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                        if (person.isArchived)
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: cs.surfaceContainerHigh,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              'Archived',
+                              style: theme.textTheme.labelSmall?.copyWith(color: cs.onSurfaceVariant),
+                            ),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 18),
+
+                    // Balance Display
+                    Column(
+                      children: [
+                        Text(
+                          balanceLabel,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: cs.onSurfaceVariant,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          CurrencyFormatter.format(balance.abs(), symbol: currencySymbol),
+                          style: theme.textTheme.headlineMedium?.copyWith(
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: -0.5,
+                            color: balanceColor,
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    // Repaid Progress Bar (only if there is a lending history)
+                    if (summary.totalGiven > 0) ...[
+                      const SizedBox(height: 14),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: LinearProgressIndicator(
+                          value: progress,
+                          minHeight: 6,
+                          backgroundColor: cs.surfaceContainerHigh,
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            progress >= 1.0 ? cs.primary : cs.secondary,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        '$percentRepaid% repaid',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: cs.onSurfaceVariant,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+
+                    const SizedBox(height: 16),
+
+                    // Given / Received breakdown
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                            decoration: BoxDecoration(
+                              color: cs.surfaceContainer,
+                              borderRadius: BorderRadius.circular(14),
+                            ),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
+                                Text('Given', style: theme.textTheme.labelSmall?.copyWith(color: cs.onSurfaceVariant)),
+                                const SizedBox(height: 2),
                                 Text(
-                                  person.name,
-                                  style: theme.textTheme.titleMedium?.copyWith(
-                                    fontWeight: FontWeight.w700,
-                                  ),
+                                  CurrencyFormatter.format(summary.totalGiven, symbol: currencySymbol),
+                                  style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
                                 ),
-                                if (person.phone != null && person.phone!.isNotEmpty) ...[
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    person.phone!,
-                                    style: theme.textTheme.bodySmall?.copyWith(color: colorScheme.onSurfaceVariant),
-                                  ),
-                                ],
-                                if (person.notes != null && person.notes!.isNotEmpty) ...[
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    person.notes!,
-                                    style: theme.textTheme.bodySmall?.copyWith(
-                                      fontStyle: FontStyle.italic,
-                                      color: colorScheme.onSurfaceVariant,
-                                    ),
-                                  ),
-                                ],
                               ],
                             ),
                           ),
-                          if (person.isArchived)
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: colorScheme.surfaceContainerHighest,
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Text(
-                                'Archived',
-                                style: theme.textTheme.labelSmall?.copyWith(color: colorScheme.onSurfaceVariant),
-                              ),
-                            ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      Divider(height: 1, color: colorScheme.outlineVariant.withValues(alpha: 0.3)),
-                      const SizedBox(height: 16),
-
-                      // Balance Display
-                      Column(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                             decoration: BoxDecoration(
-                              color: balanceColor.withValues(alpha: 0.15),
-                              borderRadius: BorderRadius.circular(20),
+                              color: cs.surfaceContainer,
+                              borderRadius: BorderRadius.circular(14),
                             ),
-                            child: Text(
-                              balanceLabel.toUpperCase(),
-                              style: theme.textTheme.labelSmall?.copyWith(
-                                fontWeight: FontWeight.w800,
-                                letterSpacing: 0.8,
-                                color: balanceColor,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 6),
-                          Text(
-                            CurrencyFormatter.format(balance.abs(), symbol: currencySymbol),
-                            style: theme.textTheme.headlineMedium?.copyWith(
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: -0.5,
-                              color: balanceColor,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text('Received', style: theme.textTheme.labelSmall?.copyWith(color: cs.onSurfaceVariant)),
+                                const SizedBox(height: 2),
+                                Text(
+                                  CurrencyFormatter.format(summary.totalReceived, symbol: currencySymbol),
+                                  style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+                                ),
+                              ],
                             ),
                           ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
 
-                      // Total Given & Total Received Summary Row
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                              decoration: BoxDecoration(
-                                color: colorScheme.surfaceContainer,
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Column(
-                                children: [
-                                  Text('Total Given', style: theme.textTheme.labelSmall?.copyWith(color: colorScheme.onSurfaceVariant)),
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    CurrencyFormatter.format(summary.totalGiven, symbol: currencySymbol),
-                                    style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
-                                  ),
-                                ],
-                              ),
+                    // Actions Row
+                    Row(
+                      children: [
+                        Expanded(
+                          flex: 3,
+                          child: FilledButton.tonal(
+                            onPressed: () => QuickReceiveSheet.show(context, personId: personId),
+                            style: FilledButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 13),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.south_west_rounded, size: 16, color: cs.primary),
+                                const SizedBox(width: 6),
+                                const Text('Receive'),
+                              ],
                             ),
                           ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                              decoration: BoxDecoration(
-                                color: colorScheme.surfaceContainer,
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Column(
-                                children: [
-                                  Text('Total Received', style: theme.textTheme.labelSmall?.copyWith(color: colorScheme.onSurfaceVariant)),
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    CurrencyFormatter.format(summary.totalReceived, symbol: currencySymbol),
-                                    style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
-                                  ),
-                                ],
-                              ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          flex: 2,
+                          child: FilledButton(
+                            onPressed: () => QuickGiveSheet.show(context, personId: personId),
+                            style: FilledButton.styleFrom(
+                              backgroundColor: cs.error,
+                              foregroundColor: cs.onError,
+                              padding: const EdgeInsets.symmetric(vertical: 13),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                            ),
+                            child: const Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.north_east_rounded, size: 16),
+                                SizedBox(width: 6),
+                                Text('Give'),
+                              ],
                             ),
                           ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-
-                      // Primary Action Buttons
-                      Row(
-                        children: [
-                          Expanded(
-                            flex: 3,
-                            child: FilledButton.tonalIcon(
-                              onPressed: () => QuickReceiveSheet.show(context, personId: personId),
-                              style: FilledButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(vertical: 14),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                              ),
-                              icon: const Icon(Icons.arrow_downward_rounded, size: 18),
-                              label: const Text(
-                                'Receive',
-                                style: TextStyle(fontWeight: FontWeight.w700),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            flex: 2,
-                            child: FilledButton.icon(
-                              onPressed: () => QuickGiveSheet.show(context, personId: personId),
-                              style: FilledButton.styleFrom(
-                                backgroundColor: colorScheme.error,
-                                foregroundColor: colorScheme.onError,
-                                padding: const EdgeInsets.symmetric(vertical: 14),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                              ),
-                              icon: const Icon(Icons.arrow_upward_rounded, size: 18),
-                              label: const Text(
-                                'Give',
-                                style: TextStyle(fontWeight: FontWeight.w700),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
               ),
 
-              // Transaction Timeline Header
+              // Timeline Header
               Padding(
-                padding: const EdgeInsets.fromLTRB(20, 12, 20, 8),
+                padding: const EdgeInsets.fromLTRB(24, 12, 24, 8),
                 child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      'Audit Timeline',
+                      'History',
                       style: theme.textTheme.titleSmall?.copyWith(
                         fontWeight: FontWeight.w700,
                         letterSpacing: -0.2,
                       ),
                     ),
-                    const Spacer(),
                     transactionsAsync.maybeWhen(
                       data: (list) => Text(
-                        '${list.length} entries',
-                        style: theme.textTheme.bodySmall?.copyWith(color: colorScheme.onSurfaceVariant),
+                        '${list.length} ${list.length == 1 ? 'entry' : 'entries'}',
+                        style: theme.textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
                       ),
                       orElse: () => const SizedBox.shrink(),
                     ),
@@ -405,7 +431,7 @@ class PersonDetailsScreen extends ConsumerWidget {
                 ),
               ),
 
-              // Transactions Timeline List
+              // Transactions List
               Expanded(
                 child: transactionsAsync.when(
                   data: (txList) {
@@ -413,28 +439,26 @@ class PersonDetailsScreen extends ConsumerWidget {
                       return EmptyStateWidget(
                         icon: Icons.receipt_long_outlined,
                         title: 'No transactions yet',
-                        description: 'Record money given to ${person.name} or repayment received.',
+                        description: 'Record loans or repayments with ${person.name}.',
                         actionLabel: 'Give Money',
                         onActionPressed: () => QuickGiveSheet.show(context, personId: personId),
                       );
                     }
 
-                    return Card(
-                      elevation: 0,
-                      margin: const EdgeInsets.symmetric(horizontal: 16),
-                      color: colorScheme.surfaceContainerLow,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                        side: BorderSide(color: colorScheme.outlineVariant.withValues(alpha: 0.3)),
+                    return Container(
+                      margin: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+                      decoration: BoxDecoration(
+                        color: cs.surfaceContainerLow,
+                        borderRadius: BorderRadius.circular(20),
                       ),
                       child: ListView.separated(
-                        padding: const EdgeInsets.only(bottom: 24),
+                        padding: const EdgeInsets.symmetric(vertical: 6),
                         itemCount: txList.length,
                         separatorBuilder: (ctx, i) => Divider(
                           height: 1,
-                          indent: 72,
+                          indent: 68,
                           endIndent: 16,
-                          color: colorScheme.outlineVariant.withValues(alpha: 0.3),
+                          color: cs.outlineVariant,
                         ),
                         itemBuilder: (ctx, index) {
                           final tx = txList[index];

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:smarava/core/utils/csv_exporter.dart';
 import 'package:smarava/core/utils/currency_formatter.dart';
 import 'package:smarava/core/utils/date_formatter.dart';
@@ -81,7 +82,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> with SingleTicker
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
+    final cs = theme.colorScheme;
     final currencySymbol = ref.watch(currencySymbolProvider);
     final allTxsAsync = ref.watch(allTransactionsProvider);
     final allSummariesAsync = ref.watch(allPersonSummariesProvider);
@@ -89,7 +90,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> with SingleTicker
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Reports & Audit'),
+        title: const Text('Reports'),
         actions: [
           IconButton(
             tooltip: 'Export CSV',
@@ -104,50 +105,35 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> with SingleTicker
               );
             },
           ),
+          const SizedBox(width: 4),
         ],
         bottom: TabBar(
           controller: _tabController,
           indicatorSize: TabBarIndicatorSize.tab,
           tabs: const [
-            Tab(text: 'Summary & Breakdown'),
-            Tab(text: 'Filtered Activity'),
+            Tab(text: 'Overview'),
+            Tab(text: 'Activity'),
           ],
         ),
       ),
       body: Column(
         children: [
-          // Date Filter Bar using Material 3 Filter Chips
+          // Date Filter Bar
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
             child: Row(
               children: [
-                FilterChip(
-                  label: const Text('All Time'),
-                  selected: _dateFilter == ReportDateFilter.allTime,
-                  onSelected: (_) => setState(() => _dateFilter = ReportDateFilter.allTime),
-                ),
+                _filterChip('All Time', ReportDateFilter.allTime),
                 const SizedBox(width: 8),
-                FilterChip(
-                  label: const Text('This Month'),
-                  selected: _dateFilter == ReportDateFilter.thisMonth,
-                  onSelected: (_) => setState(() => _dateFilter = ReportDateFilter.thisMonth),
-                ),
+                _filterChip('This Month', ReportDateFilter.thisMonth),
                 const SizedBox(width: 8),
-                FilterChip(
-                  label: const Text('Last Month'),
-                  selected: _dateFilter == ReportDateFilter.lastMonth,
-                  onSelected: (_) => setState(() => _dateFilter = ReportDateFilter.lastMonth),
-                ),
+                _filterChip('Last Month', ReportDateFilter.lastMonth),
                 const SizedBox(width: 8),
-                FilterChip(
-                  label: const Text('This Year'),
-                  selected: _dateFilter == ReportDateFilter.thisYear,
-                  onSelected: (_) => setState(() => _dateFilter = ReportDateFilter.thisYear),
-                ),
+                _filterChip('This Year', ReportDateFilter.thisYear),
                 const SizedBox(width: 8),
                 ActionChip(
-                  avatar: const Icon(Icons.date_range_rounded, size: 16),
+                  avatar: Icon(Icons.date_range_rounded, size: 16, color: cs.primary),
                   label: Text(
                     _dateFilter == ReportDateFilter.custom && _customDateRange != null
                         ? '${DateFormatter.formatShortDate(_customDateRange!.start)} - ${DateFormatter.formatShortDate(_customDateRange!.end)}'
@@ -178,69 +164,69 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> with SingleTicker
                 return TabBarView(
                   controller: _tabController,
                   children: [
-                    // Tab 1: Summary & Breakdown by Person
+                    // Tab 1: Overview
                     SingleChildScrollView(
-                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+                      padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // Overview Stats Card
-                          Card(
-                            elevation: 0,
-                            color: colorScheme.surfaceContainerLow,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16),
-                              side: BorderSide(color: colorScheme.outlineVariant.withValues(alpha: 0.3)),
+                          // Stats Card
+                          Container(
+                            padding: const EdgeInsets.all(20),
+                            decoration: BoxDecoration(
+                              color: cs.surfaceContainerLow,
+                              borderRadius: BorderRadius.circular(24),
                             ),
-                            child: Padding(
-                              padding: const EdgeInsets.all(18),
-                              child: Column(
-                                children: [
-                                  Row(
-                                    children: [
-                                      _statBox('GIVEN', given, colorScheme.error, colorScheme.errorContainer, colorScheme.onErrorContainer, currencySymbol, context),
-                                      const SizedBox(width: 12),
-                                      _statBox('RECEIVED', received, colorScheme.primary, colorScheme.primaryContainer, colorScheme.onPrimaryContainer, currencySymbol, context),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 16),
-                                  Divider(height: 1, color: colorScheme.outlineVariant.withValues(alpha: 0.4)),
-                                  const SizedBox(height: 14),
-                                  Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Text(
-                                        'Net Outstanding Shift',
-                                        style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+                            child: Column(
+                              children: [
+                                Row(
+                                  children: [
+                                    _statBox('GIVEN', given, cs.error, cs.surfaceContainer, currencySymbol, context),
+                                    const SizedBox(width: 12),
+                                    _statBox('RECEIVED', received, cs.primary, cs.surfaceContainer, currencySymbol, context),
+                                  ],
+                                ),
+                                const SizedBox(height: 18),
+                                Divider(height: 1, color: cs.outlineVariant),
+                                const SizedBox(height: 14),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text(
+                                      'Net Difference',
+                                      style: theme.textTheme.bodyMedium?.copyWith(
+                                        color: cs.onSurfaceVariant,
+                                        fontWeight: FontWeight.w500,
                                       ),
-                                      Text(
-                                        CurrencyFormatter.format(net, symbol: currencySymbol),
-                                        style: theme.textTheme.titleMedium?.copyWith(
-                                          fontWeight: FontWeight.w800,
-                                          color: net > 0
-                                              ? colorScheme.error
-                                              : net < 0
-                                                  ? colorScheme.primary
-                                                  : colorScheme.onSurfaceVariant,
-                                        ),
+                                    ),
+                                    Text(
+                                      CurrencyFormatter.format(net, symbol: currencySymbol),
+                                      style: GoogleFonts.inter(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w800,
+                                        color: net > 0
+                                            ? cs.error
+                                            : net < 0
+                                                ? cs.primary
+                                                : cs.onSurfaceVariant,
                                       ),
-                                    ],
-                                  ),
-                                ],
-                              ),
+                                    ),
+                                  ],
+                                ),
+                              ],
                             ),
                           ),
-                          const SizedBox(height: 24),
+                          const SizedBox(height: 28),
 
                           // Breakdown by Person
                           Text(
-                            'Breakdown By Person',
+                            'By Person',
                             style: theme.textTheme.titleMedium?.copyWith(
                               fontWeight: FontWeight.w700,
                               letterSpacing: -0.2,
                             ),
                           ),
-                          const SizedBox(height: 10),
+                          const SizedBox(height: 12),
 
                           allSummariesAsync.when(
                             data: (summaries) {
@@ -248,42 +234,50 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> with SingleTicker
                                 return const Text('No records available');
                               }
 
-                              return ListView.builder(
-                                shrinkWrap: true,
-                                physics: const NeverScrollableScrollPhysics(),
-                                itemCount: summaries.length,
-                                itemBuilder: (ctx, index) {
-                                  final s = summaries[index];
-                                  return Card(
-                                    elevation: 0,
-                                    margin: const EdgeInsets.symmetric(vertical: 4),
-                                    color: colorScheme.surfaceContainerLow,
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(16),
-                                      side: BorderSide(color: colorScheme.outlineVariant.withValues(alpha: 0.3)),
-                                    ),
-                                    child: ListTile(
+                              return Container(
+                                decoration: BoxDecoration(
+                                  color: cs.surfaceContainerLow,
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: ListView.separated(
+                                  shrinkWrap: true,
+                                  physics: const NeverScrollableScrollPhysics(),
+                                  padding: const EdgeInsets.symmetric(vertical: 6),
+                                  itemCount: summaries.length,
+                                  separatorBuilder: (ctx, i) => Divider(
+                                    height: 1,
+                                    indent: 68,
+                                    endIndent: 16,
+                                    color: cs.outlineVariant,
+                                  ),
+                                  itemBuilder: (ctx, index) {
+                                    final s = summaries[index];
+                                    return ListTile(
                                       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                                       leading: AvatarWidget(name: s.person.name, radius: 20),
-                                      title: Text(s.person.name, style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
+                                      title: Text(
+                                        s.person.name,
+                                        style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+                                      ),
                                       subtitle: Text(
-                                        'Given: ${CurrencyFormatter.formatCompact(s.totalGiven, symbol: currencySymbol)} • Received: ${CurrencyFormatter.formatCompact(s.totalReceived, symbol: currencySymbol)}',
-                                        style: theme.textTheme.bodySmall?.copyWith(color: colorScheme.onSurfaceVariant),
+                                        'Given: ${CurrencyFormatter.formatCompact(s.totalGiven, symbol: currencySymbol)} · Received: ${CurrencyFormatter.formatCompact(s.totalReceived, symbol: currencySymbol)}',
+                                        style: theme.textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
                                       ),
                                       trailing: Text(
                                         CurrencyFormatter.format(s.balance, symbol: currencySymbol),
-                                        style: theme.textTheme.titleSmall?.copyWith(
+                                        style: GoogleFonts.inter(
                                           fontWeight: FontWeight.w800,
+                                          fontSize: 14,
                                           color: s.balance > 0
-                                              ? colorScheme.error
+                                              ? cs.error
                                               : s.balance < 0
-                                                  ? colorScheme.tertiary
-                                                  : colorScheme.primary,
+                                                  ? cs.tertiary
+                                                  : cs.primary,
                                         ),
                                       ),
-                                    ),
-                                  );
-                                },
+                                    );
+                                  },
+                                ),
                               );
                             },
                             loading: () => const Center(child: CircularProgressIndicator()),
@@ -293,34 +287,32 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> with SingleTicker
                       ),
                     ),
 
-                    // Tab 2: Filtered Activity List
+                    // Tab 2: Activity List
                     filteredTxs.isEmpty
                         ? const EmptyStateWidget(
                             icon: Icons.filter_list_off_rounded,
                             title: 'No activity in this period',
-                            description: 'No transactions found for the selected date range.',
+                            description: 'Try changing the date range filter above.',
                           )
-                        : ListView.separated(
-                            padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-                            itemCount: filteredTxs.length,
-                            separatorBuilder: (ctx, i) => Divider(
-                              height: 1,
-                              indent: 72,
-                              endIndent: 16,
-                              color: colorScheme.outlineVariant.withValues(alpha: 0.4),
+                        : Container(
+                            margin: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+                            decoration: BoxDecoration(
+                              color: cs.surfaceContainerLow,
+                              borderRadius: BorderRadius.circular(20),
                             ),
-                            itemBuilder: (ctx, index) {
-                              final tx = filteredTxs[index];
-                              final person = personsMap[tx.personId];
-                              return Card(
-                                elevation: 0,
-                                margin: const EdgeInsets.symmetric(vertical: 4),
-                                color: colorScheme.surfaceContainerLow,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(16),
-                                  side: BorderSide(color: colorScheme.outlineVariant.withValues(alpha: 0.3)),
-                                ),
-                                child: TransactionTile(
+                            child: ListView.separated(
+                              padding: const EdgeInsets.symmetric(vertical: 6),
+                              itemCount: filteredTxs.length,
+                              separatorBuilder: (ctx, i) => Divider(
+                                height: 1,
+                                indent: 68,
+                                endIndent: 16,
+                                color: cs.outlineVariant,
+                              ),
+                              itemBuilder: (ctx, index) {
+                                final tx = filteredTxs[index];
+                                final person = personsMap[tx.personId];
+                                return TransactionTile(
                                   transaction: tx,
                                   person: person,
                                   currencySymbol: currencySymbol,
@@ -331,9 +323,9 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> with SingleTicker
                                       person: person,
                                     );
                                   },
-                                ),
-                              );
-                            },
+                                );
+                              },
+                            ),
                           ),
                   ],
                 );
@@ -347,14 +339,22 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> with SingleTicker
     );
   }
 
-  Widget _statBox(String label, double amount, Color accent, Color bg, Color fg, String symbol, BuildContext context) {
+  Widget _filterChip(String label, ReportDateFilter filter) {
+    return ChoiceChip(
+      label: Text(label),
+      selected: _dateFilter == filter,
+      onSelected: (_) => setState(() => _dateFilter = filter),
+    );
+  }
+
+  Widget _statBox(String label, double amount, Color accent, Color bg, String symbol, BuildContext context) {
     final theme = Theme.of(context);
     return Expanded(
       child: Container(
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
           color: bg,
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(16),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -362,7 +362,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> with SingleTicker
             Text(
               label,
               style: theme.textTheme.labelSmall?.copyWith(
-                color: fg,
+                color: accent,
                 fontWeight: FontWeight.w700,
                 letterSpacing: 0.6,
               ),
@@ -370,9 +370,10 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> with SingleTicker
             const SizedBox(height: 6),
             Text(
               CurrencyFormatter.format(amount, symbol: symbol),
-              style: theme.textTheme.titleLarge?.copyWith(
+              style: GoogleFonts.inter(
+                fontSize: 18,
                 fontWeight: FontWeight.w800,
-                color: fg,
+                color: accent,
               ),
             ),
           ],

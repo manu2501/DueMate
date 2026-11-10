@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:smarava/core/constants/app_constants.dart';
 import 'package:smarava/core/utils/permission_manager.dart';
 
@@ -11,36 +12,35 @@ class WelcomeScreen extends ConsumerStatefulWidget {
   ConsumerState<WelcomeScreen> createState() => _WelcomeScreenState();
 }
 
-class _WelcomeScreenState extends ConsumerState<WelcomeScreen> with SingleTickerProviderStateMixin {
-  late AnimationController _fadeController;
-  late Animation<double> _fadeAnimation;
-  late Animation<Offset> _slideAnimation;
+class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _animController;
+  late Animation<double> _fadeAnim;
+  late Animation<Offset> _slideAnim;
 
   @override
   void initState() {
     super.initState();
-
-    _fadeController = AnimationController(
+    _animController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 600),
+      duration: const Duration(milliseconds: 900),
     );
 
-    _fadeAnimation = CurvedAnimation(
-      parent: _fadeController,
-      curve: Curves.easeOut,
+    _fadeAnim = CurvedAnimation(
+      parent: _animController,
+      curve: const Interval(0.0, 0.7, curve: Curves.easeOut),
     );
 
-    _slideAnimation = Tween<Offset>(
-      begin: const Offset(0, 0.05),
+    _slideAnim = Tween<Offset>(
+      begin: const Offset(0, 0.08),
       end: Offset.zero,
     ).animate(CurvedAnimation(
-      parent: _fadeController,
+      parent: _animController,
       curve: Curves.easeOutCubic,
     ));
 
-    _fadeController.forward();
+    _animController.forward();
 
-    // Ask for permissions needed at start of app or on update
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (mounted) {
         await PermissionManager.checkAndPromptOnStartupOrUpdate(context);
@@ -50,7 +50,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> with SingleTicker
 
   @override
   void dispose() {
-    _fadeController.dispose();
+    _animController.dispose();
     super.dispose();
   }
 
@@ -62,173 +62,222 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> with SingleTicker
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
+    final cs = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
 
     return Scaffold(
-      body: SafeArea(
-        child: FadeTransition(
-          opacity: _fadeAnimation,
-          child: SlideTransition(
-            position: _slideAnimation,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const Spacer(),
-
-                  // Material 3 App Icon Container
-                  Center(
-                    child: Container(
-                      width: 80,
-                      height: 80,
-                      decoration: BoxDecoration(
-                        color: colorScheme.primaryContainer,
-                        borderRadius: BorderRadius.circular(24),
-                      ),
-                      child: Icon(
-                        Icons.account_balance_wallet_rounded,
-                        color: colorScheme.onPrimaryContainer,
-                        size: 40,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-
-                  // Tagline & App Name
-                  Text(
-                    AppConstants.appName,
-                    textAlign: TextAlign.center,
-                    style: theme.textTheme.headlineMedium?.copyWith(
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: -0.5,
-                      color: colorScheme.onSurface,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Personal Lending & Repayment Tracker',
-                    textAlign: TextAlign.center,
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: colorScheme.onSurfaceVariant,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  const SizedBox(height: 36),
-
-                  // Feature Cards
-                  _featureCard(
-                    icon: Icons.flash_on_rounded,
-                    iconBg: colorScheme.secondaryContainer,
-                    iconFg: colorScheme.onSecondaryContainer,
-                    title: 'Fast Entry',
-                    description: 'Record loans and ad-hoc partial repayments in under 10 seconds.',
-                    theme: theme,
-                  ),
-                  const SizedBox(height: 12),
-                  _featureCard(
-                    icon: Icons.lock_outline_rounded,
-                    iconBg: colorScheme.primaryContainer,
-                    iconFg: colorScheme.onPrimaryContainer,
-                    title: '100% Offline & Private',
-                    description: 'All ledger data and contacts remain strictly on your local device.',
-                    theme: theme,
-                  ),
-                  const SizedBox(height: 12),
-                  _featureCard(
-                    icon: Icons.history_edu_rounded,
-                    iconBg: colorScheme.tertiaryContainer,
-                    iconFg: colorScheme.onTertiaryContainer,
-                    title: 'Always Accurate',
-                    description: 'Outstanding balances are derived directly from immutable transaction history.',
-                    theme: theme,
-                  ),
-
-                  const Spacer(),
-
-                  // Material 3 Primary Action Button
-                  FilledButton(
-                    onPressed: _enterApp,
-                    style: FilledButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                    ),
-                    child: const Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          'Open Ledger',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                        SizedBox(width: 8),
-                        Icon(Icons.arrow_forward_rounded, size: 20),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                ],
+      body: Stack(
+        children: [
+          // Subtle warm gradient accent in background
+          Positioned(
+            top: -120,
+            left: -80,
+            child: Container(
+              width: 320,
+              height: 320,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: RadialGradient(
+                  colors: [
+                    cs.primary.withValues(alpha: isDark ? 0.25 : 0.15),
+                    cs.primary.withValues(alpha: 0.0),
+                  ],
+                ),
               ),
             ),
           ),
-        ),
+          Positioned(
+            bottom: 100,
+            right: -60,
+            child: Container(
+              width: 260,
+              height: 260,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: RadialGradient(
+                  colors: [
+                    cs.secondary.withValues(alpha: isDark ? 0.15 : 0.1),
+                    cs.secondary.withValues(alpha: 0.0),
+                  ],
+                ),
+              ),
+            ),
+          ),
+
+          SafeArea(
+            child: FadeTransition(
+              opacity: _fadeAnim,
+              child: SlideTransition(
+                position: _slideAnim,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 28.0, vertical: 24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Spacer(flex: 2),
+
+                      // Brand Mark / Logo
+                      Container(
+                        width: 64,
+                        height: 64,
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [
+                              cs.primary,
+                              cs.primary.withValues(alpha: 0.75),
+                            ],
+                          ),
+                          borderRadius: BorderRadius.circular(20),
+                          boxShadow: [
+                            BoxShadow(
+                              color: cs.primary.withValues(alpha: 0.3),
+                              blurRadius: 20,
+                              offset: const Offset(0, 8),
+                            ),
+                          ],
+                        ),
+                        child: const Icon(
+                          Icons.account_balance_wallet_rounded,
+                          color: Colors.white,
+                          size: 32,
+                        ),
+                      ),
+                      const SizedBox(height: 28),
+
+                      // App Name & Punchy human title
+                      Text(
+                        AppConstants.appName,
+                        style: theme.textTheme.displaySmall?.copyWith(
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: -1.0,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      Text(
+                        'Track what you lend.\nKnow what’s owed, effortlessly.',
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          color: cs.onSurfaceVariant,
+                          height: 1.4,
+                          fontWeight: FontWeight.w400,
+                        ),
+                      ),
+
+                      const Spacer(flex: 3),
+
+                      // Key highlights without rigid card borders
+                      _featureRow(
+                        icon: Icons.bolt_rounded,
+                        accentColor: cs.secondary,
+                        title: 'Frictionless log',
+                        subtitle: 'Record loans & quick partial repayments in seconds',
+                        theme: theme,
+                      ),
+                      const SizedBox(height: 20),
+                      _featureRow(
+                        icon: Icons.shield_outlined,
+                        accentColor: cs.primary,
+                        title: 'Private & offline',
+                        subtitle: 'No cloud tracking. Your records stay on your phone',
+                        theme: theme,
+                      ),
+                      const SizedBox(height: 20),
+                      _featureRow(
+                        icon: Icons.auto_graph_rounded,
+                        accentColor: cs.tertiary,
+                        title: 'Clear balances',
+                        subtitle: 'Audited running totals with statement exports',
+                        theme: theme,
+                      ),
+
+                      const Spacer(flex: 4),
+
+                      // Main Action CTA
+                      SizedBox(
+                        width: double.infinity,
+                        height: 56,
+                        child: FilledButton(
+                          onPressed: _enterApp,
+                          style: FilledButton.styleFrom(
+                            backgroundColor: cs.primary,
+                            foregroundColor: cs.onPrimary,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            elevation: 0,
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(
+                                'Get Started',
+                                style: GoogleFonts.inter(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              const Icon(Icons.arrow_forward_rounded, size: 20),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _featureCard({
+  Widget _featureRow({
     required IconData icon,
-    required Color iconBg,
-    required Color iconFg,
+    required Color accentColor,
     required String title,
-    required String description,
+    required String subtitle,
     required ThemeData theme,
   }) {
-    final colorScheme = theme.colorScheme;
-
-    return Card(
-      elevation: 0,
-      color: colorScheme.surfaceContainerLow,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: colorScheme.outlineVariant.withValues(alpha: 0.3)),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: iconBg,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(icon, color: iconFg, size: 20),
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    description,
-                    style: theme.textTheme.bodySmall?.copyWith(color: colorScheme.onSurfaceVariant),
-                  ),
-                ],
-              ),
-            ),
-          ],
+    final cs = theme.colorScheme;
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: 44,
+          height: 44,
+          decoration: BoxDecoration(
+            color: accentColor.withValues(alpha: 0.12),
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: Icon(icon, color: accentColor, size: 22),
         ),
-      ),
+        const SizedBox(width: 16),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: theme.textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                subtitle,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: cs.onSurfaceVariant,
+                  height: 1.35,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }

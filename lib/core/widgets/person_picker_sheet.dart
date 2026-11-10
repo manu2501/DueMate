@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:uuid/uuid.dart';
 import 'package:smarava/core/utils/contacts_helper.dart';
 import 'package:smarava/core/utils/currency_formatter.dart';
@@ -16,7 +17,6 @@ class PersonPickerSheet extends ConsumerStatefulWidget {
     this.currentSelectedPersonId,
   });
 
-  /// Opens the picker and returns the selected Person ID, or null if dismissed.
   static Future<String?> show(BuildContext context, {String? currentSelectedPersonId}) {
     return showModalBottomSheet<String>(
       context: context,
@@ -51,7 +51,6 @@ class _PersonPickerSheetState extends ConsumerState<PersonPickerSheet> {
         return;
       }
 
-      // Check if a person with this name or phone already exists
       final allPersons = await ref.read(allPersonSummariesProvider.future);
       final existing = allPersons.where((s) {
         final sameName = s.person.name.toLowerCase() == contactData.name.toLowerCase();
@@ -69,7 +68,6 @@ class _PersonPickerSheetState extends ConsumerState<PersonPickerSheet> {
         return;
       }
 
-      // Create new person from contact
       final now = DateTime.now();
       final newPerson = Person(
         id: const Uuid().v4(),
@@ -87,10 +85,10 @@ class _PersonPickerSheetState extends ConsumerState<PersonPickerSheet> {
         Navigator.of(context).pop(newPerson.id);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            backgroundColor: const Color(0xFF10B981),
+            backgroundColor: Theme.of(context).colorScheme.primary,
             content: Text(
               'Added ${newPerson.name} from Contacts',
-              style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF09090B)),
+              style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
             ),
           ),
         );
@@ -108,29 +106,28 @@ class _PersonPickerSheetState extends ConsumerState<PersonPickerSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final allPersonsAsync = ref.watch(allPersonSummariesProvider);
     final currencySymbol = ref.watch(currencySymbolProvider);
 
     final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
+    final cs = theme.colorScheme;
 
     return Container(
       constraints: BoxConstraints(
         maxHeight: MediaQuery.of(context).size.height * 0.82,
       ),
       decoration: BoxDecoration(
-        color: colorScheme.surfaceContainerLow,
+        color: cs.surfaceContainerLow,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
       ),
       child: Column(
         children: [
           // Header
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
             child: Row(
               children: [
-                Icon(Icons.people_outline_rounded, color: colorScheme.primary, size: 22),
+                Icon(Icons.people_outline_rounded, color: cs.primary, size: 22),
                 const SizedBox(width: 10),
                 Text(
                   'Select Person',
@@ -150,13 +147,13 @@ class _PersonPickerSheetState extends ConsumerState<PersonPickerSheet> {
 
           // Search Field
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
+            padding: const EdgeInsets.symmetric(horizontal: 24),
             child: SearchBar(
               controller: _searchController,
               elevation: const WidgetStatePropertyAll(0),
-              backgroundColor: WidgetStatePropertyAll(colorScheme.surfaceContainerHigh),
+              backgroundColor: WidgetStatePropertyAll(cs.surfaceContainerHigh),
               hintText: 'Search people by name...',
-              leading: const Icon(Icons.search_rounded, size: 20),
+              leading: Icon(Icons.search_rounded, size: 20, color: cs.onSurfaceVariant),
               trailing: [
                 if (_searchQuery.isNotEmpty)
                   IconButton(
@@ -172,44 +169,47 @@ class _PersonPickerSheetState extends ConsumerState<PersonPickerSheet> {
           ),
           const SizedBox(height: 12),
 
-          // Import From Contacts Action Card
+          // Import Action Button
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Card(
-              elevation: 0,
-              color: colorScheme.primaryContainer.withValues(alpha: 0.4),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(14),
-                side: BorderSide(color: colorScheme.primary.withValues(alpha: 0.3)),
-              ),
-              child: ListTile(
-                onTap: _isImportingContact ? null : _pickFromContacts,
-                leading: _isImportingContact
-                    ? SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2, color: colorScheme.primary),
-                      )
-                    : Icon(Icons.contacts_rounded, color: colorScheme.primary),
-                title: Text(
-                  'Choose from Phone Contacts',
-                  style: theme.textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w700,
-                    color: colorScheme.primary,
-                  ),
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: InkWell(
+              onTap: _isImportingContact ? null : _pickFromContacts,
+              borderRadius: BorderRadius.circular(16),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                decoration: BoxDecoration(
+                  color: cs.primary.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(16),
                 ),
-                subtitle: Text(
-                  'Select from device address book directly',
-                  style: theme.textTheme.bodySmall?.copyWith(color: colorScheme.onSurfaceVariant),
+                child: Row(
+                  children: [
+                    _isImportingContact
+                        ? SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2, color: cs.primary),
+                          )
+                        : Icon(Icons.contacts_rounded, color: cs.primary, size: 20),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        'Choose from Phone Contacts',
+                        style: TextStyle(
+                          color: cs.primary,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ),
+                    Icon(Icons.arrow_forward_ios_rounded, size: 12, color: cs.primary),
+                  ],
                 ),
-                trailing: Icon(Icons.arrow_forward_ios_rounded, size: 14, color: colorScheme.primary),
               ),
             ),
           ),
           const SizedBox(height: 10),
 
-          // Divider
-          Divider(height: 1, thickness: 1, color: colorScheme.outlineVariant.withValues(alpha: 0.4)),
+          Divider(height: 1, color: cs.outlineVariant),
 
           // Persons List
           Expanded(
@@ -226,21 +226,21 @@ class _PersonPickerSheetState extends ConsumerState<PersonPickerSheet> {
                 if (filtered.isEmpty) {
                   return Center(
                     child: Padding(
-                      padding: const EdgeInsets.all(24.0),
+                      padding: const EdgeInsets.all(28.0),
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.person_search_rounded, size: 48, color: Colors.grey.withValues(alpha: 0.5)),
+                          Icon(Icons.person_search_rounded, size: 44, color: cs.outline),
                           const SizedBox(height: 12),
                           Text(
-                            _searchQuery.isEmpty ? 'No people added yet' : 'No matches for "$_searchQuery"',
-                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                            _searchQuery.isEmpty ? 'No people in ledger yet' : 'No matches for "$_searchQuery"',
+                            style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
                           ),
-                          const SizedBox(height: 6),
-                          const Text(
-                            'Import from phone contacts above or add a new person.',
+                          const SizedBox(height: 4),
+                          Text(
+                            'Import from phone contacts above to begin.',
                             textAlign: TextAlign.center,
-                            style: TextStyle(fontSize: 12, color: Color(0xFF71717A)),
+                            style: theme.textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
                           ),
                         ],
                       ),
@@ -249,7 +249,7 @@ class _PersonPickerSheetState extends ConsumerState<PersonPickerSheet> {
                 }
 
                 return ListView.separated(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
                   itemCount: filtered.length,
                   separatorBuilder: (_, _) => const SizedBox(height: 6),
                   itemBuilder: (context, index) {
@@ -260,7 +260,6 @@ class _PersonPickerSheetState extends ConsumerState<PersonPickerSheet> {
                       summary: summary,
                       isSelected: isSelected,
                       currencySymbol: currencySymbol,
-                      isDark: isDark,
                       onTap: () => Navigator.of(context).pop(summary.person.id),
                     );
                   },
@@ -280,88 +279,74 @@ class _PersonPickerItem extends StatelessWidget {
   final PersonSummary summary;
   final bool isSelected;
   final String currencySymbol;
-  final bool isDark;
   final VoidCallback onTap;
 
   const _PersonPickerItem({
     required this.summary,
     required this.isSelected,
     required this.currencySymbol,
-    required this.isDark,
     required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
+    final cs = theme.colorScheme;
     final balance = summary.balance;
 
-    Color badgeBg;
-    Color badgeFg;
+    Color badgeColor;
     String badgeText;
     if (balance > 0) {
-      badgeBg = colorScheme.errorContainer;
-      badgeFg = colorScheme.onErrorContainer;
-      badgeText = 'Owes ${CurrencyFormatter.format(balance, symbol: currencySymbol)}';
+      badgeColor = cs.error;
+      badgeText = CurrencyFormatter.format(balance, symbol: currencySymbol);
     } else if (balance < 0) {
-      badgeBg = colorScheme.tertiaryContainer;
-      badgeFg = colorScheme.onTertiaryContainer;
-      badgeText = 'Overpaid ${CurrencyFormatter.format(balance.abs(), symbol: currencySymbol)}';
+      badgeColor = cs.tertiary;
+      badgeText = 'Over ${CurrencyFormatter.format(balance.abs(), symbol: currencySymbol)}';
     } else {
-      badgeBg = colorScheme.primaryContainer;
-      badgeFg = colorScheme.onPrimaryContainer;
+      badgeColor = cs.primary;
       badgeText = 'Settled';
     }
 
-    return Card(
-      elevation: 0,
-      margin: const EdgeInsets.symmetric(vertical: 3),
-      color: isSelected
-          ? colorScheme.primaryContainer.withValues(alpha: 0.35)
-          : colorScheme.surfaceContainer,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(14),
-        side: BorderSide(
-          color: isSelected ? colorScheme.primary : colorScheme.outlineVariant.withValues(alpha: 0.3),
-          width: isSelected ? 1.5 : 1.0,
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        decoration: BoxDecoration(
+          color: isSelected ? cs.primary.withValues(alpha: 0.1) : cs.surfaceContainer,
+          borderRadius: BorderRadius.circular(16),
         ),
-      ),
-      child: ListTile(
-        onTap: onTap,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
-        leading: AvatarWidget(name: summary.person.name, radius: 18),
-        title: Text(
-          summary.person.name,
-          style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
-        ),
-        subtitle: (summary.person.phone != null && summary.person.phone!.isNotEmpty)
-            ? Text(
-                summary.person.phone!,
-                style: theme.textTheme.bodySmall?.copyWith(color: colorScheme.onSurfaceVariant),
-              )
-            : null,
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
+        child: Row(
           children: [
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-              decoration: BoxDecoration(
-                color: badgeBg,
-                borderRadius: BorderRadius.circular(8),
+            AvatarWidget(name: summary.person.name, radius: 18),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    summary.person.name,
+                    style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+                  ),
+                  if (summary.person.phone != null && summary.person.phone!.isNotEmpty)
+                    Text(
+                      summary.person.phone!,
+                      style: theme.textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+                    ),
+                ],
               ),
-              child: Text(
-                badgeText,
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w700,
-                  color: badgeFg,
-                ),
+            ),
+            Text(
+              badgeText,
+              style: GoogleFonts.inter(
+                fontSize: 13,
+                fontWeight: FontWeight.w800,
+                color: badgeColor,
               ),
             ),
             if (isSelected) ...[
               const SizedBox(width: 8),
-              Icon(Icons.check_circle_rounded, color: colorScheme.primary, size: 20),
+              Icon(Icons.check_circle_rounded, color: cs.primary, size: 18),
             ],
           ],
         ),

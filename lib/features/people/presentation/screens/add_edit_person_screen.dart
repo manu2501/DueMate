@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:uuid/uuid.dart';
 import 'package:smarava/core/utils/contacts_helper.dart';
 import 'package:smarava/data/providers/app_providers.dart';
@@ -125,138 +126,144 @@ class _AddEditPersonScreenState extends ConsumerState<AddEditPersonScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
+    final cs = theme.colorScheme;
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(isEditing ? 'Edit Details' : 'Add Person'),
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 8.0),
-            child: TextButton(
-              onPressed: _isSaving ? null : _save,
-              child: _isSaving
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Text('Save', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
-            ),
-          ),
-        ],
+        title: Text(isEditing ? 'Edit Details' : 'New Person'),
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
         child: Form(
           key: _formKey,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Auto-fill from Contacts Card
-              Card(
-                elevation: 0,
-                color: colorScheme.primaryContainer.withValues(alpha: 0.4),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                  side: BorderSide(color: colorScheme.primary.withValues(alpha: 0.3)),
-                ),
-                child: ListTile(
-                  onTap: _isImporting ? null : _importFromContacts,
-                  leading: _isImporting
-                      ? SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2, color: colorScheme.primary),
-                        )
-                      : Icon(Icons.contacts_rounded, color: colorScheme.primary, size: 22),
-                  title: Text(
-                    'Import from Phone Contacts',
-                    style: theme.textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w700,
-                      color: colorScheme.primary,
-                    ),
+              // Import from contacts button
+              InkWell(
+                onTap: _isImporting ? null : _importFromContacts,
+                borderRadius: BorderRadius.circular(16),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: cs.primary.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(16),
                   ),
-                  subtitle: Text(
-                    'Auto-populate name and contact number',
-                    style: theme.textTheme.bodySmall?.copyWith(color: colorScheme.onSurfaceVariant),
-                  ),
-                  trailing: Icon(Icons.arrow_forward_ios_rounded, size: 14, color: colorScheme.primary),
-                ),
-              ),
-              const SizedBox(height: 16),
-
-              Card(
-                elevation: 0,
-                color: colorScheme.surfaceContainerLow,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                  side: BorderSide(color: colorScheme.outlineVariant.withValues(alpha: 0.3)),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
+                  child: Row(
                     children: [
-                      TextFormField(
-                        controller: _nameController,
-                        decoration: const InputDecoration(
-                          labelText: 'Full Name *',
-                          hintText: 'e.g. Rahul Kumar',
-                          prefixIcon: Icon(Icons.person_outline_rounded, size: 20),
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: cs.primary.withValues(alpha: 0.12),
+                          shape: BoxShape.circle,
                         ),
-                        validator: (value) {
-                          if (value == null || value.trim().isEmpty) {
-                            return 'Please enter a name';
-                          }
-                          return null;
-                        },
-                        textCapitalization: TextCapitalization.words,
+                        child: _isImporting
+                            ? SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(strokeWidth: 2, color: cs.primary),
+                              )
+                            : Icon(Icons.contacts_rounded, color: cs.primary, size: 18),
                       ),
-                      const SizedBox(height: 14),
-                      TextFormField(
-                        controller: _phoneController,
-                        decoration: const InputDecoration(
-                          labelText: 'Phone Number (Optional)',
-                          hintText: 'e.g. +91 98765 43210',
-                          prefixIcon: Icon(Icons.phone_outlined, size: 20),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Import from Phone Contacts',
+                              style: theme.textTheme.titleSmall?.copyWith(
+                                color: cs.primary,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            Text(
+                              'Auto-fill name & phone number',
+                              style: theme.textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+                            ),
+                          ],
                         ),
-                        keyboardType: TextInputType.phone,
                       ),
-                      const SizedBox(height: 14),
-                      TextFormField(
-                        controller: _emailController,
-                        decoration: const InputDecoration(
-                          labelText: 'Email Address (Optional)',
-                          hintText: 'e.g. rahul@example.com',
-                          prefixIcon: Icon(Icons.email_outlined, size: 20),
-                        ),
-                        keyboardType: TextInputType.emailAddress,
-                      ),
-                      const SizedBox(height: 14),
-                      TextFormField(
-                        controller: _notesController,
-                        decoration: const InputDecoration(
-                          labelText: 'Notes (Optional)',
-                          hintText: 'e.g. Office friend, neighbor, roommate',
-                          prefixIcon: Icon(Icons.notes_rounded, size: 20),
-                        ),
-                        maxLines: 3,
-                      ),
+                      Icon(Icons.chevron_right_rounded, color: cs.primary),
                     ],
                   ),
                 ),
               ),
               const SizedBox(height: 24),
 
-              FilledButton(
-                onPressed: _isSaving ? null : _save,
-                style: FilledButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              // Form fields in clean surface container
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: cs.surfaceContainerLow,
+                  borderRadius: BorderRadius.circular(24),
                 ),
-                child: Text(
-                  isEditing ? 'Save Changes' : 'Create Person Entry',
-                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                child: Column(
+                  children: [
+                    TextFormField(
+                      controller: _nameController,
+                      decoration: const InputDecoration(
+                        labelText: 'Full Name *',
+                        hintText: 'e.g. Rahul Kumar',
+                        prefixIcon: Icon(Icons.person_outline_rounded, size: 20),
+                      ),
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return 'Please enter a name';
+                        }
+                        return null;
+                      },
+                      textCapitalization: TextCapitalization.words,
+                    ),
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      controller: _phoneController,
+                      decoration: const InputDecoration(
+                        labelText: 'Phone Number (Optional)',
+                        hintText: 'e.g. +91 98765 43210',
+                        prefixIcon: Icon(Icons.phone_outlined, size: 20),
+                      ),
+                      keyboardType: TextInputType.phone,
+                    ),
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      controller: _emailController,
+                      decoration: const InputDecoration(
+                        labelText: 'Email Address (Optional)',
+                        hintText: 'e.g. rahul@example.com',
+                        prefixIcon: Icon(Icons.email_outlined, size: 20),
+                      ),
+                      keyboardType: TextInputType.emailAddress,
+                    ),
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      controller: _notesController,
+                      decoration: const InputDecoration(
+                        labelText: 'Notes (Optional)',
+                        hintText: 'e.g. Roommate, colleague, friend',
+                        prefixIcon: Icon(Icons.notes_rounded, size: 20),
+                      ),
+                      maxLines: 3,
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 28),
+
+              SizedBox(
+                height: 54,
+                child: FilledButton(
+                  onPressed: _isSaving ? null : _save,
+                  child: _isSaving
+                      ? SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2, color: cs.onPrimary),
+                        )
+                      : Text(
+                          isEditing ? 'Save Changes' : 'Create Person',
+                          style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w700),
+                        ),
                 ),
               ),
             ],

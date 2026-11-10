@@ -23,16 +23,16 @@ void main() {
     await tester.pump(const Duration(milliseconds: 500));
 
     // Verify Welcome screen renders
-    expect(find.text('Open Ledger'), findsOneWidget);
+    expect(find.text('Get Started'), findsOneWidget);
 
-    // Tap "Open Ledger" button to enter Dashboard
-    await tester.tap(find.text('Open Ledger'));
+    // Tap "Get Started" button to enter Dashboard
+    await tester.tap(find.text('Get Started'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 500));
 
     // Verify bottom navigation bar destinations on dashboard
-    expect(find.text('Dashboard'), findsOneWidget);
-    expect(find.text('People'), findsOneWidget);
+    expect(find.text('Home'), findsOneWidget);
+    expect(find.text('Ledger'), findsOneWidget);
     expect(find.text('Reports'), findsOneWidget);
     expect(find.text('Settings'), findsOneWidget);
 

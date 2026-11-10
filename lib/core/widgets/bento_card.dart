@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-/// Material 3 Card component replacing legacy custom bento styling
 class BentoCard extends StatelessWidget {
   final Widget child;
   final EdgeInsetsGeometry padding;
@@ -13,7 +12,7 @@ class BentoCard extends StatelessWidget {
   const BentoCard({
     super.key,
     required this.child,
-    this.padding = const EdgeInsets.all(16),
+    this.padding = const EdgeInsets.all(20),
     this.margin,
     this.onTap,
     this.glowColor,
@@ -23,39 +22,27 @@ class BentoCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-    final r = borderRadius ?? BorderRadius.circular(16);
+    final cs = Theme.of(context).colorScheme;
+    final r = borderRadius ?? BorderRadius.circular(20);
 
-    final card = Card(
+    Widget content = Padding(padding: padding, child: child);
+
+    if (onTap != null) {
+      content = InkWell(onTap: onTap, borderRadius: r, child: content);
+    }
+
+    return Container(
       margin: margin ?? EdgeInsets.zero,
-      elevation: 0,
-      color: colorScheme.surfaceContainerLow,
-      shape: RoundedRectangleBorder(
+      decoration: BoxDecoration(
         borderRadius: r,
-        side: BorderSide(
-          color: glowColor != null
-              ? glowColor!.withValues(alpha: 0.5)
-              : colorScheme.outlineVariant.withValues(alpha: 0.4),
-          width: glowColor != null ? 1.5 : 1.0,
-        ),
+        color: backgroundGradient == null ? cs.surfaceContainerLow : null,
+        gradient: backgroundGradient,
+        border: glowColor != null
+            ? Border.all(color: glowColor!.withValues(alpha: 0.3))
+            : null,
       ),
       clipBehavior: Clip.antiAlias,
-      child: onTap != null
-          ? InkWell(
-              onTap: onTap,
-              borderRadius: r,
-              child: Padding(
-                padding: padding,
-                child: child,
-              ),
-            )
-          : Padding(
-              padding: padding,
-              child: child,
-            ),
+      child: content,
     );
-
-    return card;
   }
 }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:smarava/core/constants/app_constants.dart';
 import 'package:smarava/core/utils/currency_formatter.dart';
 import 'package:smarava/core/utils/date_formatter.dart';
@@ -34,15 +35,15 @@ class TransactionDetailsDialog extends ConsumerWidget {
 
   void _confirmDelete(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
+    final cs = theme.colorScheme;
     final personName = person?.name ?? 'the borrower';
 
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text('Delete Transaction?', style: TextStyle(color: colorScheme.error)),
+        title: Text('Delete Entry?', style: TextStyle(color: cs.error)),
         content: Text(
-          'Are you sure you want to delete this transaction?\n\n'
+          'Are you sure you want to delete this record?\n\n'
           'Deleting this will recalculate $personName\'s outstanding balance.',
         ),
         actions: [
@@ -51,7 +52,7 @@ class TransactionDetailsDialog extends ConsumerWidget {
             child: const Text('Cancel'),
           ),
           FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: colorScheme.error, foregroundColor: colorScheme.onError),
+            style: FilledButton.styleFrom(backgroundColor: cs.error, foregroundColor: cs.onError),
             onPressed: () async {
               Navigator.of(ctx).pop();
               Navigator.of(context).pop();
@@ -85,7 +86,7 @@ class TransactionDetailsDialog extends ConsumerWidget {
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setState) {
           final theme = Theme.of(context);
-          final colorScheme = theme.colorScheme;
+          final cs = theme.colorScheme;
 
           return AlertDialog(
             title: Text('Edit ${transaction.type.label}'),
@@ -128,9 +129,9 @@ class TransactionDetailsDialog extends ConsumerWidget {
                     title: const Text('Date', style: TextStyle(fontSize: 13)),
                     subtitle: Text(
                       DateFormatter.formatDate(selectedDate),
-                      style: TextStyle(color: colorScheme.primary, fontWeight: FontWeight.bold),
+                      style: TextStyle(color: cs.primary, fontWeight: FontWeight.bold),
                     ),
-                    trailing: const Icon(Icons.calendar_today_rounded, size: 20),
+                    trailing: const Icon(Icons.calendar_today_rounded, size: 18),
                     onTap: () async {
                       final picked = await showDatePicker(
                         context: context,
@@ -193,25 +194,30 @@ class TransactionDetailsDialog extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
+    final cs = theme.colorScheme;
     final currencySymbol = ref.watch(currencySymbolProvider);
     final isReceived = transaction.type == TransactionType.paymentReceived;
-    final color = isReceived ? colorScheme.primary : colorScheme.error;
+    final color = isReceived ? cs.primary : cs.error;
 
     return AlertDialog(
       titlePadding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
       contentPadding: const EdgeInsets.fromLTRB(24, 16, 24, 16),
       title: Row(
         children: [
-          CircleAvatar(
-            backgroundColor: isReceived ? colorScheme.primaryContainer : colorScheme.errorContainer,
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(12),
+            ),
             child: Icon(
-              isReceived ? Icons.arrow_downward_rounded : Icons.arrow_upward_rounded,
+              isReceived ? Icons.south_west_rounded : Icons.north_east_rounded,
               color: color,
               size: 20,
             ),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -223,7 +229,7 @@ class TransactionDetailsDialog extends ConsumerWidget {
                 if (person != null)
                   Text(
                     person!.name,
-                    style: theme.textTheme.bodySmall?.copyWith(color: colorScheme.onSurfaceVariant),
+                    style: theme.textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
                   ),
               ],
             ),
@@ -235,24 +241,25 @@ class TransactionDetailsDialog extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            Divider(height: 24, color: colorScheme.outlineVariant.withValues(alpha: 0.4)),
+            const SizedBox(height: 8),
             Center(
               child: Text(
-                CurrencyFormatter.format(transaction.amount, symbol: currencySymbol),
-                style: theme.textTheme.headlineMedium?.copyWith(
+                '${isReceived ? '+' : '-'}${CurrencyFormatter.format(transaction.amount, symbol: currencySymbol)}',
+                style: GoogleFonts.dmSans(
                   fontWeight: FontWeight.w800,
+                  fontSize: 32,
                   letterSpacing: -0.5,
                   color: color,
                 ),
               ),
             ),
-            const SizedBox(height: 18),
+            const SizedBox(height: 20),
             _infoRow('Date', DateFormatter.formatDate(transaction.transactionDate), theme),
             _infoRow('Time', DateFormatter.formatTime(transaction.transactionDate), theme),
-            _infoRow('Payment Method', transaction.paymentMethod.label, theme),
+            _infoRow('Method', transaction.paymentMethod.label, theme),
             if (transaction.note != null && transaction.note!.isNotEmpty)
               _infoRow('Note', transaction.note!, theme),
-            _infoRow('Recorded On', DateFormatter.formatDateTime(transaction.createdAt), theme),
+            _infoRow('Recorded', DateFormatter.formatDateTime(transaction.createdAt), theme),
           ],
         ),
       ),
@@ -260,7 +267,7 @@ class TransactionDetailsDialog extends ConsumerWidget {
         IconButton(
           tooltip: 'Delete Transaction',
           onPressed: () => _confirmDelete(context, ref),
-          icon: Icon(Icons.delete_outline_rounded, color: colorScheme.error),
+          icon: Icon(Icons.delete_outline_rounded, color: cs.error, size: 22),
         ),
         const Spacer(),
         TextButton(
@@ -277,12 +284,12 @@ class TransactionDetailsDialog extends ConsumerWidget {
 
   Widget _infoRow(String label, String value, ThemeData theme) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
+      padding: const EdgeInsets.symmetric(vertical: 5),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SizedBox(
-            width: 110,
+            width: 90,
             child: Text(
               label,
               style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
