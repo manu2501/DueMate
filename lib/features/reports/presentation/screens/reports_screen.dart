@@ -175,7 +175,15 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> with SingleTicker
                             padding: const EdgeInsets.all(20),
                             decoration: BoxDecoration(
                               color: cs.surfaceContainerLow,
-                              borderRadius: BorderRadius.circular(24),
+                              borderRadius: BorderRadius.circular(22),
+                              border: Border.all(color: cs.outlineVariant),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: theme.brightness == Brightness.dark ? 0.15 : 0.03),
+                                  blurRadius: 10,
+                                  offset: const Offset(0, 3),
+                                ),
+                              ],
                             ),
                             child: Column(
                               children: [

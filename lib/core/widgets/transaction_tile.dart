@@ -16,7 +16,7 @@ class TransactionTile extends StatelessWidget {
     super.key,
     required this.transaction,
     this.person,
-    this.currencySymbol = 'â‚¹',
+    this.currencySymbol = '₹',
     this.onTap,
   });
 

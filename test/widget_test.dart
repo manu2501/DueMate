@@ -30,10 +30,13 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 500));
 
-    // Verify bottom navigation bar destinations on dashboard
-    expect(find.text('Home'), findsOneWidget);
-    expect(find.text('Ledger'), findsOneWidget);
-    expect(find.text('Reports'), findsOneWidget);
+    // Verify dashboard renders with new floating dock navigation
+    expect(find.text('DueMate'), findsWidgets);
+    expect(find.text('Active dues'), findsOneWidget);
+    expect(find.byTooltip('Dashboard'), findsOneWidget);
+    expect(find.byTooltip('Directory'), findsOneWidget);
+    expect(find.byTooltip('Reports'), findsOneWidget);
+    expect(find.byTooltip('Settings'), findsOneWidget);
 
     await testDb.close();
   });

@@ -109,16 +109,15 @@ final appRouterProvider = Provider<GoRouter>((ref) {
               child: const ReportsScreen(),
             ),
           ),
+          GoRoute(
+            path: '/settings',
+            pageBuilder: (context, state) => _buildTabTransition(
+              context: context,
+              state: state,
+              child: const SettingsScreen(),
+            ),
+          ),
         ],
-      ),
-      GoRoute(
-        parentNavigatorKey: _rootNavigatorKey,
-        path: '/settings',
-        pageBuilder: (context, state) => _buildSlideTransition(
-          context: context,
-          state: state,
-          child: const SettingsScreen(),
-        ),
       ),
       GoRoute(
         parentNavigatorKey: _rootNavigatorKey,
@@ -155,6 +154,7 @@ class AppShell extends StatelessWidget {
     if (location == '/') return 0;
     if (location.startsWith('/people')) return 1;
     if (location.startsWith('/reports')) return 2;
+    if (location.startsWith('/settings')) return 3;
     return 0;
   }
 
@@ -169,40 +169,121 @@ class AppShell extends StatelessWidget {
       case 2:
         context.go('/reports');
         break;
+      case 3:
+        context.go('/settings');
+        break;
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final selectedIndex = _calculateSelectedIndex(context);
-    final cs = Theme.of(context).colorScheme;
 
     return Scaffold(
+      extendBody: true,
       body: child,
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          border: Border(top: BorderSide(color: cs.outlineVariant, width: 0.5)),
-        ),
-        child: NavigationBar(
-          selectedIndex: selectedIndex,
-          onDestinationSelected: (index) => _onItemTapped(index, context),
-          destinations: const [
-            NavigationDestination(
-              icon: Icon(Icons.home_outlined),
-              selectedIcon: Icon(Icons.home_rounded),
-              label: 'Home',
+      bottomNavigationBar: _FloatingDockNavBar(
+        selectedIndex: selectedIndex,
+        onItemSelected: (index) => _onItemTapped(index, context),
+      ),
+    );
+  }
+}
+
+class _FloatingDockNavBar extends StatelessWidget {
+  final int selectedIndex;
+  final ValueChanged<int> onItemSelected;
+
+  const _FloatingDockNavBar({
+    required this.selectedIndex,
+    required this.onItemSelected,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+
+    final items = const [
+      (Icons.account_balance_wallet_outlined, Icons.account_balance_wallet_rounded, 'Dashboard'),
+      (Icons.outlined_flag_rounded, Icons.flag_rounded, 'Directory'),
+      (Icons.chat_bubble_outline_rounded, Icons.chat_bubble_rounded, 'Reports'),
+      (Icons.tune_rounded, Icons.tune_rounded, 'Settings'),
+    ];
+
+    return SafeArea(
+      top: false,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+        child: Container(
+          height: 66,
+          decoration: BoxDecoration(
+            color: cs.surfaceContainerLow,
+            borderRadius: BorderRadius.circular(32),
+            border: Border.all(
+              color: cs.outlineVariant.withValues(alpha: 0.9),
+              width: 1.2,
             ),
-            NavigationDestination(
-              icon: Icon(Icons.people_outline_rounded),
-              selectedIcon: Icon(Icons.people_rounded),
-              label: 'Ledger',
-            ),
-            NavigationDestination(
-              icon: Icon(Icons.insights_outlined),
-              selectedIcon: Icon(Icons.insights_rounded),
-              label: 'Reports',
-            ),
-          ],
+            boxShadow: [
+              BoxShadow(
+                color: (isDark ? Colors.black : const Color(0xFF101124))
+                    .withValues(alpha: isDark ? 0.35 : 0.08),
+                blurRadius: 20,
+                offset: const Offset(0, 8),
+              ),
+            ],
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: List.generate(items.length, (index) {
+              final isSelected = selectedIndex == index;
+              final item = items[index];
+
+              return Tooltip(
+                message: item.$3,
+                child: InkWell(
+                  onTap: () => onItemSelected(index),
+                  borderRadius: BorderRadius.circular(20),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 250),
+                    curve: Curves.easeOutCubic,
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: isSelected
+                          ? (isDark
+                              ? cs.surfaceContainerHigh
+                              : const Color(0xFFEFF1FB))
+                          : Colors.transparent,
+                      borderRadius: BorderRadius.circular(20),
+                      border: isSelected
+                          ? Border.all(
+                              color: cs.outlineVariant.withValues(alpha: 0.9),
+                              width: 1,
+                            )
+                          : null,
+                      boxShadow: isSelected && !isDark
+                          ? [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.04),
+                                blurRadius: 6,
+                                offset: const Offset(0, 2),
+                              ),
+                            ]
+                          : null,
+                    ),
+                    child: Icon(
+                      isSelected ? item.$2 : item.$1,
+                      size: 22,
+                      color: isSelected
+                          ? (isDark ? Colors.white : const Color(0xFF131438))
+                          : cs.onSurfaceVariant.withValues(alpha: 0.75),
+                    ),
+                  ),
+                ),
+              );
+            }),
+          ),
         ),
       ),
     );

@@ -205,7 +205,13 @@ class _PeopleScreenState extends ConsumerState<PeopleScreen> {
             child: SearchBar(
               controller: _searchController,
               elevation: const WidgetStatePropertyAll(0),
-              backgroundColor: WidgetStatePropertyAll(cs.surfaceContainerHigh),
+              backgroundColor: WidgetStatePropertyAll(cs.surfaceContainerLow),
+              shape: WidgetStatePropertyAll(
+                RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  side: BorderSide(color: cs.outlineVariant),
+                ),
+              ),
               hintText: 'Search people or notes...',
               hintStyle: WidgetStatePropertyAll(
                 TextStyle(color: cs.onSurfaceVariant, fontSize: 14),
@@ -293,10 +299,18 @@ class _PeopleScreenState extends ConsumerState<PeopleScreen> {
                           onTap: () => context.push('/people/${person.id}'),
                           borderRadius: BorderRadius.circular(18),
                           child: Container(
-                            padding: const EdgeInsets.all(14),
+                            padding: const EdgeInsets.all(16),
                             decoration: BoxDecoration(
                               color: cs.surfaceContainerLow,
-                              borderRadius: BorderRadius.circular(18),
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(color: cs.outlineVariant),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: theme.brightness == Brightness.dark ? 0.15 : 0.03),
+                                  blurRadius: 10,
+                                  offset: const Offset(0, 3),
+                                ),
+                              ],
                             ),
                             child: Row(
                               children: [
