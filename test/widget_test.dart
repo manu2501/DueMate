@@ -32,7 +32,10 @@ void main() {
 
     // Verify dashboard renders with new floating dock navigation
     expect(find.text('DueMate'), findsWidgets);
-    expect(find.text('Active dues'), findsOneWidget);
+    expect(find.text('Settlement Progress'), findsOneWidget);
+    expect(find.text('Top Dues'), findsOneWidget);
+    expect(find.text('They owe you'), findsOneWidget);
+    expect(find.text('You owe'), findsOneWidget);
     expect(find.byTooltip('Dashboard'), findsOneWidget);
     expect(find.byTooltip('Directory'), findsOneWidget);
     expect(find.byTooltip('Reports'), findsOneWidget);

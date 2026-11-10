@@ -188,14 +188,17 @@ class _PeopleScreenState extends ConsumerState<PeopleScreen> {
           const SizedBox(width: 4),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () {
-          Navigator.of(context).push(
-            MaterialPageRoute(builder: (ctx) => const AddEditPersonScreen()),
-          );
-        },
-        icon: const Icon(Icons.person_add_rounded, size: 20),
-        label: Text('Add Person', style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
+      floatingActionButton: Padding(
+        padding: const EdgeInsets.only(bottom: 80),
+        child: FloatingActionButton.extended(
+          onPressed: () {
+            Navigator.of(context).push(
+              MaterialPageRoute(builder: (ctx) => const AddEditPersonScreen()),
+            );
+          },
+          icon: const Icon(Icons.person_add_rounded, size: 20),
+          label: Text('Add Person', style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
+        ),
       ),
       body: Column(
         children: [

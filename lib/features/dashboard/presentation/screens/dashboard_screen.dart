@@ -24,8 +24,6 @@ class DashboardScreen extends ConsumerStatefulWidget {
 }
 
 class _DashboardScreenState extends ConsumerState<DashboardScreen> {
-  bool _showAnnouncement = true;
-
   @override
   void initState() {
     super.initState();
@@ -42,10 +40,18 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     final cs = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;
     final currencySymbol = ref.watch(currencySymbolProvider);
-    final ledgerSummaryAsync = ref.watch(ledgerSummaryProvider);
-    final topDebtors = ref.watch(topDebtorsProvider);
+    final totals = ref.watch(dashboardTotalsProvider);
+    final topPeople = ref.watch(topPeopleByBalanceProvider);
     final recentTxAsync = ref.watch(recentTransactionsProvider);
     final personsMap = ref.watch(personsMapProvider);
+
+    // Repayment / recovery progress
+    final double totalGiven = totals.totalGiven;
+    final double totalReceived = totals.totalReceived;
+    final double progress = totalGiven > 0
+        ? (totalReceived / totalGiven).clamp(0.0, 1.0)
+        : (totals.totalTheyOwe == 0 ? 1.0 : 0.0);
+    final int percentRecovered = (progress * 100).toInt();
 
     return Scaffold(
       appBar: PreferredSize(
@@ -112,7 +118,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   ),
                 ),
 
-                // Notification / Settings Action Icon on Right
+                // Notification / Action Icon on Right
                 InkWell(
                   onTap: () => _showQuickActionSheet(context),
                   borderRadius: BorderRadius.circular(14),
@@ -160,138 +166,309 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           ),
         ),
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _showQuickActionSheet(context),
-        icon: const Icon(Icons.add_rounded, size: 22),
-        label: Text(
-          'New Entry',
-          style: GoogleFonts.inter(fontWeight: FontWeight.w700),
+
+      // Lift FAB comfortably above the floating dock navigation bar
+      floatingActionButton: Padding(
+        padding: const EdgeInsets.only(bottom: 84),
+        child: FloatingActionButton.extended(
+          onPressed: () => _showQuickActionSheet(context),
+          icon: const Icon(Icons.add_rounded, size: 22),
+          label: Text(
+            'New Entry',
+            style: GoogleFonts.inter(fontWeight: FontWeight.w700),
+          ),
         ),
       ),
+
       body: RefreshIndicator(
         onRefresh: () async {
-          ref.invalidate(ledgerSummaryProvider);
           ref.invalidate(allPersonSummariesProvider);
           ref.invalidate(recentTransactionsProvider);
         },
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.only(bottom: 120),
+          padding: const EdgeInsets.only(bottom: 160),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const SizedBox(height: 12),
+              const SizedBox(height: 8),
 
-              // 1. Midnight Navy Announcement Banner ("Congratulations")
-              if (_showAnnouncement)
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  child: ledgerSummaryAsync.when(
-                    data: (summary) {
-                      final hasDues = summary.activePeopleCount > 0;
-                      return Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
-                        decoration: BoxDecoration(
-                          color: AppTheme.darkBannerBackground,
-                          borderRadius: BorderRadius.circular(22),
-                          boxShadow: const [
-                            BoxShadow(
-                              color: Color(0x22131438),
-                              blurRadius: 16,
-                              offset: Offset(0, 6),
-                            ),
-                          ],
-                        ),
-                        child: Row(
-                          children: [
-                            // Celebration / Badge Icon
-                            Container(
-                              width: 44,
-                              height: 44,
-                              decoration: BoxDecoration(
-                                color: const Color(0xFF26274E),
-                                borderRadius: BorderRadius.circular(14),
-                              ),
-                              child: const Center(
-                                child: Text('🎉', style: TextStyle(fontSize: 20)),
-                              ),
-                            ),
-                            const SizedBox(width: 14),
-
-                            // Banner Text
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    hasDues ? 'Congratulations' : 'All Settled Up',
-                                    style: GoogleFonts.inter(
-                                      fontSize: 15,
-                                      fontWeight: FontWeight.w700,
-                                      color: Colors.white,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 3),
-                                  Text(
-                                    hasDues
-                                        ? "You're owed ${CurrencyFormatter.format(summary.totalOutstanding, symbol: currencySymbol)} across ${summary.activePeopleCount} people."
-                                        : 'Your personal ledger has zero pending debts.',
-                                    style: GoogleFonts.inter(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w400,
-                                      color: AppTheme.darkBannerSubtitle,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-
-                            // Dismiss Action
-                            IconButton(
-                              icon: const Icon(
-                                Icons.close_rounded,
-                                size: 18,
-                                color: Color(0xFF8C8BA8),
-                              ),
-                              onPressed: () {
-                                setState(() {
-                                  _showAnnouncement = false;
-                                });
-                              },
-                            ),
-                          ],
-                        ),
-                      );
-                    },
-                    loading: () => const SizedBox.shrink(),
-                    error: (_, _) => const SizedBox.shrink(),
-                  ),
-                ),
-
-              const SizedBox(height: 24),
-
-              // 2. Section: Active Dues (styled after "Loan offers" in screenshot)
+              // 1. Repayment / Settlement Progress Card (Replaces Congratulations message)
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                child: Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: AppTheme.darkBannerBackground,
+                    borderRadius: BorderRadius.circular(22),
+                    boxShadow: const [
+                      BoxShadow(
+                        color: Color(0x24131438),
+                        blurRadius: 18,
+                        offset: Offset(0, 6),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            width: 42,
+                            height: 42,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF26274E),
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                            child: const Icon(
+                              Icons.donut_large_rounded,
+                              size: 22,
+                              color: Color(0xFF818CF8),
+                            ),
+                          ),
+                          const SizedBox(width: 14),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Settlement Progress',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w700,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  totalGiven > 0
+                                      ? '$percentRecovered% of total lent funds collected'
+                                      : 'All accounts balanced & settled',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w400,
+                                    color: AppTheme.darkBannerSubtitle,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF26274E),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Text(
+                              '$percentRecovered%',
+                              style: GoogleFonts.dmSans(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w800,
+                                color: const Color(0xFF818CF8),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Linear Progress Bar
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(6),
+                        child: LinearProgressIndicator(
+                          value: progress,
+                          minHeight: 7,
+                          backgroundColor: const Color(0xFF26274E),
+                          valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF818CF8)),
+                        ),
+                      ),
+
+                      const SizedBox(height: 14),
+
+                      // Stats row inside card
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Collected: ${CurrencyFormatter.format(totalReceived, symbol: currencySymbol)}',
+                            style: GoogleFonts.inter(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                              color: const Color(0xFFB4B3D4),
+                            ),
+                          ),
+                          Text(
+                            'Outstanding: ${CurrencyFormatter.format(totals.totalTheyOwe, symbol: currencySymbol)}',
+                            style: GoogleFonts.inter(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                              color: const Color(0xFFB4B3D4),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 20),
+
+              // 2. Core Dashboard Cards: "They Owe You" & "You Owe"
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Row(
                   children: [
-                    Text(
-                      'Active dues',
-                      style: GoogleFonts.dmSans(
-                        fontSize: 22,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: -0.4,
-                        color: isDark ? Colors.white : const Color(0xFF131438),
+                    // Card 1: They Owe You (Money owed to user)
+                    Expanded(
+                      child: Container(
+                        padding: const EdgeInsets.all(18),
+                        decoration: BoxDecoration(
+                          color: cs.surfaceContainerLow,
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: cs.outlineVariant),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: isDark ? 0.15 : 0.03),
+                              blurRadius: 10,
+                              offset: const Offset(0, 3),
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(6),
+                                  decoration: BoxDecoration(
+                                    color: cs.primary.withValues(alpha: 0.1),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Icon(
+                                    Icons.south_west_rounded,
+                                    size: 14,
+                                    color: cs.primary,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    "They owe you",
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: GoogleFonts.inter(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                      color: AppTheme.mutedLabel,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 10),
+                            Text(
+                              CurrencyFormatter.format(totals.totalTheyOwe, symbol: currencySymbol),
+                              style: GoogleFonts.dmSans(
+                                fontSize: 20,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: -0.4,
+                                color: isDark ? Colors.white : const Color(0xFF131438),
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              totals.peopleOweUserCount == 1
+                                  ? '1 person owing'
+                                  : '${totals.peopleOweUserCount} people owing',
+                              style: GoogleFonts.inter(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w500,
+                                color: cs.onSurfaceVariant,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Once payment is recorded, your balance updates automatically.',
-                      style: GoogleFonts.inter(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w400,
-                        color: cs.onSurfaceVariant,
+
+                    const SizedBox(width: 12),
+
+                    // Card 2: You Owe (Money user owes to others)
+                    Expanded(
+                      child: Container(
+                        padding: const EdgeInsets.all(18),
+                        decoration: BoxDecoration(
+                          color: cs.surfaceContainerLow,
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: cs.outlineVariant),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: isDark ? 0.15 : 0.03),
+                              blurRadius: 10,
+                              offset: const Offset(0, 3),
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(6),
+                                  decoration: BoxDecoration(
+                                    color: cs.error.withValues(alpha: 0.1),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Icon(
+                                    Icons.north_east_rounded,
+                                    size: 14,
+                                    color: cs.error,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    "You owe",
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: GoogleFonts.inter(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                      color: AppTheme.mutedLabel,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 10),
+                            Text(
+                              CurrencyFormatter.format(totals.totalUserOwes, symbol: currencySymbol),
+                              style: GoogleFonts.dmSans(
+                                fontSize: 20,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: -0.4,
+                                color: totals.totalUserOwes > 0
+                                    ? cs.error
+                                    : (isDark ? Colors.white : const Color(0xFF131438)),
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              totals.peopleUserOwesCount == 1
+                                  ? '1 person to pay'
+                                  : '${totals.peopleUserOwesCount} people to pay',
+                              style: GoogleFonts.inter(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w500,
+                                color: cs.onSurfaceVariant,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ],
@@ -300,17 +477,106 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 
               const SizedBox(height: 14),
 
-              // Cards for Active Dues
-              if (topDebtors.isNotEmpty) ...[
+              // Prominent On-Page Quick Record Shortcuts (Always visible and reachable)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: FilledButton.tonal(
+                        onPressed: () => QuickReceiveSheet.show(context),
+                        style: FilledButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 13),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.south_west_rounded, size: 17, color: cs.primary),
+                            const SizedBox(width: 6),
+                            const Text('Receive Money'),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: FilledButton(
+                        onPressed: () => QuickGiveSheet.show(context),
+                        style: FilledButton.styleFrom(
+                          backgroundColor: cs.primary,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 13),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                        ),
+                        child: const Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.north_east_rounded, size: 17),
+                            SizedBox(width: 6),
+                            Text('Give Money'),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 24),
+
+              // 3. Section: Top 5 Users (Based on amount owed / user owes) + "Show all" button
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Top Dues',
+                      style: GoogleFonts.dmSans(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: -0.3,
+                        color: isDark ? Colors.white : const Color(0xFF131438),
+                      ),
+                    ),
+                    TextButton.icon(
+                      onPressed: () => context.go('/people'),
+                      icon: Text(
+                        'Show all',
+                        style: GoogleFonts.inter(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: cs.primary,
+                        ),
+                      ),
+                      label: Icon(
+                        Icons.arrow_forward_rounded,
+                        size: 16,
+                        color: cs.primary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 8),
+
+              // List of Top 5 Users
+              if (topPeople.isNotEmpty) ...[
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 20),
                   child: Column(
-                    children: topDebtors.take(4).map((debtor) {
+                    children: topPeople.map((personSummary) {
                       return Padding(
                         padding: const EdgeInsets.only(bottom: 12),
-                        child: _buildDueCard(
+                        child: _buildUserDueCard(
                           context: context,
-                          debtor: debtor,
+                          summary: personSummary,
                           currencySymbol: currencySymbol,
                           isDark: isDark,
                         ),
@@ -319,7 +585,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   ),
                 ),
               ] else ...[
-                // Empty active dues starter card
+                // Empty state when no people have active balances
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 20),
                   child: Container(
@@ -332,56 +598,24 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Get started',
-                                  style: GoogleFonts.inter(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w500,
-                                    color: AppTheme.mutedLabel,
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  'No active dues',
-                                  style: GoogleFonts.dmSans(
-                                    fontSize: 20,
-                                    fontWeight: FontWeight.w800,
-                                    color: isDark ? Colors.white : const Color(0xFF131438),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Directory',
-                                  style: GoogleFonts.inter(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w500,
-                                    color: AppTheme.mutedLabel,
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  'Add borrower',
-                                  style: GoogleFonts.dmSans(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w700,
-                                    color: cs.primary,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
+                        Text(
+                          'No pending dues',
+                          style: GoogleFonts.dmSans(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w800,
+                            color: isDark ? Colors.white : const Color(0xFF131438),
+                          ),
                         ),
-                        const SizedBox(height: 16),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Everyone in your ledger is settled up. Tap below to record a new loan or advance.',
+                          style: GoogleFonts.inter(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w400,
+                            color: cs.onSurfaceVariant,
+                          ),
+                        ),
+                        const SizedBox(height: 14),
                         Divider(color: cs.outlineVariant.withValues(alpha: 0.6), height: 1),
                         const SizedBox(height: 12),
                         InkWell(
@@ -393,7 +627,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                           child: Row(
                             children: [
                               Text(
-                                'Add a person & record money',
+                                'Add someone to directory',
                                 style: GoogleFonts.inter(
                                   fontSize: 14,
                                   fontWeight: FontWeight.w600,
@@ -411,154 +645,16 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 ),
               ],
 
-              const SizedBox(height: 20),
-
-              // 3. Section: Potential / Ledger Overview (styled like "Potential offers" in screenshot)
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: Text(
-                  'Ledger overview',
-                  style: GoogleFonts.dmSans(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: -0.3,
-                    color: isDark ? Colors.white : const Color(0xFF131438),
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 12),
-
-              ledgerSummaryAsync.when(
-                data: (summary) {
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    child: Container(
-                      padding: const EdgeInsets.all(20),
-                      decoration: BoxDecoration(
-                        color: cs.surfaceContainerLow,
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: cs.outlineVariant),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Total Given',
-                                    style: GoogleFonts.inter(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w500,
-                                      color: AppTheme.mutedLabel,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    CurrencyFormatter.format(summary.totalGiven, symbol: currencySymbol),
-                                    style: GoogleFonts.dmSans(
-                                      fontSize: 20,
-                                      fontWeight: FontWeight.w800,
-                                      color: isDark ? Colors.white : const Color(0xFF131438),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Total Received',
-                                    style: GoogleFonts.inter(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w500,
-                                      color: AppTheme.mutedLabel,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    CurrencyFormatter.format(summary.totalReceived, symbol: currencySymbol),
-                                    style: GoogleFonts.dmSans(
-                                      fontSize: 20,
-                                      fontWeight: FontWeight.w800,
-                                      color: cs.primary,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 16),
-                          Divider(color: cs.outlineVariant.withValues(alpha: 0.6), height: 1),
-                          const SizedBox(height: 12),
-                          InkWell(
-                            onTap: () => context.go('/reports'),
-                            child: Row(
-                              children: [
-                                Text(
-                                  'View detailed financial breakdown',
-                                  style: GoogleFonts.inter(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w600,
-                                    color: cs.primary,
-                                  ),
-                                ),
-                                const Spacer(),
-                                Icon(Icons.arrow_forward_rounded, size: 18, color: cs.primary),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                },
-                loading: () => const SizedBox.shrink(),
-                error: (_, _) => const SizedBox.shrink(),
-              ),
-
-              const SizedBox(height: 18),
-
-              // 4. Recommendations / Export Link Row ("Recommendations ->" style from screenshot)
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: InkWell(
-                  onTap: () => context.go('/reports'),
-                  borderRadius: BorderRadius.circular(16),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                    child: Row(
-                      children: [
-                        Text(
-                          'Statements & Reports',
-                          style: GoogleFonts.inter(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w600,
-                            color: cs.primary,
-                          ),
-                        ),
-                        const Spacer(),
-                        Icon(Icons.arrow_forward_rounded, size: 18, color: cs.primary),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-
               const SizedBox(height: 24),
 
-              // 5. Recent Activity List
+              // 4. Section: Recent Transactions
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      'Recent Activity',
+                      'Recent Transactions',
                       style: GoogleFonts.dmSans(
                         fontSize: 18,
                         fontWeight: FontWeight.w700,
@@ -569,7 +665,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     TextButton(
                       onPressed: () => context.go('/reports'),
                       child: Text(
-                        'See all',
+                        'View all',
                         style: GoogleFonts.inter(
                           fontSize: 13,
                           fontWeight: FontWeight.w600,
@@ -648,15 +744,19 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     );
   }
 
-  // Two-column Card styled directly after the screenshot's "Get / Term" card
-  Widget _buildDueCard({
+  // Two-column Card styled directly after the screenshot
+  Widget _buildUserDueCard({
     required BuildContext context,
-    required PersonSummary debtor,
+    required PersonSummary summary,
     required String currencySymbol,
     required bool isDark,
   }) {
-    final theme = Theme.of(context);
-    final cs = theme.colorScheme;
+    final cs = Theme.of(context).colorScheme;
+    final owesMoney = summary.balance > 0.0001;
+    final labelText = owesMoney ? 'Owes you' : 'You owe';
+    final amountColor = owesMoney
+        ? (isDark ? Colors.white : const Color(0xFF131438))
+        : cs.error;
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -675,58 +775,68 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Top Row: Two Columns ("Get" / "Term")
+          // Top Row: Two Columns ("Owes / Amount" and "Contact / Status")
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              // Left Column: Owed / Amount
+              // Left Column: Amount & Direction
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Owed',
+                    labelText,
                     style: GoogleFonts.inter(
                       fontSize: 13,
                       fontWeight: FontWeight.w500,
-                      color: AppTheme.mutedLabel,
+                      color: owesMoney ? AppTheme.mutedLabel : cs.error,
                     ),
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    CurrencyFormatter.format(debtor.balance, symbol: currencySymbol),
+                    CurrencyFormatter.format(summary.balance.abs(), symbol: currencySymbol),
                     style: GoogleFonts.dmSans(
                       fontSize: 22,
                       fontWeight: FontWeight.w800,
                       letterSpacing: -0.4,
-                      color: isDark ? Colors.white : const Color(0xFF131438),
+                      color: amountColor,
                     ),
                   ),
                 ],
               ),
 
-              // Right Column: Borrower / Contact
+              // Right Column: Borrower / Contact Info
               Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  Text(
-                    'Borrower',
-                    style: GoogleFonts.inter(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w500,
-                      color: AppTheme.mutedLabel,
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: owesMoney
+                          ? cs.primary.withValues(alpha: 0.1)
+                          : cs.error.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      owesMoney ? 'Pending' : 'To Pay',
+                      style: GoogleFonts.inter(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: owesMoney ? cs.primary : cs.error,
+                      ),
                     ),
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 6),
                   Row(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
                       AvatarWidget(
-                        name: debtor.person.name,
+                        name: summary.person.name,
                         radius: 12,
-                        heroTag: 'avatar-dash-${debtor.person.id}',
+                        heroTag: 'avatar-dash-${summary.person.id}',
                       ),
                       const SizedBox(width: 8),
                       Text(
-                        debtor.person.name,
+                        summary.person.name,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: GoogleFonts.dmSans(
@@ -742,17 +852,17 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             ],
           ),
 
-          const SizedBox(height: 18),
+          const SizedBox(height: 16),
           Divider(color: cs.outlineVariant.withValues(alpha: 0.6), height: 1),
-          const SizedBox(height: 14),
+          const SizedBox(height: 12),
 
-          // Bottom Action Row: "Record payment ->"
+          // Bottom Action Row: "View ledger & record payment ->"
           InkWell(
-            onTap: () => context.push('/people/${debtor.person.id}'),
+            onTap: () => context.push('/people/${summary.person.id}'),
             child: Row(
               children: [
                 Text(
-                  'View & settle payment',
+                  'View ledger & record payment',
                   style: GoogleFonts.inter(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
