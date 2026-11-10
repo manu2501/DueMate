@@ -1,25 +1,22 @@
 import 'package:intl/intl.dart';
 
 class DateFormatter {
-  static String formatDate(DateTime dt) {
-    return DateFormat('dd MMM yyyy').format(dt);
-  }
+  static final _fullDate = DateFormat('dd MMM yyyy');
+  static final _shortDate = DateFormat('dd MMM');
+  static final _dateTime = DateFormat('dd MMM yyyy, hh:mm a');
+  static final _time = DateFormat('hh:mm a');
+  static final _monthYear = DateFormat('MMMM yyyy');
+  static final _dayOfWeek = DateFormat('EEEE');
 
-  static String formatShortDate(DateTime dt) {
-    return DateFormat('dd MMM').format(dt);
-  }
+  static String formatDate(DateTime dt) => _fullDate.format(dt);
 
-  static String formatDateTime(DateTime dt) {
-    return DateFormat('dd MMM yyyy, hh:mm a').format(dt);
-  }
+  static String formatShortDate(DateTime dt) => _shortDate.format(dt);
 
-  static String formatTime(DateTime dt) {
-    return DateFormat('hh:mm a').format(dt);
-  }
+  static String formatDateTime(DateTime dt) => _dateTime.format(dt);
 
-  static String formatMonthYear(DateTime dt) {
-    return DateFormat('MMMM yyyy').format(dt);
-  }
+  static String formatTime(DateTime dt) => _time.format(dt);
+
+  static String formatMonthYear(DateTime dt) => _monthYear.format(dt);
 
   static String formatRelative(DateTime date) {
     final now = DateTime.now();
@@ -34,12 +31,11 @@ class DateFormatter {
     } else if (diff == -1) {
       return 'Tomorrow';
     } else if (diff > 1 && diff < 7) {
-      return DateFormat('EEEE').format(date); // e.g. "Monday"
+      return _dayOfWeek.format(date);
     } else if (date.year == now.year) {
-      return DateFormat('dd MMM').format(date); // e.g. "08 Nov"
+      return _shortDate.format(date);
     } else {
-      return DateFormat('dd MMM yyyy').format(date);
+      return _fullDate.format(date);
     }
   }
 }
-

@@ -1,6 +1,11 @@
 import 'package:intl/intl.dart';
 
 class CurrencyFormatter {
+  static final _inrInt = NumberFormat.currency(symbol: '', decimalDigits: 0, locale: 'en_IN');
+  static final _inrDec = NumberFormat.currency(symbol: '', decimalDigits: 2, locale: 'en_IN');
+  static final _usInt = NumberFormat.currency(symbol: '', decimalDigits: 0, locale: 'en_US');
+  static final _usDec = NumberFormat.currency(symbol: '', decimalDigits: 2, locale: 'en_US');
+
   static String format(
     double amount, {
     String symbol = '₹',
@@ -8,13 +13,14 @@ class CurrencyFormatter {
   }) {
     final isNegative = amount < 0;
     final absAmount = amount.abs();
-
     final hasDecimals = (absAmount % 1) != 0;
-    final formatter = NumberFormat.currency(
-      symbol: '',
-      decimalDigits: hasDecimals ? 2 : 0,
-      locale: symbol == '₹' ? 'en_IN' : 'en_US',
-    );
+
+    final NumberFormat formatter;
+    if (symbol == '₹') {
+      formatter = hasDecimals ? _inrDec : _inrInt;
+    } else {
+      formatter = hasDecimals ? _usDec : _usInt;
+    }
 
     final formattedNumber = formatter.format(absAmount).trim();
 
@@ -45,4 +51,3 @@ class CurrencyFormatter {
     return '${isNegative ? '-' : ''}$symbol$formatted';
   }
 }
-
