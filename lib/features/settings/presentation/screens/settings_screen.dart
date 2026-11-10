@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:smarava/core/constants/app_constants.dart';
-import 'package:smarava/core/utils/backup_helper.dart';
-import 'package:smarava/core/utils/csv_exporter.dart';
-import 'package:smarava/core/utils/permission_manager.dart';
-import 'package:smarava/data/providers/app_providers.dart';
+import 'package:duemate/core/constants/app_constants.dart';
+import 'package:duemate/core/utils/backup_helper.dart';
+import 'package:duemate/core/utils/csv_exporter.dart';
+import 'package:duemate/core/utils/permission_manager.dart';
+import 'package:duemate/data/providers/app_providers.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -367,7 +367,7 @@ class SettingsScreen extends ConsumerWidget {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    '100% Private · Zero Analytics · Local SQLite Vault',
+                    '100% Private Â· Zero Analytics Â· Local SQLite Vault',
                     style: theme.textTheme.labelSmall?.copyWith(
                       color: cs.outline,
                     ),

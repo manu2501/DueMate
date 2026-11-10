@@ -1,4 +1,4 @@
-# DueMate (Smarava)
+# DueMate
 
 <p align="center">
   <img src="assets/images/app_logo.png" alt="DueMate Logo" width="120" height="120" />
@@ -24,16 +24,16 @@
 
 - **🔒 100% Offline & Private**: Zero accounts, zero ads, and no external cloud servers. All transactions and contacts remain strictly on your device.
 - **💸 Intuitive Lending & Repayment**:
-  - Record **Money Given** (*You're owed*) and **Payment Received** with one tap.
+  - Record **Money Given** (_You're owed_) and **Payment Received** with one tap.
   - Tag payment methods: Cash, UPI, Bank Transfer, Cheque, or Other.
   - Add optional reference notes and dates.
 - **👥 Contact-Linked People Directory**:
-  - Filter ledger instantly: *Active*, *Settled*, *Archived*, or *All Directory*.
+  - Filter ledger instantly: _Active_, _Settled_, _Archived_, or _All Directory_.
   - Import borrower names and phone numbers directly from your device contacts.
   - Visual color-coded repayment progress bars.
 - **📊 Reports & Financial Analytics**:
   - Overview tabs breaking down total given, total received, and net differences.
-  - Time filters: *All Time*, *This Month*, *Last Month*, and *This Year*.
+  - Time filters: _All Time_, _This Month_, _Last Month_, and _This Year_.
   - Per-person debt breakdown.
 - **📤 Easy Sharing & Reminders**:
   - One-tap formatted WhatsApp / SMS friendly reminder messages.
@@ -76,6 +76,7 @@ lib/
 ```
 
 ### Performance Enhancements
+
 - **SQLite WAL Mode**: Configured `PRAGMA journal_mode = WAL` and `PRAGMA synchronous = NORMAL` for non-blocking concurrent reads and fast commits.
 - **Composite Indexing**: Added database indexes (`idx_transactions_person_id`, `idx_transactions_date`) to ensure fast aggregations over large transaction histories.
 - **Zero-Allocation Formatting**: Static singleton caching for `NumberFormat` and `DateFormat` instances, eliminating runtime garbage-collection overhead during rapid list scrolling.
@@ -94,17 +95,20 @@ lib/
 ### Installation & Run
 
 1. **Clone the repository:**
+
    ```bash
-   git clone https://github.com/your-username/smarava.git
-   cd smarava
+   https://github.com/manu2501/DueMate.git
+   cd duemate
    ```
 
 2. **Install dependencies:**
+
    ```bash
    flutter pub get
    ```
 
 3. **Generate Drift database code:**
+
    ```bash
    dart run build_runner build --delete-conflicting-outputs
    ```
@@ -139,6 +143,7 @@ flutter build apk --release
 ```
 
 The compiled binary will be placed at:
+
 ```
 build/app/outputs/flutter-apk/app-release.apk
 ```

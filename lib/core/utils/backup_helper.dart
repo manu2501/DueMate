@@ -3,8 +3,8 @@ import 'dart:io';
 import 'package:drift/drift.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
-import 'package:smarava/data/database/app_database.dart';
-import 'package:smarava/data/database/tables.dart';
+import 'package:duemate/data/database/app_database.dart';
+import 'package:duemate/data/database/tables.dart';
 
 class BackupHelper {
   static Future<void> exportBackup(AppDatabase db) async {

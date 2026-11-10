@@ -1,11 +1,11 @@
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:smarava/data/database/app_database.dart' show AppDatabase;
-import 'package:smarava/data/database/tables.dart';
-import 'package:smarava/data/repositories/person_repository_impl.dart';
-import 'package:smarava/data/repositories/transaction_repository_impl.dart';
-import 'package:smarava/domain/entities/ledger_transaction.dart';
-import 'package:smarava/domain/entities/person.dart';
+import 'package:duemate/data/database/app_database.dart' show AppDatabase;
+import 'package:duemate/data/database/tables.dart';
+import 'package:duemate/data/repositories/person_repository_impl.dart';
+import 'package:duemate/data/repositories/transaction_repository_impl.dart';
+import 'package:duemate/domain/entities/ledger_transaction.dart';
+import 'package:duemate/domain/entities/person.dart';
 
 void main() {
   late AppDatabase db;
@@ -45,7 +45,7 @@ void main() {
     expect(summary.balance, 0);
     expect(summary.hasNoTransactions, true);
 
-    // 2. Give Money: ₹10,000
+    // 2. Give Money: â‚¹10,000
     await txRepo.addTransaction(
       LedgerTransaction(
         id: 'tx-1',
@@ -67,7 +67,7 @@ void main() {
     expect(summary.owesMoney, true);
     expect(summary.isSettled, false);
 
-    // 3. Receive Partial Payment: ₹1,000
+    // 3. Receive Partial Payment: â‚¹1,000
     await txRepo.addTransaction(
       LedgerTransaction(
         id: 'tx-2',
@@ -88,7 +88,7 @@ void main() {
     expect(summary.balance, 9000); // 10000 - 1000 = 9000
     expect(summary.owesMoney, true);
 
-    // 4. Multiple loans to the same person: +₹5,000
+    // 4. Multiple loans to the same person: +â‚¹5,000
     await txRepo.addTransaction(
       LedgerTransaction(
         id: 'tx-3',
@@ -108,7 +108,7 @@ void main() {
     expect(summary.totalReceived, 1000);
     expect(summary.balance, 14000);
 
-    // 5. Full settlement: Repay remaining ₹14,000
+    // 5. Full settlement: Repay remaining â‚¹14,000
     await txRepo.addTransaction(
       LedgerTransaction(
         id: 'tx-4',
@@ -130,7 +130,7 @@ void main() {
     expect(summary.isSettled, true);
     expect(summary.owesMoney, false);
 
-    // 6. Overpayment case: Person pays extra ₹500
+    // 6. Overpayment case: Person pays extra â‚¹500
     await txRepo.addTransaction(
       LedgerTransaction(
         id: 'tx-5',

@@ -1,5 +1,5 @@
 import 'package:flutter_contacts/flutter_contacts.dart';
-import 'package:smarava/core/utils/permission_manager.dart';
+import 'package:duemate/core/utils/permission_manager.dart';
 
 class ContactData {
   final String name;

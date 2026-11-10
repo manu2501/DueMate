@@ -1,10 +1,10 @@
 import 'package:share_plus/share_plus.dart';
-import 'package:smarava/core/utils/currency_formatter.dart';
-import 'package:smarava/core/utils/date_formatter.dart';
-import 'package:smarava/domain/entities/person_summary.dart';
+import 'package:duemate/core/utils/currency_formatter.dart';
+import 'package:duemate/core/utils/date_formatter.dart';
+import 'package:duemate/domain/entities/person_summary.dart';
 
 class ReminderHelper {
-  static String generateReminderText(PersonSummary summary, {String currencySymbol = '₹'}) {
+  static String generateReminderText(PersonSummary summary, {String currencySymbol = 'â‚¹'}) {
     final personName = summary.person.name;
     final balance = CurrencyFormatter.format(summary.balance.abs(), symbol: currencySymbol);
 
@@ -23,12 +23,12 @@ class ReminderHelper {
           'Shared via DueMate.';
     } else {
       return 'Hi $personName,\n\n'
-          'Our ledger is fully settled with zero balance outstanding! 🎉\n\n'
+          'Our ledger is fully settled with zero balance outstanding! ðŸŽ‰\n\n'
           'Shared via DueMate.';
     }
   }
 
-  static Future<void> shareReminder(PersonSummary summary, {String currencySymbol = '₹'}) async {
+  static Future<void> shareReminder(PersonSummary summary, {String currencySymbol = 'â‚¹'}) async {
     final text = generateReminderText(summary, currencySymbol: currencySymbol);
     await SharePlus.instance.share(
       ShareParams(

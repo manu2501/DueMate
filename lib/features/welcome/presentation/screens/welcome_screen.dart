@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:smarava/core/constants/app_constants.dart';
-import 'package:smarava/core/utils/permission_manager.dart';
+import 'package:duemate/core/constants/app_constants.dart';
+import 'package:duemate/core/utils/permission_manager.dart';
 
 class WelcomeScreen extends ConsumerStatefulWidget {
   const WelcomeScreen({super.key});
@@ -148,7 +148,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
                       ),
                       const SizedBox(height: 10),
                       Text(
-                        'Track what you lend.\nKnow what’s owed, effortlessly.',
+                        'Track what you lend.\nKnow whatâ€™s owed, effortlessly.',
                         style: theme.textTheme.titleMedium?.copyWith(
                           color: cs.onSurfaceVariant,
                           height: 1.4,

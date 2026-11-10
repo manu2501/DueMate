@@ -2,18 +2,18 @@ import 'dart:io';
 import 'package:csv/csv.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
-import 'package:smarava/core/constants/app_constants.dart';
-import 'package:smarava/core/utils/currency_formatter.dart';
-import 'package:smarava/core/utils/date_formatter.dart';
-import 'package:smarava/domain/entities/ledger_transaction.dart';
-import 'package:smarava/domain/entities/person.dart';
-import 'package:smarava/domain/entities/person_summary.dart';
+import 'package:duemate/core/constants/app_constants.dart';
+import 'package:duemate/core/utils/currency_formatter.dart';
+import 'package:duemate/core/utils/date_formatter.dart';
+import 'package:duemate/domain/entities/ledger_transaction.dart';
+import 'package:duemate/domain/entities/person.dart';
+import 'package:duemate/domain/entities/person_summary.dart';
 
 class CsvExporter {
   static Future<void> exportAndShareAllTransactions({
     required List<LedgerTransaction> transactions,
     required Map<String, Person> personsMap,
-    String currencySymbol = '₹',
+    String currencySymbol = 'â‚¹',
   }) async {
     final List<List<dynamic>> rows = [];
 
@@ -59,7 +59,7 @@ class CsvExporter {
   static Future<void> exportAndSharePersonStatement({
     required PersonSummary summary,
     required List<LedgerTransaction> transactions,
-    String currencySymbol = '₹',
+    String currencySymbol = 'â‚¹',
   }) async {
     final List<List<dynamic>> rows = [];
 

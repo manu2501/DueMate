@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:smarava/core/constants/app_constants.dart';
-import 'package:smarava/core/utils/permission_manager.dart';
+import 'package:duemate/core/constants/app_constants.dart';
+import 'package:duemate/core/utils/permission_manager.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();

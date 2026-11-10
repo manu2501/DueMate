@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:smarava/core/constants/app_constants.dart';
+import 'package:duemate/core/constants/app_constants.dart';
 
 class AppPermissionStatus {
   final bool contactsGranted;

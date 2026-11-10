@@ -1,16 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:smarava/core/constants/app_constants.dart';
-import 'package:smarava/domain/entities/ledger_summary.dart';
-import 'package:smarava/domain/entities/ledger_transaction.dart';
-import 'package:smarava/domain/entities/person.dart' as domain;
-import 'package:smarava/domain/entities/person_summary.dart';
-import 'package:smarava/domain/repositories/person_repository.dart';
-import 'package:smarava/domain/repositories/transaction_repository.dart';
-import 'package:smarava/data/database/app_database.dart';
-import 'package:smarava/data/repositories/person_repository_impl.dart';
-import 'package:smarava/data/repositories/transaction_repository_impl.dart';
+import 'package:duemate/core/constants/app_constants.dart';
+import 'package:duemate/domain/entities/ledger_summary.dart';
+import 'package:duemate/domain/entities/ledger_transaction.dart';
+import 'package:duemate/domain/entities/person.dart' as domain;
+import 'package:duemate/domain/entities/person_summary.dart';
+import 'package:duemate/domain/repositories/person_repository.dart';
+import 'package:duemate/domain/repositories/transaction_repository.dart';
+import 'package:duemate/data/database/app_database.dart';
+import 'package:duemate/data/repositories/person_repository_impl.dart';
+import 'package:duemate/data/repositories/transaction_repository_impl.dart';
 
 // Database Provider
 final databaseProvider = Provider<AppDatabase>((ref) {

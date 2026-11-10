@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:uuid/uuid.dart';
-import 'package:smarava/core/utils/contacts_helper.dart';
-import 'package:smarava/data/providers/app_providers.dart';
-import 'package:smarava/domain/entities/person.dart';
+import 'package:duemate/core/utils/contacts_helper.dart';
+import 'package:duemate/data/providers/app_providers.dart';
+import 'package:duemate/domain/entities/person.dart';
 
 class AddEditPersonScreen extends ConsumerStatefulWidget {
   final Person? personToEdit;

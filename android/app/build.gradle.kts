@@ -5,7 +5,7 @@ plugins {
 }
 
 android {
-    namespace = "com.smarava.smarava"
+    namespace = "com.duemate.duemate"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -16,7 +16,7 @@ android {
 
     defaultConfig {
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.smarava.smarava"
+        applicationId = "com.duemate.duemate"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion

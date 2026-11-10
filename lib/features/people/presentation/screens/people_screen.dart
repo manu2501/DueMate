@@ -3,15 +3,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:uuid/uuid.dart';
-import 'package:smarava/core/utils/contacts_helper.dart';
-import 'package:smarava/core/utils/currency_formatter.dart';
-import 'package:smarava/core/utils/date_formatter.dart';
-import 'package:smarava/core/widgets/avatar_widget.dart';
-import 'package:smarava/core/widgets/empty_state_widget.dart';
-import 'package:smarava/core/widgets/quick_receive_sheet.dart';
-import 'package:smarava/data/providers/app_providers.dart';
-import 'package:smarava/domain/entities/person.dart';
-import 'package:smarava/features/people/presentation/screens/add_edit_person_screen.dart';
+import 'package:duemate/core/utils/contacts_helper.dart';
+import 'package:duemate/core/utils/currency_formatter.dart';
+import 'package:duemate/core/utils/date_formatter.dart';
+import 'package:duemate/core/widgets/avatar_widget.dart';
+import 'package:duemate/core/widgets/empty_state_widget.dart';
+import 'package:duemate/core/widgets/quick_receive_sheet.dart';
+import 'package:duemate/data/providers/app_providers.dart';
+import 'package:duemate/domain/entities/person.dart';
+import 'package:duemate/features/people/presentation/screens/add_edit_person_screen.dart';
 
 class PeopleScreen extends ConsumerStatefulWidget {
   const PeopleScreen({super.key});

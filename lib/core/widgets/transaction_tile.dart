@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:smarava/core/constants/app_constants.dart';
-import 'package:smarava/core/utils/currency_formatter.dart';
-import 'package:smarava/core/utils/date_formatter.dart';
-import 'package:smarava/data/database/tables.dart';
-import 'package:smarava/domain/entities/ledger_transaction.dart';
-import 'package:smarava/domain/entities/person.dart';
+import 'package:duemate/core/constants/app_constants.dart';
+import 'package:duemate/core/utils/currency_formatter.dart';
+import 'package:duemate/core/utils/date_formatter.dart';
+import 'package:duemate/data/database/tables.dart';
+import 'package:duemate/domain/entities/ledger_transaction.dart';
+import 'package:duemate/domain/entities/person.dart';
 
 class TransactionTile extends StatelessWidget {
   final LedgerTransaction transaction;
@@ -16,7 +16,7 @@ class TransactionTile extends StatelessWidget {
     super.key,
     required this.transaction,
     this.person,
-    this.currencySymbol = '₹',
+    this.currencySymbol = 'â‚¹',
     this.onTap,
   });
 
@@ -73,7 +73,7 @@ class TransactionTile extends StatelessWidget {
                       ),
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 6),
-                        child: Text('·', style: TextStyle(color: cs.outline)),
+                        child: Text('Â·', style: TextStyle(color: cs.outline)),
                       ),
                       Text(
                         DateFormatter.formatRelative(transaction.transactionDate),
@@ -84,7 +84,7 @@ class TransactionTile extends StatelessWidget {
                       if (transaction.note != null && transaction.note!.trim().isNotEmpty) ...[
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 6),
-                          child: Text('·', style: TextStyle(color: cs.outline)),
+                          child: Text('Â·', style: TextStyle(color: cs.outline)),
                         ),
                         Expanded(
                           child: Text(

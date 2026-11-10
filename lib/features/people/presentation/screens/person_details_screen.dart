@@ -1,17 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:smarava/core/utils/csv_exporter.dart';
-import 'package:smarava/core/utils/currency_formatter.dart';
-import 'package:smarava/core/utils/reminder_helper.dart';
-import 'package:smarava/core/widgets/avatar_widget.dart';
-import 'package:smarava/core/widgets/empty_state_widget.dart';
-import 'package:smarava/core/widgets/quick_give_sheet.dart';
-import 'package:smarava/core/widgets/quick_receive_sheet.dart';
-import 'package:smarava/core/widgets/transaction_tile.dart';
-import 'package:smarava/data/providers/app_providers.dart';
-import 'package:smarava/features/people/presentation/screens/add_edit_person_screen.dart';
-import 'package:smarava/features/transactions/presentation/widgets/transaction_details_dialog.dart';
+import 'package:duemate/core/utils/csv_exporter.dart';
+import 'package:duemate/core/utils/currency_formatter.dart';
+import 'package:duemate/core/utils/reminder_helper.dart';
+import 'package:duemate/core/widgets/avatar_widget.dart';
+import 'package:duemate/core/widgets/empty_state_widget.dart';
+import 'package:duemate/core/widgets/quick_give_sheet.dart';
+import 'package:duemate/core/widgets/quick_receive_sheet.dart';
+import 'package:duemate/core/widgets/transaction_tile.dart';
+import 'package:duemate/data/providers/app_providers.dart';
+import 'package:duemate/features/people/presentation/screens/add_edit_person_screen.dart';
+import 'package:duemate/features/transactions/presentation/widgets/transaction_details_dialog.dart';
 
 class PersonDetailsScreen extends ConsumerWidget {
   final String personId;

@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:smarava/features/dashboard/presentation/screens/dashboard_screen.dart';
-import 'package:smarava/features/people/presentation/screens/add_edit_person_screen.dart';
-import 'package:smarava/features/people/presentation/screens/people_screen.dart';
-import 'package:smarava/features/people/presentation/screens/person_details_screen.dart';
-import 'package:smarava/features/reports/presentation/screens/reports_screen.dart';
-import 'package:smarava/features/settings/presentation/screens/settings_screen.dart';
-import 'package:smarava/features/welcome/presentation/screens/welcome_screen.dart';
+import 'package:duemate/features/dashboard/presentation/screens/dashboard_screen.dart';
+import 'package:duemate/features/people/presentation/screens/add_edit_person_screen.dart';
+import 'package:duemate/features/people/presentation/screens/people_screen.dart';
+import 'package:duemate/features/people/presentation/screens/person_details_screen.dart';
+import 'package:duemate/features/reports/presentation/screens/reports_screen.dart';
+import 'package:duemate/features/settings/presentation/screens/settings_screen.dart';
+import 'package:duemate/features/welcome/presentation/screens/welcome_screen.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
 final _shellNavigatorKey = GlobalKey<NavigatorState>();

@@ -1,9 +1,9 @@
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:smarava/data/database/app_database.dart';
-import 'package:smarava/data/providers/app_providers.dart';
-import 'package:smarava/main.dart';
+import 'package:duemate/data/database/app_database.dart';
+import 'package:duemate/data/providers/app_providers.dart';
+import 'package:duemate/main.dart';
 
 void main() {
   testWidgets('DueMate app renders welcome animation and transitions to dashboard', (WidgetTester tester) async {

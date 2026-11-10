@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:smarava/core/constants/app_constants.dart';
-import 'package:smarava/core/utils/currency_formatter.dart';
-import 'package:smarava/core/utils/date_formatter.dart';
-import 'package:smarava/core/widgets/avatar_widget.dart';
-import 'package:smarava/data/database/tables.dart';
-import 'package:smarava/data/providers/app_providers.dart';
-import 'package:smarava/domain/entities/ledger_transaction.dart';
-import 'package:smarava/domain/entities/person.dart';
+import 'package:duemate/core/constants/app_constants.dart';
+import 'package:duemate/core/utils/currency_formatter.dart';
+import 'package:duemate/core/utils/date_formatter.dart';
+import 'package:duemate/core/widgets/avatar_widget.dart';
+import 'package:duemate/data/database/tables.dart';
+import 'package:duemate/data/providers/app_providers.dart';
+import 'package:duemate/domain/entities/ledger_transaction.dart';
+import 'package:duemate/domain/entities/person.dart';
 
 class TransactionDetailsDialog extends ConsumerWidget {
   final LedgerTransaction transaction;
@@ -112,7 +112,7 @@ class TransactionDetailsDialog extends ConsumerWidget {
                     keyboardType: const TextInputType.numberWithOptions(decimal: true),
                     decoration: const InputDecoration(
                       labelText: 'Amount',
-                      prefixText: '₹ ',
+                      prefixText: 'â‚¹ ',
                     ),
                   ),
                   const SizedBox(height: 14),

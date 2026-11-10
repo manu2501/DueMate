@@ -2,17 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:smarava/core/constants/app_constants.dart';
-import 'package:smarava/core/utils/currency_formatter.dart';
-import 'package:smarava/core/utils/permission_manager.dart';
-import 'package:smarava/core/widgets/avatar_widget.dart';
-import 'package:smarava/core/widgets/empty_state_widget.dart';
-import 'package:smarava/core/widgets/quick_give_sheet.dart';
-import 'package:smarava/core/widgets/quick_receive_sheet.dart';
-import 'package:smarava/core/widgets/transaction_tile.dart';
-import 'package:smarava/data/providers/app_providers.dart';
-import 'package:smarava/features/people/presentation/screens/add_edit_person_screen.dart';
-import 'package:smarava/features/transactions/presentation/widgets/transaction_details_dialog.dart';
+import 'package:duemate/core/constants/app_constants.dart';
+import 'package:duemate/core/utils/currency_formatter.dart';
+import 'package:duemate/core/utils/permission_manager.dart';
+import 'package:duemate/core/widgets/avatar_widget.dart';
+import 'package:duemate/core/widgets/empty_state_widget.dart';
+import 'package:duemate/core/widgets/quick_give_sheet.dart';
+import 'package:duemate/core/widgets/quick_receive_sheet.dart';
+import 'package:duemate/core/widgets/transaction_tile.dart';
+import 'package:duemate/data/providers/app_providers.dart';
+import 'package:duemate/features/people/presentation/screens/add_edit_person_screen.dart';
+import 'package:duemate/features/transactions/presentation/widgets/transaction_details_dialog.dart';
 
 class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
@@ -35,11 +35,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   String _getGreeting() {
     final hour = DateTime.now().hour;
     if (hour < 12) {
-      return 'Good morning ☀️';
+      return 'Good morning â˜€ï¸';
     } else if (hour < 17) {
-      return 'Good afternoon 🌤️';
+      return 'Good afternoon ðŸŒ¤ï¸';
     } else {
-      return 'Good evening 🌙';
+      return 'Good evening ðŸŒ™';
     }
   }
 

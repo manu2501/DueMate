@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:smarava/core/utils/csv_exporter.dart';
-import 'package:smarava/core/utils/currency_formatter.dart';
-import 'package:smarava/core/utils/date_formatter.dart';
-import 'package:smarava/core/widgets/avatar_widget.dart';
-import 'package:smarava/core/widgets/empty_state_widget.dart';
-import 'package:smarava/core/widgets/transaction_tile.dart';
-import 'package:smarava/data/database/tables.dart';
-import 'package:smarava/data/providers/app_providers.dart';
-import 'package:smarava/features/transactions/presentation/widgets/transaction_details_dialog.dart';
+import 'package:duemate/core/utils/csv_exporter.dart';
+import 'package:duemate/core/utils/currency_formatter.dart';
+import 'package:duemate/core/utils/date_formatter.dart';
+import 'package:duemate/core/widgets/avatar_widget.dart';
+import 'package:duemate/core/widgets/empty_state_widget.dart';
+import 'package:duemate/core/widgets/transaction_tile.dart';
+import 'package:duemate/data/database/tables.dart';
+import 'package:duemate/data/providers/app_providers.dart';
+import 'package:duemate/features/transactions/presentation/widgets/transaction_details_dialog.dart';
 
 enum ReportDateFilter { allTime, thisMonth, lastMonth, thisYear, custom }
 
@@ -274,7 +274,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> with SingleTicker
                                         style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
                                       ),
                                       subtitle: Text(
-                                        'Given: ${CurrencyFormatter.formatCompact(s.totalGiven, symbol: currencySymbol)} · Received: ${CurrencyFormatter.formatCompact(s.totalReceived, symbol: currencySymbol)}',
+                                        'Given: ${CurrencyFormatter.formatCompact(s.totalGiven, symbol: currencySymbol)} Â· Received: ${CurrencyFormatter.formatCompact(s.totalReceived, symbol: currencySymbol)}',
                                         style: theme.textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
                                       ),
                                       trailing: Text(
