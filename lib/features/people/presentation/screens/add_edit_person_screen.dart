@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
+import 'package:smarava/core/utils/contacts_helper.dart';
 import 'package:smarava/core/widgets/bento_card.dart';
 import 'package:smarava/core/widgets/spotlight_background.dart';
 import 'package:smarava/data/providers/app_providers.dart';
@@ -22,6 +23,7 @@ class _AddEditPersonScreenState extends ConsumerState<AddEditPersonScreen> {
   late final TextEditingController _emailController;
   late final TextEditingController _notesController;
   bool _isSaving = false;
+  bool _isImporting = false;
 
   bool get isEditing => widget.personToEdit != null;
 
@@ -41,6 +43,41 @@ class _AddEditPersonScreenState extends ConsumerState<AddEditPersonScreen> {
     _emailController.dispose();
     _notesController.dispose();
     super.dispose();
+  }
+
+  Future<void> _importFromContacts() async {
+    setState(() => _isImporting = true);
+    try {
+      final contact = await ContactsHelper.pickContact();
+      if (contact != null && mounted) {
+        _nameController.text = contact.name;
+        if (contact.phone != null && contact.phone!.isNotEmpty) {
+          _phoneController.text = contact.phone!;
+        }
+        if (contact.email != null && contact.email!.isNotEmpty) {
+          _emailController.text = contact.email!;
+        }
+        setState(() {});
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: const Color(0xFF10B981),
+            content: Text(
+              'Imported ${contact.name} from contacts',
+              style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF09090B)),
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not read contact: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isImporting = false);
+    }
   }
 
   Future<void> _save() async {
@@ -126,6 +163,57 @@ class _AddEditPersonScreenState extends ConsumerState<AddEditPersonScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                // Auto-fill from Contacts Banner
+                InkWell(
+                  onTap: _isImporting ? null : _importFromContacts,
+                  borderRadius: BorderRadius.circular(16),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF10B981).withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: const Color(0xFF10B981).withValues(alpha: 0.35),
+                        width: 1,
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        _isImporting
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF10B981)),
+                              )
+                            : const Icon(Icons.contacts_rounded, color: Color(0xFF10B981), size: 22),
+                        const SizedBox(width: 14),
+                        const Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Import from Phone Contacts',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w800,
+                                  fontSize: 14,
+                                  color: Color(0xFF10B981),
+                                ),
+                              ),
+                              SizedBox(height: 2),
+                              Text(
+                                'Tap to auto-fill name, phone & email',
+                                style: TextStyle(fontSize: 12, color: Color(0xFF71717A)),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: Color(0xFF10B981)),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+
                 BentoCard(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -138,10 +226,15 @@ class _AddEditPersonScreenState extends ConsumerState<AddEditPersonScreen> {
                       // Name
                       TextFormField(
                         controller: _nameController,
-                        decoration: const InputDecoration(
+                        decoration: InputDecoration(
                           labelText: 'Full Name *',
                           hintText: 'e.g. Rahul Kumar',
-                          prefixIcon: Icon(Icons.person_outline_rounded, size: 20),
+                          prefixIcon: const Icon(Icons.person_outline_rounded, size: 20),
+                          suffixIcon: IconButton(
+                            icon: const Icon(Icons.contacts_outlined, size: 20),
+                            tooltip: 'Pick from Contacts',
+                            onPressed: _importFromContacts,
+                          ),
                         ),
                         textCapitalization: TextCapitalization.words,
                         validator: (val) {
@@ -156,10 +249,15 @@ class _AddEditPersonScreenState extends ConsumerState<AddEditPersonScreen> {
                       // Phone
                       TextFormField(
                         controller: _phoneController,
-                        decoration: const InputDecoration(
+                        decoration: InputDecoration(
                           labelText: 'Phone Number (Optional)',
                           hintText: 'e.g. +91 98765 43210',
-                          prefixIcon: Icon(Icons.phone_outlined, size: 20),
+                          prefixIcon: const Icon(Icons.phone_outlined, size: 20),
+                          suffixIcon: IconButton(
+                            icon: const Icon(Icons.contacts_outlined, size: 20),
+                            tooltip: 'Pick from Contacts',
+                            onPressed: _importFromContacts,
+                          ),
                         ),
                         keyboardType: TextInputType.phone,
                       ),

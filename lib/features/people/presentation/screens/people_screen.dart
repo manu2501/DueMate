@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:uuid/uuid.dart';
+import 'package:smarava/core/utils/contacts_helper.dart';
 import 'package:smarava/core/utils/currency_formatter.dart';
 import 'package:smarava/core/utils/date_formatter.dart';
 import 'package:smarava/core/widgets/avatar_widget.dart';
@@ -9,6 +11,7 @@ import 'package:smarava/core/widgets/empty_state_widget.dart';
 import 'package:smarava/core/widgets/quick_receive_sheet.dart';
 import 'package:smarava/core/widgets/spotlight_background.dart';
 import 'package:smarava/data/providers/app_providers.dart';
+import 'package:smarava/domain/entities/person.dart';
 import 'package:smarava/features/people/presentation/screens/add_edit_person_screen.dart';
 
 class PeopleScreen extends ConsumerStatefulWidget {
@@ -20,11 +23,79 @@ class PeopleScreen extends ConsumerStatefulWidget {
 
 class _PeopleScreenState extends ConsumerState<PeopleScreen> {
   final _searchController = TextEditingController();
+  bool _isImporting = false;
 
   @override
   void dispose() {
     _searchController.dispose();
     super.dispose();
+  }
+
+  Future<void> _importFromContacts(BuildContext context) async {
+    setState(() => _isImporting = true);
+    try {
+      final contact = await ContactsHelper.pickContact();
+      if (contact == null) {
+        setState(() => _isImporting = false);
+        return;
+      }
+
+      final allPersons = await ref.read(allPersonSummariesProvider.future);
+      final existing = allPersons.where((s) {
+        final sameName = s.person.name.toLowerCase() == contact.name.toLowerCase();
+        final samePhone = contact.phone != null &&
+            s.person.phone != null &&
+            s.person.phone!.replaceAll(RegExp(r'\s+'), '') ==
+                contact.phone!.replaceAll(RegExp(r'\s+'), '');
+        return sameName || samePhone;
+      }).firstOrNull;
+
+      if (existing != null) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('${existing.person.name} is already in your ledger'),
+            ),
+          );
+          context.go('/people/${existing.person.id}');
+        }
+        return;
+      }
+
+      final now = DateTime.now();
+      final newPerson = Person(
+        id: const Uuid().v4(),
+        name: contact.name,
+        phone: contact.phone,
+        email: contact.email,
+        notes: 'Imported from phone contacts',
+        createdAt: now,
+        updatedAt: now,
+      );
+
+      await ref.read(personRepositoryProvider).createPerson(newPerson);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: const Color(0xFF10B981),
+            content: Text(
+              'Added ${newPerson.name} from contacts',
+              style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF09090B)),
+            ),
+          ),
+        );
+        context.go('/people/${newPerson.id}');
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not read contact: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isImporting = false);
+    }
   }
 
   void _showSortMenu(BuildContext context) {
@@ -122,6 +193,22 @@ class _PeopleScreenState extends ConsumerState<PeopleScreen> {
           style: TextStyle(fontWeight: FontWeight.w800, fontSize: 20),
         ),
         actions: [
+          _isImporting
+              ? const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 14.0),
+                  child: Center(
+                    child: SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF10B981)),
+                    ),
+                  ),
+                )
+              : IconButton(
+                  tooltip: 'Import from Phone Contacts',
+                  icon: const Icon(Icons.contacts_rounded, color: Color(0xFF10B981)),
+                  onPressed: () => _importFromContacts(context),
+                ),
           IconButton(
             tooltip: 'Sort Options',
             icon: const Icon(Icons.tune_rounded),

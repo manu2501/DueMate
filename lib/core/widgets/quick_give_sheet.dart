@@ -5,9 +5,11 @@ import 'package:smarava/core/constants/app_constants.dart';
 import 'package:smarava/core/utils/currency_formatter.dart';
 import 'package:smarava/core/utils/date_formatter.dart';
 import 'package:smarava/core/widgets/avatar_widget.dart';
+import 'package:smarava/core/widgets/person_picker_sheet.dart';
 import 'package:smarava/data/database/tables.dart';
 import 'package:smarava/data/providers/app_providers.dart';
 import 'package:smarava/domain/entities/ledger_transaction.dart';
+import 'package:smarava/domain/entities/person_summary.dart';
 
 class QuickGiveSheet extends ConsumerStatefulWidget {
   final String? initialPersonId;
@@ -21,6 +23,7 @@ class QuickGiveSheet extends ConsumerStatefulWidget {
     return showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      useSafeArea: true,
       backgroundColor: Colors.transparent,
       builder: (ctx) => QuickGiveSheet(initialPersonId: personId),
     );
@@ -39,14 +42,25 @@ class _QuickGiveSheetState extends ConsumerState<QuickGiveSheet> {
   PaymentMethod _selectedPaymentMethod = PaymentMethod.upi;
   DateTime _selectedDate = DateTime.now();
   bool _isSaving = false;
+  bool _isAmountFocused = false;
 
   @override
   void initState() {
     super.initState();
     _selectedPersonId = widget.initialPersonId;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _focusNode.requestFocus();
+
+    _focusNode.addListener(() {
+      if (mounted) {
+        setState(() => _isAmountFocused = _focusNode.hasFocus);
+      }
     });
+
+    // Only auto-focus if person is already chosen
+    if (widget.initialPersonId != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _focusNode.requestFocus();
+      });
+    }
   }
 
   @override
@@ -68,7 +82,24 @@ class _QuickGiveSheetState extends ConsumerState<QuickGiveSheet> {
     setState(() {});
   }
 
+  Future<void> _openPersonPicker() async {
+    _focusNode.unfocus();
+    final pickedId = await PersonPickerSheet.show(
+      context,
+      currentSelectedPersonId: _selectedPersonId,
+    );
+
+    if (pickedId != null && mounted) {
+      setState(() => _selectedPersonId = pickedId);
+      // Auto focus amount after choosing person
+      Future.delayed(const Duration(milliseconds: 150), () {
+        if (mounted) _focusNode.requestFocus();
+      });
+    }
+  }
+
   Future<void> _selectDate() async {
+    _focusNode.unfocus();
     final picked = await showDatePicker(
       context: context,
       initialDate: _selectedDate,
@@ -131,7 +162,7 @@ class _QuickGiveSheetState extends ConsumerState<QuickGiveSheet> {
             backgroundColor: const Color(0xFFF43F5E),
             content: Text(
               'Gave ${CurrencyFormatter.format(amount, symbol: currencySymbol)} to $personName',
-              style: const TextStyle(fontWeight: FontWeight.bold),
+              style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
             ),
           ),
         );
@@ -153,29 +184,39 @@ class _QuickGiveSheetState extends ConsumerState<QuickGiveSheet> {
     final isDark = theme.brightness == Brightness.dark;
     final currencySymbol = ref.watch(currencySymbolProvider);
     final allPersonsAsync = ref.watch(allPersonSummariesProvider);
-    final mediaQuery = MediaQuery.of(context);
+    final viewInsets = MediaQuery.of(context).viewInsets;
 
-    return Container(
-      decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF18181B) : Colors.white,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-        border: Border(top: BorderSide(color: isDark ? const Color(0x28FFFFFF) : const Color(0xFFE2E8F0))),
-      ),
-      padding: EdgeInsets.only(
-        left: 20,
-        right: 20,
-        top: 16,
-        bottom: mediaQuery.viewInsets.bottom + 20,
-      ),
-      child: SingleChildScrollView(
+    PersonSummary? selectedSummary;
+    if (_selectedPersonId != null) {
+      selectedSummary = allPersonsAsync.asData?.value
+          .where((s) => s.person.id == _selectedPersonId)
+          .firstOrNull;
+    }
+
+    return Padding(
+      padding: EdgeInsets.only(bottom: viewInsets.bottom),
+      child: Container(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(context).size.height * 0.88,
+        ),
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF18181B) : Colors.white,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+          border: Border(
+            top: BorderSide(
+              color: isDark ? const Color(0x28FFFFFF) : const Color(0xFFE2E8F0),
+              width: 1,
+            ),
+          ),
+        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             // Handle bar
             Center(
               child: Container(
-                width: 40,
+                margin: const EdgeInsets.only(top: 12),
+                width: 36,
                 height: 4,
                 decoration: BoxDecoration(
                   color: isDark ? Colors.white24 : Colors.black26,
@@ -183,239 +224,432 @@ class _QuickGiveSheetState extends ConsumerState<QuickGiveSheet> {
                 ),
               ),
             ),
-            const SizedBox(height: 16),
 
             // Header Row
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF43F5E).withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: const Color(0xFFF43F5E).withValues(alpha: 0.3)),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(7),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF43F5E).withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: const Color(0xFFF43F5E).withValues(alpha: 0.3)),
+                    ),
+                    child: const Icon(
+                      Icons.arrow_upward_rounded,
+                      color: Color(0xFFF43F5E),
+                      size: 18,
+                    ),
                   ),
-                  child: const Icon(
-                    Icons.arrow_outward_rounded,
-                    color: Color(0xFFF43F5E),
-                    size: 20,
+                  const SizedBox(width: 12),
+                  Text(
+                    'Record Money Given',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w800,
+                      fontSize: 17,
+                      color: isDark ? Colors.white : Colors.black87,
+                    ),
                   ),
-                ),
-                const SizedBox(width: 12),
-                Text(
-                  'Record Money Given',
-                  style: TextStyle(
-                    fontWeight: FontWeight.w800,
-                    fontSize: 18,
-                    color: isDark ? Colors.white : Colors.black87,
+                  const Spacer(),
+                  IconButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    icon: const Icon(Icons.close_rounded),
+                    visualDensity: VisualDensity.compact,
                   ),
-                ),
-                const Spacer(),
-                IconButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  icon: const Icon(Icons.close_rounded),
-                  visualDensity: VisualDensity.compact,
-                ),
-              ],
+                ],
+              ),
             ),
-            const SizedBox(height: 16),
 
-            // Person Selector
-            allPersonsAsync.when(
-              data: (summaries) {
-                final activeSummaries = summaries.where((s) => !s.person.isArchived).toList();
-                if (activeSummaries.isEmpty) {
-                  return const Text('No persons available. Add a person first.');
-                }
+            const Divider(height: 1, thickness: 1, color: Color(0x18FFFFFF)),
 
-                final selectedSummary = summaries.where((s) => s.person.id == _selectedPersonId).firstOrNull;
+            // Scrollable Form Content
+            Flexible(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    // 1. Person Selector Card
+                    const Text(
+                      'GIVEN TO',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800,
+                        color: Color(0xFF71717A),
+                        letterSpacing: 1.1,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
 
-                return DropdownButtonFormField<String>(
-                  initialValue: _selectedPersonId,
-                  decoration: InputDecoration(
-                    labelText: 'Person',
-                    prefixIcon: selectedSummary != null
-                        ? Padding(
-                            padding: const EdgeInsets.all(8.0),
-                            child: AvatarWidget(name: selectedSummary.person.name, radius: 14),
-                          )
-                        : const Icon(Icons.person_outline_rounded),
-                  ),
-                  items: activeSummaries.map((s) {
-                    return DropdownMenuItem<String>(
-                      value: s.person.id,
+                    if (selectedSummary == null)
+                      InkWell(
+                        onTap: _openPersonPicker,
+                        borderRadius: BorderRadius.circular(16),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                          decoration: BoxDecoration(
+                            color: isDark ? const Color(0xFF27272A).withValues(alpha: 0.5) : const Color(0xFFF1F5F9),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: isDark ? const Color(0x28FFFFFF) : const Color(0xFFCBD5E1),
+                              width: 1,
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFF43F5E).withValues(alpha: 0.12),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(Icons.person_add_alt_1_rounded, color: Color(0xFFF43F5E), size: 18),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  'Tap to choose person...',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 14,
+                                    color: isDark ? const Color(0xFFA1A1AA) : const Color(0xFF64748B),
+                                  ),
+                                ),
+                              ),
+                              const Icon(Icons.keyboard_arrow_down_rounded, color: Color(0xFF71717A)),
+                            ],
+                          ),
+                        ),
+                      )
+                    else
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: isDark ? const Color(0xFF27272A).withValues(alpha: 0.6) : const Color(0xFFF8FAFC),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: const Color(0xFFF43F5E).withValues(alpha: 0.4),
+                            width: 1.2,
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            AvatarWidget(name: selectedSummary.person.name, radius: 18),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    selectedSummary.person.name,
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w800,
+                                      fontSize: 15,
+                                      color: isDark ? Colors.white : Colors.black87,
+                                    ),
+                                  ),
+                                  Text(
+                                    selectedSummary.balance > 0
+                                        ? 'Current balance: Owes ${CurrencyFormatter.format(selectedSummary.balance, symbol: currencySymbol)}'
+                                        : selectedSummary.balance < 0
+                                            ? 'Current balance: Overpaid ${CurrencyFormatter.format(selectedSummary.balance.abs(), symbol: currencySymbol)}'
+                                            : 'Current balance: Settled (₹0)',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w700,
+                                      color: selectedSummary.balance > 0
+                                          ? const Color(0xFFF43F5E)
+                                          : selectedSummary.balance < 0
+                                              ? const Color(0xFF8B5CF6)
+                                              : const Color(0xFF10B981),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            OutlinedButton(
+                              onPressed: _openPersonPicker,
+                              style: OutlinedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                visualDensity: VisualDensity.compact,
+                                side: BorderSide(color: const Color(0xFFF43F5E).withValues(alpha: 0.4)),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                              ),
+                              child: const Text(
+                                'Change',
+                                style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFFF43F5E)),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                    const SizedBox(height: 18),
+
+                    // 2. Amount Input Box
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'AMOUNT',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w800,
+                            color: Color(0xFF71717A),
+                            letterSpacing: 1.1,
+                          ),
+                        ),
+                        if (_currentAmount > 0)
+                          Text(
+                            CurrencyFormatter.format(_currentAmount, symbol: currencySymbol),
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFFF43F5E),
+                            ),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: isDark ? const Color(0xFF09090B) : const Color(0xFFF1F5F9),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: _isAmountFocused
+                              ? const Color(0xFFF43F5E)
+                              : isDark
+                                  ? const Color(0x28FFFFFF)
+                                  : const Color(0xFFCBD5E1),
+                          width: _isAmountFocused ? 1.8 : 1.0,
+                        ),
+                      ),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Text(
+                            currencySymbol,
+                            style: const TextStyle(
+                              fontSize: 28,
+                              fontWeight: FontWeight.w900,
+                              color: Color(0xFFF43F5E),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: TextField(
+                              controller: _amountController,
+                              focusNode: _focusNode,
+                              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                              style: TextStyle(
+                                fontWeight: FontWeight.w900,
+                                fontSize: 28,
+                                letterSpacing: -0.5,
+                                color: isDark ? Colors.white : Colors.black87,
+                              ),
+                              decoration: const InputDecoration(
+                                hintText: '0',
+                                hintStyle: TextStyle(
+                                  fontWeight: FontWeight.w900,
+                                  fontSize: 28,
+                                  color: Color(0xFF52525B),
+                                ),
+                                border: InputBorder.none,
+                                enabledBorder: InputBorder.none,
+                                focusedBorder: InputBorder.none,
+                                filled: false,
+                                contentPadding: EdgeInsets.zero,
+                                isDense: true,
+                              ),
+                              onChanged: (_) => setState(() {}),
+                            ),
+                          ),
+                          if (_amountController.text.isNotEmpty)
+                            IconButton(
+                              icon: const Icon(Icons.clear_rounded, size: 20, color: Color(0xFF71717A)),
+                              onPressed: () {
+                                _amountController.clear();
+                                setState(() {});
+                              },
+                              visualDensity: VisualDensity.compact,
+                            ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+
+                    // Quick Preset Chips
+                    SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
                       child: Row(
                         children: [
-                          Text(s.person.name, style: const TextStyle(fontWeight: FontWeight.w600)),
-                          const Spacer(),
-                          Text(
-                            s.balance > 0
-                                ? 'Owes ${CurrencyFormatter.format(s.balance, symbol: currencySymbol)}'
-                                : s.balance < 0
-                                    ? 'Overpaid ${CurrencyFormatter.format(s.balance.abs(), symbol: currencySymbol)}'
-                                    : 'Settled',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: s.balance > 0
-                                  ? const Color(0xFFF43F5E)
-                                  : s.balance < 0
-                                      ? const Color(0xFF8B5CF6)
-                                      : const Color(0xFF10B981),
-                              fontWeight: FontWeight.bold,
+                          _presetChip('+500', 500, isDark),
+                          const SizedBox(width: 8),
+                          _presetChip('+1,000', 1000, isDark),
+                          const SizedBox(width: 8),
+                          _presetChip('+2,000', 2000, isDark),
+                          const SizedBox(width: 8),
+                          _presetChip('+5,000', 5000, isDark),
+                          const SizedBox(width: 8),
+                          _presetChip('+10,000', 10000, isDark),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 18),
+
+                    // 3. Payment Method Pills
+                    const Text(
+                      'PAYMENT METHOD',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800,
+                        color: Color(0xFF71717A),
+                        letterSpacing: 1.1,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+
+                    SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        children: PaymentMethod.values.map((method) {
+                          final isSelected = method == _selectedPaymentMethod;
+                          final label = method.label;
+
+                          return Padding(
+                            padding: const EdgeInsets.only(right: 8.0),
+                            child: ChoiceChip(
+                              label: Text(label),
+                              selected: isSelected,
+                              onSelected: (_) => setState(() => _selectedPaymentMethod = method),
+                              selectedColor: const Color(0xFFF43F5E).withValues(alpha: 0.2),
+                              side: BorderSide(
+                                color: isSelected
+                                    ? const Color(0xFFF43F5E)
+                                    : isDark
+                                        ? const Color(0x28FFFFFF)
+                                        : const Color(0xFFCBD5E1),
+                              ),
+                              labelStyle: TextStyle(
+                                fontSize: 12,
+                                fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                                color: isSelected
+                                    ? const Color(0xFFF43F5E)
+                                    : isDark
+                                        ? Colors.white70
+                                        : Colors.black87,
+                              ),
                             ),
+                          );
+                        }).toList(),
+                      ),
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    // 4. Date & Note Row
+                    Row(
+                      children: [
+                        Expanded(
+                          child: InkWell(
+                            onTap: _selectDate,
+                            borderRadius: BorderRadius.circular(14),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                              decoration: BoxDecoration(
+                                color: isDark ? const Color(0xFF27272A).withValues(alpha: 0.4) : const Color(0xFFF1F5F9),
+                                borderRadius: BorderRadius.circular(14),
+                                border: Border.all(
+                                  color: isDark ? const Color(0x28FFFFFF) : const Color(0xFFCBD5E1),
+                                ),
+                              ),
+                              child: Row(
+                                children: [
+                                  const Icon(Icons.calendar_today_rounded, size: 16, color: Color(0xFFF43F5E)),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      DateFormatter.formatRelative(_selectedDate),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w700,
+                                        color: isDark ? Colors.white : Colors.black87,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: TextField(
+                            controller: _noteController,
+                            decoration: const InputDecoration(
+                              hintText: 'Note (optional)',
+                              prefixIcon: Icon(Icons.notes_rounded, size: 16),
+                              contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                            ),
+                            style: const TextStyle(fontSize: 12),
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 22),
+
+                    // 5. Submit Action Button
+                    Container(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFFF43F5E).withValues(alpha: 0.35),
+                            blurRadius: 18,
+                            offset: const Offset(0, 4),
                           ),
                         ],
                       ),
-                    );
-                  }).toList(),
-                  onChanged: (val) {
-                    setState(() => _selectedPersonId = val);
-                  },
-                );
-              },
-              loading: () => const LinearProgressIndicator(),
-              error: (err, _) => Text('Error: $err'),
-            ),
-            const SizedBox(height: 16),
-
-            // Amount Input Field (Glowing Rose)
-            TextField(
-              controller: _amountController,
-              focusNode: _focusNode,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              style: TextStyle(
-                fontWeight: FontWeight.w900,
-                fontSize: 32,
-                letterSpacing: -0.5,
-                color: const Color(0xFFF43F5E),
-              ),
-              decoration: InputDecoration(
-                labelText: 'Amount Given',
-                prefixText: '$currencySymbol ',
-                prefixStyle: const TextStyle(
-                  fontWeight: FontWeight.w900,
-                  fontSize: 32,
-                  color: Color(0xFFF43F5E),
-                ),
-                hintText: '0',
-              ),
-              onChanged: (_) => setState(() {}),
-            ),
-            const SizedBox(height: 12),
-
-            // Quick Preset Amount Chips
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: [
-                  _presetChip('+500', 500, isDark),
-                  const SizedBox(width: 8),
-                  _presetChip('+1,000', 1000, isDark),
-                  const SizedBox(width: 8),
-                  _presetChip('+2,000', 2000, isDark),
-                  const SizedBox(width: 8),
-                  _presetChip('+5,000', 5000, isDark),
-                  const SizedBox(width: 8),
-                  _presetChip('+10,000', 10000, isDark),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            // Date & Payment Method Row
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: _selectDate,
-                    icon: const Icon(Icons.calendar_today_rounded, size: 16),
-                    label: Text(
-                      DateFormatter.formatRelative(_selectedDate),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: DropdownButtonFormField<PaymentMethod>(
-                    initialValue: _selectedPaymentMethod,
-                    decoration: const InputDecoration(
-                      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                      labelText: 'Method',
-                    ),
-                    items: PaymentMethod.values.map((m) {
-                      return DropdownMenuItem(
-                        value: m,
-                        child: Row(
-                          children: [
-                            Icon(m.icon, size: 16),
-                            const SizedBox(width: 8),
-                            Text(m.label, style: const TextStyle(fontSize: 13)),
-                          ],
+                      child: FilledButton(
+                        onPressed: _isSaving ? null : _save,
+                        style: FilledButton.styleFrom(
+                          backgroundColor: const Color(0xFFF43F5E),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                         ),
-                      );
-                    }).toList(),
-                    onChanged: (val) {
-                      if (val != null) setState(() => _selectedPaymentMethod = val);
-                    },
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 14),
-
-            // Optional Note
-            TextField(
-              controller: _noteController,
-              decoration: const InputDecoration(
-                labelText: 'Note (Optional)',
-                hintText: 'e.g. Emergency loan, advance, etc.',
-                prefixIcon: Icon(Icons.note_alt_outlined, size: 18),
-              ),
-            ),
-            const SizedBox(height: 20),
-
-            // Big Give Action Button with Glow
-            Container(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                    color: const Color(0xFFF43F5E).withValues(alpha: 0.35),
-                    blurRadius: 18,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: FilledButton(
-                onPressed: _isSaving ? null : _save,
-                style: FilledButton.styleFrom(
-                  backgroundColor: const Color(0xFFF43F5E),
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                ),
-                child: _isSaving
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                      )
-                    : Text(
-                        _currentAmount > 0
-                            ? 'Give ${CurrencyFormatter.format(_currentAmount, symbol: currencySymbol)}'
-                            : 'Save Transaction',
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: 0.5,
-                        ),
+                        child: _isSaving
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                              )
+                            : Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  const Icon(Icons.arrow_upward_rounded, size: 20),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    _currentAmount > 0
+                                        ? 'Record ${CurrencyFormatter.format(_currentAmount, symbol: currencySymbol)} Given'
+                                        : 'Record Money Given',
+                                    style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
+                                  ),
+                                ],
+                              ),
                       ),
+                    ),
+                    const SizedBox(height: 10),
+                  ],
+                ),
               ),
             ),
           ],
@@ -424,23 +658,26 @@ class _QuickGiveSheetState extends ConsumerState<QuickGiveSheet> {
     );
   }
 
-  Widget _presetChip(String label, double amount, bool isDark) {
+  Widget _presetChip(String label, double value, bool isDark) {
     return InkWell(
-      onTap: () => _addAmount(amount),
-      borderRadius: BorderRadius.circular(10),
+      onTap: () => _addAmount(value),
+      borderRadius: BorderRadius.circular(20),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
-          color: isDark ? const Color(0xFF27272A) : const Color(0xFFE2E8F0),
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: isDark ? const Color(0x18FFFFFF) : const Color(0xFFCBD5E1)),
+          color: isDark ? const Color(0xFF27272A).withValues(alpha: 0.5) : const Color(0xFFE2E8F0),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: const Color(0xFFF43F5E).withValues(alpha: 0.3),
+            width: 1,
+          ),
         ),
         child: Text(
           label,
-          style: TextStyle(
+          style: const TextStyle(
             fontSize: 12,
-            fontWeight: FontWeight.bold,
-            color: isDark ? Colors.white : Colors.black87,
+            fontWeight: FontWeight.w700,
+            color: Color(0xFFF43F5E),
           ),
         ),
       ),
