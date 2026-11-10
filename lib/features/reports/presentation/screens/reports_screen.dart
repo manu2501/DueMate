@@ -199,16 +199,30 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> with SingleTicker
                                         fontWeight: FontWeight.w500,
                                       ),
                                     ),
-                                    Text(
-                                      CurrencyFormatter.format(net, symbol: currencySymbol),
-                                      style: GoogleFonts.inter(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w800,
-                                        color: net > 0
-                                            ? cs.error
-                                            : net < 0
-                                                ? cs.primary
-                                                : cs.onSurfaceVariant,
+                                    AnimatedSwitcher(
+                                      duration: const Duration(milliseconds: 300),
+                                      transitionBuilder: (child, anim) => FadeTransition(
+                                        opacity: anim,
+                                        child: SlideTransition(
+                                          position: Tween<Offset>(
+                                            begin: const Offset(0.0, 0.2),
+                                            end: Offset.zero,
+                                          ).animate(anim),
+                                          child: child,
+                                        ),
+                                      ),
+                                      child: Text(
+                                        CurrencyFormatter.format(net, symbol: currencySymbol),
+                                        key: ValueKey('net-$net'),
+                                        style: GoogleFonts.inter(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w800,
+                                          color: net > 0
+                                              ? cs.error
+                                              : net < 0
+                                                  ? cs.primary
+                                                  : cs.onSurfaceVariant,
+                                        ),
                                       ),
                                     ),
                                   ],
@@ -368,12 +382,26 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> with SingleTicker
               ),
             ),
             const SizedBox(height: 6),
-            Text(
-              CurrencyFormatter.format(amount, symbol: symbol),
-              style: GoogleFonts.inter(
-                fontSize: 18,
-                fontWeight: FontWeight.w800,
-                color: accent,
+            AnimatedSwitcher(
+              duration: const Duration(milliseconds: 300),
+              transitionBuilder: (child, anim) => FadeTransition(
+                opacity: anim,
+                child: SlideTransition(
+                  position: Tween<Offset>(
+                    begin: const Offset(0.0, 0.2),
+                    end: Offset.zero,
+                  ).animate(anim),
+                  child: child,
+                ),
+              ),
+              child: Text(
+                CurrencyFormatter.format(amount, symbol: symbol),
+                key: ValueKey('$label-$amount'),
+                style: GoogleFonts.inter(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                  color: accent,
+                ),
               ),
             ),
           ],

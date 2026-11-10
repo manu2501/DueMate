@@ -12,6 +12,60 @@ import 'package:smarava/features/welcome/presentation/screens/welcome_screen.dar
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
 final _shellNavigatorKey = GlobalKey<NavigatorState>();
 
+CustomTransitionPage<void> _buildTabTransition({
+  required BuildContext context,
+  required GoRouterState state,
+  required Widget child,
+}) {
+  return CustomTransitionPage<void>(
+    key: state.pageKey,
+    child: child,
+    transitionDuration: const Duration(milliseconds: 280),
+    transitionsBuilder: (context, animation, secondaryAnimation, child) {
+      final fade = CurvedAnimation(
+        parent: animation,
+        curve: Curves.easeOutCubic,
+      );
+      final scale = Tween<double>(begin: 0.98, end: 1.0).animate(fade);
+
+      return FadeTransition(
+        opacity: fade,
+        child: ScaleTransition(scale: scale, child: child),
+      );
+    },
+  );
+}
+
+CustomTransitionPage<void> _buildSlideTransition({
+  required BuildContext context,
+  required GoRouterState state,
+  required Widget child,
+}) {
+  return CustomTransitionPage<void>(
+    key: state.pageKey,
+    child: child,
+    transitionDuration: const Duration(milliseconds: 320),
+    reverseTransitionDuration: const Duration(milliseconds: 260),
+    transitionsBuilder: (context, animation, secondaryAnimation, child) {
+      final curved = CurvedAnimation(
+        parent: animation,
+        curve: Curves.easeOutCubic,
+        reverseCurve: Curves.easeInCubic,
+      );
+
+      final offset = Tween<Offset>(
+        begin: const Offset(0.08, 0.0),
+        end: Offset.zero,
+      ).animate(curved);
+
+      return SlideTransition(
+        position: offset,
+        child: FadeTransition(opacity: curved, child: child),
+      );
+    },
+  );
+}
+
 final appRouterProvider = Provider<GoRouter>((ref) {
   return GoRouter(
     navigatorKey: _rootNavigatorKey,
@@ -19,7 +73,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     routes: [
       GoRoute(
         path: '/welcome',
-        builder: (context, state) => const WelcomeScreen(),
+        pageBuilder: (context, state) => _buildSlideTransition(
+          context: context,
+          state: state,
+          child: const WelcomeScreen(),
+        ),
       ),
       ShellRoute(
         navigatorKey: _shellNavigatorKey,
@@ -29,35 +87,59 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         routes: [
           GoRoute(
             path: '/',
-            builder: (context, state) => const DashboardScreen(),
+            pageBuilder: (context, state) => _buildTabTransition(
+              context: context,
+              state: state,
+              child: const DashboardScreen(),
+            ),
           ),
           GoRoute(
             path: '/people',
-            builder: (context, state) => const PeopleScreen(),
+            pageBuilder: (context, state) => _buildTabTransition(
+              context: context,
+              state: state,
+              child: const PeopleScreen(),
+            ),
           ),
           GoRoute(
             path: '/reports',
-            builder: (context, state) => const ReportsScreen(),
+            pageBuilder: (context, state) => _buildTabTransition(
+              context: context,
+              state: state,
+              child: const ReportsScreen(),
+            ),
           ),
         ],
       ),
       GoRoute(
         parentNavigatorKey: _rootNavigatorKey,
         path: '/settings',
-        builder: (context, state) => const SettingsScreen(),
+        pageBuilder: (context, state) => _buildSlideTransition(
+          context: context,
+          state: state,
+          child: const SettingsScreen(),
+        ),
       ),
       GoRoute(
         parentNavigatorKey: _rootNavigatorKey,
         path: '/people/:id',
-        builder: (context, state) {
+        pageBuilder: (context, state) {
           final personId = state.pathParameters['id']!;
-          return PersonDetailsScreen(personId: personId);
+          return _buildSlideTransition(
+            context: context,
+            state: state,
+            child: PersonDetailsScreen(personId: personId),
+          );
         },
       ),
       GoRoute(
         parentNavigatorKey: _rootNavigatorKey,
         path: '/add-person',
-        builder: (context, state) => const AddEditPersonScreen(),
+        pageBuilder: (context, state) => _buildSlideTransition(
+          context: context,
+          state: state,
+          child: const AddEditPersonScreen(),
+        ),
       ),
     ],
   );

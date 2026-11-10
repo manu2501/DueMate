@@ -113,7 +113,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             children: [
               const SizedBox(height: 8),
 
-              // Hero Card: Total Balance
+              // Hero Card: Total Balance with smooth AnimatedSwitcher
               ledgerSummaryAsync.when(
                 data: (summary) {
                   return Padding(
@@ -121,7 +121,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Container(
+                        AnimatedContainer(
+                          duration: const Duration(milliseconds: 300),
+                          curve: Curves.easeOutCubic,
                           width: double.infinity,
                           padding: const EdgeInsets.all(24),
                           decoration: BoxDecoration(
@@ -152,15 +154,31 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                                 ],
                               ),
                               const SizedBox(height: 8),
-                              Text(
-                                CurrencyFormatter.format(
-                                  summary.totalOutstanding,
-                                  symbol: currencySymbol,
-                                ),
-                                style: theme.textTheme.displaySmall?.copyWith(
-                                  fontWeight: FontWeight.w800,
-                                  letterSpacing: -1.2,
-                                  color: cs.onSurface,
+                              AnimatedSwitcher(
+                                duration: const Duration(milliseconds: 400),
+                                transitionBuilder: (child, animation) {
+                                  return FadeTransition(
+                                    opacity: animation,
+                                    child: SlideTransition(
+                                      position: Tween<Offset>(
+                                        begin: const Offset(0.0, 0.15),
+                                        end: Offset.zero,
+                                      ).animate(animation),
+                                      child: child,
+                                    ),
+                                  );
+                                },
+                                child: Text(
+                                  CurrencyFormatter.format(
+                                    summary.totalOutstanding,
+                                    symbol: currencySymbol,
+                                  ),
+                                  key: ValueKey(summary.totalOutstanding),
+                                  style: theme.textTheme.displaySmall?.copyWith(
+                                    fontWeight: FontWeight.w800,
+                                    letterSpacing: -1.2,
+                                    color: cs.onSurface,
+                                  ),
                                 ),
                               ),
                               const SizedBox(height: 20),
@@ -328,7 +346,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 ),
               ),
 
-              // Section: People Owing You (Horizontal Avatar Chips)
+              // Section: People Owing You (Horizontal Avatar Chips with Hero tags)
               if (topDebtors.isNotEmpty) ...[
                 const SizedBox(height: 28),
                 Padding(
@@ -376,7 +394,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              AvatarWidget(name: debtor.person.name, radius: 22),
+                              AvatarWidget(
+                                name: debtor.person.name,
+                                radius: 22,
+                                heroTag: 'avatar-${debtor.person.id}',
+                              ),
                               const SizedBox(height: 6),
                               Text(
                                 debtor.person.name,
@@ -418,7 +440,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                       'Recent Activity',
                       style: theme.textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.w700,
-                        letterSpacing: -0.3,
+                        letterSpacing: -0.2,
                       ),
                     ),
                     TextButton(

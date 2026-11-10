@@ -214,7 +214,11 @@ class PersonDetailsScreen extends ConsumerWidget {
                   children: [
                     Row(
                       children: [
-                        AvatarWidget(name: person.name, radius: 28),
+                        AvatarWidget(
+                          name: person.name,
+                          radius: 28,
+                          heroTag: 'avatar-${person.id}',
+                        ),
                         const SizedBox(width: 16),
                         Expanded(
                           child: Column(
@@ -289,13 +293,20 @@ class PersonDetailsScreen extends ConsumerWidget {
                       const SizedBox(height: 14),
                       ClipRRect(
                         borderRadius: BorderRadius.circular(8),
-                        child: LinearProgressIndicator(
-                          value: progress,
-                          minHeight: 6,
-                          backgroundColor: cs.surfaceContainerHigh,
-                          valueColor: AlwaysStoppedAnimation<Color>(
-                            progress >= 1.0 ? cs.primary : cs.secondary,
-                          ),
+                        child: TweenAnimationBuilder<double>(
+                          tween: Tween<double>(begin: 0.0, end: progress),
+                          duration: const Duration(milliseconds: 700),
+                          curve: Curves.easeOutCubic,
+                          builder: (context, value, _) {
+                            return LinearProgressIndicator(
+                              value: value,
+                              minHeight: 6,
+                              backgroundColor: cs.surfaceContainerHigh,
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                value >= 1.0 ? cs.primary : cs.secondary,
+                              ),
+                            );
+                          },
                         ),
                       ),
                       const SizedBox(height: 6),

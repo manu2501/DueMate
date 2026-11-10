@@ -245,120 +245,129 @@ class _PeopleScreenState extends ConsumerState<PeopleScreen> {
           ),
           const SizedBox(height: 8),
 
-          // People List
+          // People List with AnimatedSwitcher
           Expanded(
-            child: people.isEmpty
-                ? EmptyStateWidget(
-                    icon: Icons.people_outline_rounded,
-                    title: _searchController.text.isNotEmpty ? 'No matches' : 'No records yet',
-                    description: _searchController.text.isNotEmpty
-                        ? 'Try searching with another name or phone number.'
-                        : 'Add someone to track balances and payments.',
-                    actionLabel: _searchController.text.isNotEmpty ? null : 'Add Person',
-                    onActionPressed: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(builder: (ctx) => const AddEditPersonScreen()),
-                      );
-                    },
-                  )
-                : ListView.separated(
-                    padding: const EdgeInsets.fromLTRB(20, 4, 20, 96),
-                    itemCount: people.length,
-                    separatorBuilder: (_, _) => const SizedBox(height: 8),
-                    itemBuilder: (ctx, index) {
-                      final summary = people[index];
-                      final person = summary.person;
-                      final balance = summary.balance;
-                      final owes = summary.owesMoney;
-                      final overpaid = summary.isOverpaid;
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 300),
+              child: people.isEmpty
+                  ? EmptyStateWidget(
+                      key: ValueKey('empty_${currentFilter.name}_${_searchController.text}'),
+                      icon: Icons.people_outline_rounded,
+                      title: _searchController.text.isNotEmpty ? 'No matches' : 'No records yet',
+                      description: _searchController.text.isNotEmpty
+                          ? 'Try searching with another name or phone number.'
+                          : 'Add someone to track balances and payments.',
+                      actionLabel: _searchController.text.isNotEmpty ? null : 'Add Person',
+                      onActionPressed: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(builder: (ctx) => const AddEditPersonScreen()),
+                        );
+                      },
+                    )
+                  : ListView.separated(
+                      key: ValueKey('list_${currentFilter.name}'),
+                      padding: const EdgeInsets.fromLTRB(20, 4, 20, 96),
+                      itemCount: people.length,
+                      separatorBuilder: (_, _) => const SizedBox(height: 8),
+                      itemBuilder: (ctx, index) {
+                        final summary = people[index];
+                        final person = summary.person;
+                        final balance = summary.balance;
+                        final owes = summary.owesMoney;
+                        final overpaid = summary.isOverpaid;
 
-                      Color badgeColor;
-                      String badgeText;
-                      if (owes) {
-                        badgeColor = cs.error;
-                        badgeText = CurrencyFormatter.format(balance, symbol: currencySymbol);
-                      } else if (overpaid) {
-                        badgeColor = cs.tertiary;
-                        badgeText = 'Over ${CurrencyFormatter.format(balance.abs(), symbol: currencySymbol)}';
-                      } else {
-                        badgeColor = cs.primary;
-                        badgeText = 'Settled';
-                      }
+                        Color badgeColor;
+                        String badgeText;
+                        if (owes) {
+                          badgeColor = cs.error;
+                          badgeText = CurrencyFormatter.format(balance, symbol: currencySymbol);
+                        } else if (overpaid) {
+                          badgeColor = cs.tertiary;
+                          badgeText = 'Over ${CurrencyFormatter.format(balance.abs(), symbol: currencySymbol)}';
+                        } else {
+                          badgeColor = cs.primary;
+                          badgeText = 'Settled';
+                        }
 
-                      return InkWell(
-                        onTap: () => context.push('/people/${person.id}'),
-                        borderRadius: BorderRadius.circular(18),
-                        child: Container(
-                          padding: const EdgeInsets.all(14),
-                          decoration: BoxDecoration(
-                            color: cs.surfaceContainerLow,
-                            borderRadius: BorderRadius.circular(18),
-                          ),
-                          child: Row(
-                            children: [
-                              AvatarWidget(name: person.name, radius: 22),
-                              const SizedBox(width: 14),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      person.name,
-                                      style: theme.textTheme.titleSmall?.copyWith(
-                                        fontWeight: FontWeight.w700,
+                        return InkWell(
+                          onTap: () => context.push('/people/${person.id}'),
+                          borderRadius: BorderRadius.circular(18),
+                          child: Container(
+                            padding: const EdgeInsets.all(14),
+                            decoration: BoxDecoration(
+                              color: cs.surfaceContainerLow,
+                              borderRadius: BorderRadius.circular(18),
+                            ),
+                            child: Row(
+                              children: [
+                                AvatarWidget(
+                                  name: person.name,
+                                  radius: 22,
+                                  heroTag: 'avatar-${person.id}',
+                                ),
+                                const SizedBox(width: 14),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        person.name,
+                                        style: theme.textTheme.titleSmall?.copyWith(
+                                          fontWeight: FontWeight.w700,
+                                        ),
                                       ),
-                                    ),
-                                    const SizedBox(height: 2),
-                                    Text(
-                                      summary.lastTransaction != null
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        summary.lastTransaction != null
                                           ? 'Last: ${DateFormatter.formatRelative(summary.lastTransaction!.transactionDate)}'
                                           : (person.phone != null && person.phone!.isNotEmpty)
                                               ? person.phone!
                                               : 'Added ${DateFormatter.formatShortDate(person.createdAt)}',
-                                      style: theme.textTheme.bodySmall?.copyWith(
-                                        color: cs.onSurfaceVariant,
+                                        style: theme.textTheme.bodySmall?.copyWith(
+                                          color: cs.onSurfaceVariant,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.end,
+                                  children: [
+                                    Text(
+                                      badgeText,
+                                      style: GoogleFonts.inter(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w800,
+                                        color: badgeColor,
                                       ),
                                     ),
-                                  ],
-                                ),
-                              ),
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.end,
-                                children: [
-                                  Text(
-                                    badgeText,
-                                    style: GoogleFonts.inter(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w800,
-                                      color: badgeColor,
-                                    ),
-                                  ),
-                                  if (owes) ...[
-                                    const SizedBox(height: 4),
-                                    InkWell(
-                                      onTap: () => QuickReceiveSheet.show(context, personId: person.id),
-                                      borderRadius: BorderRadius.circular(8),
-                                      child: Padding(
-                                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                                        child: Text(
-                                          'Receive',
-                                          style: TextStyle(
-                                            fontSize: 11,
-                                            fontWeight: FontWeight.w700,
-                                            color: cs.primary,
+                                    if (owes) ...[
+                                      const SizedBox(height: 4),
+                                      InkWell(
+                                        onTap: () => QuickReceiveSheet.show(context, personId: person.id),
+                                        borderRadius: BorderRadius.circular(8),
+                                        child: Padding(
+                                          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                                          child: Text(
+                                            'Receive',
+                                            style: TextStyle(
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.w700,
+                                              color: cs.primary,
+                                            ),
                                           ),
                                         ),
                                       ),
-                                    ),
+                                    ],
                                   ],
-                                ],
-                              ),
-                            ],
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
-                      );
-                    },
-                  ),
+                        );
+                      },
+                    ),
+            ),
           ),
         ],
       ),

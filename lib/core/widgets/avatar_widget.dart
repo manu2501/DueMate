@@ -5,12 +5,14 @@ class AvatarWidget extends StatelessWidget {
   final String name;
   final double radius;
   final TextStyle? textStyle;
+  final String? heroTag;
 
   const AvatarWidget({
     super.key,
     required this.name,
     this.radius = 20,
     this.textStyle,
+    this.heroTag,
   });
 
   static const _palettes = [
@@ -44,7 +46,7 @@ class AvatarWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     final gradient = _getGradient(name);
 
-    return Container(
+    Widget avatar = Container(
       width: radius * 2,
       height: radius * 2,
       decoration: BoxDecoration(
@@ -67,5 +69,17 @@ class AvatarWidget extends StatelessWidget {
             ),
       ),
     );
+
+    if (heroTag != null) {
+      return Hero(
+        tag: heroTag!,
+        child: Material(
+          type: MaterialType.transparency,
+          child: avatar,
+        ),
+      );
+    }
+
+    return avatar;
   }
 }
