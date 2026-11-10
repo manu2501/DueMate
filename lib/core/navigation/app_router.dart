@@ -6,6 +6,7 @@ import 'package:duemate/features/people/presentation/screens/add_edit_person_scr
 import 'package:duemate/features/people/presentation/screens/people_screen.dart';
 import 'package:duemate/features/people/presentation/screens/person_details_screen.dart';
 import 'package:duemate/features/reports/presentation/screens/reports_screen.dart';
+import 'package:duemate/features/notifications/presentation/screens/notifications_screen.dart';
 import 'package:duemate/features/settings/presentation/screens/settings_screen.dart';
 import 'package:duemate/features/welcome/presentation/screens/welcome_screen.dart';
 
@@ -110,14 +111,23 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             ),
           ),
           GoRoute(
-            path: '/settings',
+            path: '/notifications',
             pageBuilder: (context, state) => _buildTabTransition(
               context: context,
               state: state,
-              child: const SettingsScreen(),
+              child: const NotificationsScreen(),
             ),
           ),
         ],
+      ),
+      GoRoute(
+        parentNavigatorKey: _rootNavigatorKey,
+        path: '/settings',
+        pageBuilder: (context, state) => _buildSlideTransition(
+          context: context,
+          state: state,
+          child: const SettingsScreen(),
+        ),
       ),
       GoRoute(
         parentNavigatorKey: _rootNavigatorKey,
@@ -154,7 +164,7 @@ class AppShell extends StatelessWidget {
     if (location == '/') return 0;
     if (location.startsWith('/people')) return 1;
     if (location.startsWith('/reports')) return 2;
-    if (location.startsWith('/settings')) return 3;
+    if (location.startsWith('/notifications')) return 3;
     return 0;
   }
 
@@ -170,7 +180,7 @@ class AppShell extends StatelessWidget {
         context.go('/reports');
         break;
       case 3:
-        context.go('/settings');
+        context.go('/notifications');
         break;
     }
   }
@@ -178,13 +188,24 @@ class AppShell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final selectedIndex = _calculateSelectedIndex(context);
+    final location = GoRouterState.of(context).uri.path;
+    final isDashboard = location == '/';
 
-    return Scaffold(
-      extendBody: true,
-      body: child,
-      bottomNavigationBar: _FloatingDockNavBar(
-        selectedIndex: selectedIndex,
-        onItemSelected: (index) => _onItemTapped(index, context),
+    return BackButtonListener(
+      onBackButtonPressed: () async {
+        if (!isDashboard) {
+          context.go('/');
+          return true;
+        }
+        return false;
+      },
+      child: Scaffold(
+        extendBody: true,
+        body: child,
+        bottomNavigationBar: _FloatingDockNavBar(
+          selectedIndex: selectedIndex,
+          onItemSelected: (index) => _onItemTapped(index, context),
+        ),
       ),
     );
   }
@@ -209,7 +230,7 @@ class _FloatingDockNavBar extends StatelessWidget {
       (Icons.account_balance_wallet_outlined, Icons.account_balance_wallet_rounded, 'Dashboard'),
       (Icons.outlined_flag_rounded, Icons.flag_rounded, 'Directory'),
       (Icons.chat_bubble_outline_rounded, Icons.chat_bubble_rounded, 'Reports'),
-      (Icons.tune_rounded, Icons.tune_rounded, 'Settings'),
+      (Icons.notifications_none_rounded, Icons.notifications_rounded, 'Notifications'),
     ];
 
     return SafeArea(

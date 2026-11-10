@@ -39,7 +39,20 @@ void main() {
     expect(find.byTooltip('Dashboard'), findsOneWidget);
     expect(find.byTooltip('Directory'), findsOneWidget);
     expect(find.byTooltip('Reports'), findsOneWidget);
-    expect(find.byTooltip('Settings'), findsOneWidget);
+    expect(find.byTooltip('Notifications'), findsOneWidget);
+
+    // Tap on Directory tab to leave dashboard
+    await tester.tap(find.byTooltip('Directory'));
+    await tester.pumpAndSettle();
+    expect(find.text('Search people or notes...'), findsOneWidget);
+
+    // Simulate system back button: should navigate back to Dashboard
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+
+    // Verify we are back on Dashboard, not closing app
+    expect(find.text('Settlement Progress'), findsOneWidget);
+    expect(find.text('Top Dues'), findsOneWidget);
 
     await testDb.close();
   });

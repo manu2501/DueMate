@@ -61,66 +61,41 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
             child: Row(
               children: [
-                // User Avatar on Left
-                GestureDetector(
-                  onTap: () => context.go('/settings'),
-                  child: Container(
-                    padding: const EdgeInsets.all(2),
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: cs.primary.withValues(alpha: 0.35),
-                        width: 1.5,
-                      ),
-                    ),
-                    child: const AvatarWidget(
-                      name: 'DueMate User',
-                      radius: 18,
+                // Branding on Left: Icon + DueMate
+                Container(
+                  width: 28,
+                  height: 28,
+                  decoration: BoxDecoration(
+                    color: cs.primary,
+                    borderRadius: BorderRadius.circular(8),
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF4F46E5), Color(0xFF7C3AED)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
                     ),
                   ),
+                  child: const Icon(
+                    Icons.swap_horiz_rounded,
+                    size: 18,
+                    color: Colors.white,
+                  ),
                 ),
-                const SizedBox(width: 12),
-
-                // Center Branding: Icon + DueMate
-                Expanded(
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Container(
-                        width: 26,
-                        height: 26,
-                        decoration: BoxDecoration(
-                          color: cs.primary,
-                          borderRadius: BorderRadius.circular(8),
-                          gradient: const LinearGradient(
-                            colors: [Color(0xFF4F46E5), Color(0xFF7C3AED)],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
-                        ),
-                        child: const Icon(
-                          Icons.swap_horiz_rounded,
-                          size: 17,
-                          color: Colors.white,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        AppConstants.appName,
-                        style: GoogleFonts.dmSans(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: -0.4,
-                          color: isDark ? Colors.white : const Color(0xFF131438),
-                        ),
-                      ),
-                    ],
+                const SizedBox(width: 10),
+                Text(
+                  AppConstants.appName,
+                  style: GoogleFonts.dmSans(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: -0.4,
+                    color: isDark ? Colors.white : const Color(0xFF131438),
                   ),
                 ),
 
-                // Notification / Action Icon on Right
+                const Spacer(),
+
+                // Settings Action Icon on Right
                 InkWell(
-                  onTap: () => _showQuickActionSheet(context),
+                  onTap: () => context.push('/settings'),
                   borderRadius: BorderRadius.circular(14),
                   child: Container(
                     width: 42,
@@ -137,27 +112,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                         ),
                       ],
                     ),
-                    child: Stack(
-                      alignment: Alignment.center,
-                      children: [
-                        Icon(
-                          Icons.notifications_none_rounded,
-                          size: 20,
-                          color: cs.onSurface,
-                        ),
-                        Positioned(
-                          top: 10,
-                          right: 11,
-                          child: Container(
-                            width: 6,
-                            height: 6,
-                            decoration: BoxDecoration(
-                              color: cs.primary,
-                              shape: BoxShape.circle,
-                            ),
-                          ),
-                        ),
-                      ],
+                    child: Icon(
+                      Icons.settings_outlined,
+                      size: 20,
+                      color: cs.onSurface,
                     ),
                   ),
                 ),
