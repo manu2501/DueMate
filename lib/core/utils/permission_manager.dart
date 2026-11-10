@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:smarava/core/constants/app_constants.dart';
-import 'package:smarava/core/widgets/bento_card.dart';
 
 class AppPermissionStatus {
   final bool contactsGranted;
@@ -211,19 +210,13 @@ class _PermissionsRationaleSheetState extends State<_PermissionsRationaleSheet> 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
+    final colorScheme = theme.colorScheme;
 
     return Container(
-      padding: const EdgeInsets.fromLTRB(24, 12, 24, 28),
+      padding: const EdgeInsets.fromLTRB(24, 8, 24, 28),
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF18181B) : Colors.white,
+        color: colorScheme.surfaceContainerLow,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-        border: Border(
-          top: BorderSide(
-            color: isDark ? const Color(0x28FFFFFF) : const Color(0xFFE2E8F0),
-            width: 1,
-          ),
-        ),
       ),
       child: SafeArea(
         top: false,
@@ -232,193 +225,186 @@ class _PermissionsRationaleSheetState extends State<_PermissionsRationaleSheet> 
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-            // Top Drag Handle
-            Center(
-              child: Container(
-                width: 36,
-                height: 4,
-                margin: const EdgeInsets.only(bottom: 20),
-                decoration: BoxDecoration(
-                  color: isDark ? Colors.white24 : Colors.black26,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-            ),
-
-            // Icon Badge
-            Center(
-              child: Container(
-                width: 64,
-                height: 64,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: const Color(0xFF10B981).withValues(alpha: 0.15),
-                  border: Border.all(
-                    color: const Color(0xFF10B981).withValues(alpha: 0.35),
-                    width: 2,
+              // Icon Badge
+              Center(
+                child: Container(
+                  width: 56,
+                  height: 56,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: colorScheme.primaryContainer,
+                  ),
+                  child: Icon(
+                    Icons.security_rounded,
+                    color: colorScheme.onPrimaryContainer,
+                    size: 28,
                   ),
                 ),
-                child: const Icon(
-                  Icons.security_rounded,
-                  color: Color(0xFF10B981),
-                  size: 32,
+              ),
+              const SizedBox(height: 16),
+
+              // Title
+              Text(
+                widget.isUpdate ? 'App Updated: Permissions Check' : 'Permissions Needed',
+                textAlign: TextAlign.center,
+                style: theme.textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: -0.3,
+                  color: colorScheme.onSurface,
                 ),
               ),
-            ),
-            const SizedBox(height: 16),
+              const SizedBox(height: 8),
 
-            // Title
-            Text(
-              widget.isUpdate ? 'App Updated: Permissions Check' : 'Permissions Needed',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.w900,
-                letterSpacing: -0.5,
-                color: isDark ? Colors.white : Colors.black87,
-              ),
-            ),
-            const SizedBox(height: 8),
-
-            // Subtitle
-            Text(
-              widget.isUpdate
-                  ? 'DueMate was updated! Please allow the required permissions below to ensure uninterrupted contact importing and due reminders.'
-                  : 'DueMate requires a few permissions to seamlessly manage your personal lending records and due reminders.',
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 13,
-                height: 1.4,
-                color: Color(0xFFA1A1AA),
-              ),
-            ),
-            const SizedBox(height: 20),
-
-            // Permissions Bento Cards
-            BentoCard(
-              padding: const EdgeInsets.all(14),
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF10B981).withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Icon(Icons.contacts_rounded, color: Color(0xFF10B981), size: 22),
-                  ),
-                  const SizedBox(width: 14),
-                  const Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Device Contacts',
-                          style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
-                        ),
-                        SizedBox(height: 2),
-                        Text(
-                          'Easily import borrowers & auto-fill phone numbers without manual entry.',
-                          style: TextStyle(fontSize: 12, color: Color(0xFF71717A)),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 10),
-
-            BentoCard(
-              padding: const EdgeInsets.all(14),
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF6366F1).withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Icon(Icons.notifications_active_rounded, color: Color(0xFF6366F1), size: 22),
-                  ),
-                  const SizedBox(width: 14),
-                  const Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Payment Reminders',
-                          style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
-                        ),
-                        SizedBox(height: 2),
-                        Text(
-                          'Timely reminders for upcoming dues and follow-ups.',
-                          style: TextStyle(fontSize: 12, color: Color(0xFF71717A)),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            // Privacy Assurance
-            Row(
-              children: [
-                const Icon(Icons.lock_outline_rounded, color: Color(0xFF10B981), size: 16),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    '100% Offline & Private: Contacts and records never leave your phone.',
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: isDark ? const Color(0xFFA1A1AA) : const Color(0xFF64748B),
-                    ),
-                  ),
+              // Subtitle
+              Text(
+                widget.isUpdate
+                    ? 'DueMate was updated! Please allow the required permissions below to ensure uninterrupted contact importing and due reminders.'
+                    : 'DueMate requires a few permissions to seamlessly manage your personal lending records and due reminders.',
+                textAlign: TextAlign.center,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: colorScheme.onSurfaceVariant,
+                  height: 1.4,
                 ),
-              ],
-            ),
-            const SizedBox(height: 22),
+              ),
+              const SizedBox(height: 20),
 
-            // Action Buttons
-            ElevatedButton(
-              onPressed: _isRequesting ? null : _grantPermissions,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF10B981),
-                foregroundColor: const Color(0xFF09090B),
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              // Permissions Cards
+              Card(
                 elevation: 0,
-              ),
-              child: _isRequesting
-                  ? const SizedBox(
-                      height: 20,
-                      width: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF09090B)),
-                    )
-                  : const Text(
-                      'Allow Permissions',
-                      style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15),
-                    ),
-            ),
-            const SizedBox(height: 10),
-
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text(
-                'Skip for Now',
-                style: TextStyle(
-                  color: Color(0xFF71717A),
-                  fontWeight: FontWeight.w600,
-                  fontSize: 13,
+                color: colorScheme.surfaceContainer,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  side: BorderSide(color: colorScheme.outlineVariant.withValues(alpha: 0.5)),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: colorScheme.primaryContainer,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Icon(Icons.contacts_rounded, color: colorScheme.onPrimaryContainer, size: 22),
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Device Contacts',
+                              style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              'Easily import borrowers & auto-fill phone numbers without manual entry.',
+                              style: theme.textTheme.bodySmall?.copyWith(color: colorScheme.onSurfaceVariant),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
-            ),
-          ],
+              const SizedBox(height: 10),
+
+              Card(
+                elevation: 0,
+                color: colorScheme.surfaceContainer,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  side: BorderSide(color: colorScheme.outlineVariant.withValues(alpha: 0.5)),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: colorScheme.secondaryContainer,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Icon(Icons.notifications_active_rounded, color: colorScheme.onSecondaryContainer, size: 22),
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Payment Reminders',
+                              style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              'Timely reminders for upcoming dues and follow-ups.',
+                              style: theme.textTheme.bodySmall?.copyWith(color: colorScheme.onSurfaceVariant),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // Privacy Assurance
+              Row(
+                children: [
+                  Icon(Icons.lock_outline_rounded, color: colorScheme.primary, size: 16),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      '100% Offline & Private: Contacts and records never leave your phone.',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
+
+              // Action Buttons
+              FilledButton(
+                onPressed: _isRequesting ? null : _grantPermissions,
+                style: FilledButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                child: _isRequesting
+                    ? SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2, color: colorScheme.onPrimary),
+                      )
+                    : const Text(
+                        'Allow Permissions',
+                        style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+                      ),
+              ),
+              const SizedBox(height: 8),
+
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                style: TextButton.styleFrom(
+                  foregroundColor: colorScheme.onSurfaceVariant,
+                ),
+                child: const Text(
+                  'Skip for Now',
+                  style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
-    ),
-  );
+    );
   }
 }

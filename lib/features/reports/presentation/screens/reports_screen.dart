@@ -4,9 +4,7 @@ import 'package:smarava/core/utils/csv_exporter.dart';
 import 'package:smarava/core/utils/currency_formatter.dart';
 import 'package:smarava/core/utils/date_formatter.dart';
 import 'package:smarava/core/widgets/avatar_widget.dart';
-import 'package:smarava/core/widgets/bento_card.dart';
 import 'package:smarava/core/widgets/empty_state_widget.dart';
-import 'package:smarava/core/widgets/spotlight_background.dart';
 import 'package:smarava/core/widgets/transaction_tile.dart';
 import 'package:smarava/data/database/tables.dart';
 import 'package:smarava/data/providers/app_providers.dart';
@@ -59,16 +57,19 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> with SingleTicker
   }
 
   Future<void> _pickCustomRange() async {
+    final initial = _customDateRange ??
+        DateTimeRange(
+          start: DateTime.now().subtract(const Duration(days: 30)),
+          end: DateTime.now(),
+        );
+
     final picked = await showDateRangePicker(
       context: context,
-      firstDate: DateTime(2000),
+      firstDate: DateTime(2020),
       lastDate: DateTime.now().add(const Duration(days: 365)),
-      initialDateRange: _customDateRange ??
-          DateTimeRange(
-            start: DateTime.now().subtract(const Duration(days: 30)),
-            end: DateTime.now(),
-          ),
+      initialDateRange: initial,
     );
+
     if (picked != null) {
       setState(() {
         _customDateRange = picked;
@@ -80,7 +81,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> with SingleTicker
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
+    final colorScheme = theme.colorScheme;
     final currencySymbol = ref.watch(currencySymbolProvider);
     final allTxsAsync = ref.watch(allTransactionsProvider);
     final allSummariesAsync = ref.watch(allPersonSummariesProvider);
@@ -88,7 +89,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> with SingleTicker
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Reports & Audit', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 20)),
+        title: const Text('Reports & Audit'),
         actions: [
           IconButton(
             tooltip: 'Export CSV',
@@ -106,131 +107,121 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> with SingleTicker
         ],
         bottom: TabBar(
           controller: _tabController,
-          indicatorColor: const Color(0xFF10B981),
-          labelColor: const Color(0xFF10B981),
-          unselectedLabelColor: const Color(0xFF71717A),
+          indicatorSize: TabBarIndicatorSize.tab,
           tabs: const [
             Tab(text: 'Summary & Breakdown'),
             Tab(text: 'Filtered Activity'),
           ],
         ),
       ),
-      body: SpotlightBackground(
-        primaryGlow: const Color(0xFF06B6D4),
-        secondaryGlow: const Color(0xFF10B981),
-        child: Column(
-          children: [
-            // Date Filter Bar
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-              child: Row(
-                children: [
-                  _datePill('All Time', ReportDateFilter.allTime, isDark),
-                  const SizedBox(width: 8),
-                  _datePill('This Month', ReportDateFilter.thisMonth, isDark),
-                  const SizedBox(width: 8),
-                  _datePill('Last Month', ReportDateFilter.lastMonth, isDark),
-                  const SizedBox(width: 8),
-                  _datePill('This Year', ReportDateFilter.thisYear, isDark),
-                  const SizedBox(width: 8),
-                  InkWell(
-                    onTap: _pickCustomRange,
-                    borderRadius: BorderRadius.circular(10),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-                      decoration: BoxDecoration(
-                        color: _dateFilter == ReportDateFilter.custom
-                            ? const Color(0xFF10B981).withValues(alpha: 0.2)
-                            : isDark
-                                ? const Color(0xFF18181B)
-                                : const Color(0xFFE2E8F0),
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(
-                          color: _dateFilter == ReportDateFilter.custom ? const Color(0xFF10B981) : Colors.transparent,
-                        ),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(Icons.date_range_rounded, size: 14, color: Color(0xFF10B981)),
-                          const SizedBox(width: 6),
-                          Text(
-                            _dateFilter == ReportDateFilter.custom && _customDateRange != null
-                                ? '${DateFormatter.formatShortDate(_customDateRange!.start)} - ${DateFormatter.formatShortDate(_customDateRange!.end)}'
-                                : 'Custom',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                              color: _dateFilter == ReportDateFilter.custom ? const Color(0xFF10B981) : const Color(0xFF71717A),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
+      body: Column(
+        children: [
+          // Date Filter Bar using Material 3 Filter Chips
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: Row(
+              children: [
+                FilterChip(
+                  label: const Text('All Time'),
+                  selected: _dateFilter == ReportDateFilter.allTime,
+                  onSelected: (_) => setState(() => _dateFilter = ReportDateFilter.allTime),
+                ),
+                const SizedBox(width: 8),
+                FilterChip(
+                  label: const Text('This Month'),
+                  selected: _dateFilter == ReportDateFilter.thisMonth,
+                  onSelected: (_) => setState(() => _dateFilter = ReportDateFilter.thisMonth),
+                ),
+                const SizedBox(width: 8),
+                FilterChip(
+                  label: const Text('Last Month'),
+                  selected: _dateFilter == ReportDateFilter.lastMonth,
+                  onSelected: (_) => setState(() => _dateFilter = ReportDateFilter.lastMonth),
+                ),
+                const SizedBox(width: 8),
+                FilterChip(
+                  label: const Text('This Year'),
+                  selected: _dateFilter == ReportDateFilter.thisYear,
+                  onSelected: (_) => setState(() => _dateFilter = ReportDateFilter.thisYear),
+                ),
+                const SizedBox(width: 8),
+                ActionChip(
+                  avatar: const Icon(Icons.date_range_rounded, size: 16),
+                  label: Text(
+                    _dateFilter == ReportDateFilter.custom && _customDateRange != null
+                        ? '${DateFormatter.formatShortDate(_customDateRange!.start)} - ${DateFormatter.formatShortDate(_customDateRange!.end)}'
+                        : 'Custom Range',
                   ),
-                ],
-              ),
+                  onPressed: _pickCustomRange,
+                ),
+              ],
             ),
+          ),
 
-            Expanded(
-              child: allTxsAsync.when(
-                data: (allTxs) {
-                  final filteredTxs = allTxs.where((t) => _isDateInRange(t.transactionDate)).toList();
+          Expanded(
+            child: allTxsAsync.when(
+              data: (allTxs) {
+                final filteredTxs = allTxs.where((t) => _isDateInRange(t.transactionDate)).toList();
 
-                  double given = 0;
-                  double received = 0;
-                  for (final tx in filteredTxs) {
-                    if (tx.type == TransactionType.moneyGiven) {
-                      given += tx.amount;
-                    } else {
-                      received += tx.amount;
-                    }
+                double given = 0;
+                double received = 0;
+                for (final tx in filteredTxs) {
+                  if (tx.type == TransactionType.moneyGiven) {
+                    given += tx.amount;
+                  } else {
+                    received += tx.amount;
                   }
-                  final net = given - received;
+                }
+                final net = given - received;
 
-                  return TabBarView(
-                    controller: _tabController,
-                    children: [
-                      // Tab 1: Summary & Breakdown by Person
-                      SingleChildScrollView(
-                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            // Overview Stats Bento Card
-                            BentoCard(
-                              glowColor: const Color(0xFF06B6D4),
-                              padding: const EdgeInsets.all(20),
+                return TabBarView(
+                  controller: _tabController,
+                  children: [
+                    // Tab 1: Summary & Breakdown by Person
+                    SingleChildScrollView(
+                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Overview Stats Card
+                          Card(
+                            elevation: 0,
+                            color: colorScheme.surfaceContainerLow,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                              side: BorderSide(color: colorScheme.outlineVariant.withValues(alpha: 0.3)),
+                            ),
+                            child: Padding(
+                              padding: const EdgeInsets.all(18),
                               child: Column(
                                 children: [
                                   Row(
                                     children: [
-                                      _statBox('GIVEN', given, const Color(0xFFF43F5E), currencySymbol, isDark),
+                                      _statBox('GIVEN', given, colorScheme.error, colorScheme.errorContainer, colorScheme.onErrorContainer, currencySymbol, context),
                                       const SizedBox(width: 12),
-                                      _statBox('RECEIVED', received, const Color(0xFF10B981), currencySymbol, isDark),
+                                      _statBox('RECEIVED', received, colorScheme.primary, colorScheme.primaryContainer, colorScheme.onPrimaryContainer, currencySymbol, context),
                                     ],
                                   ),
                                   const SizedBox(height: 16),
-                                  Divider(height: 1, color: isDark ? const Color(0x18FFFFFF) : const Color(0xFFE2E8F0)),
-                                  const SizedBox(height: 16),
+                                  Divider(height: 1, color: colorScheme.outlineVariant.withValues(alpha: 0.4)),
+                                  const SizedBox(height: 14),
                                   Row(
                                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                     children: [
-                                      const Text(
+                                      Text(
                                         'Net Outstanding Shift',
-                                        style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                                        style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
                                       ),
                                       Text(
                                         CurrencyFormatter.format(net, symbol: currencySymbol),
-                                        style: TextStyle(
+                                        style: theme.textTheme.titleMedium?.copyWith(
                                           fontWeight: FontWeight.w800,
-                                          fontSize: 16,
                                           color: net > 0
-                                              ? const Color(0xFFF43F5E)
+                                              ? colorScheme.error
                                               : net < 0
-                                                  ? const Color(0xFF10B981)
-                                                  : Colors.grey,
+                                                  ? colorScheme.primary
+                                                  : colorScheme.onSurfaceVariant,
                                         ),
                                       ),
                                     ],
@@ -238,169 +229,151 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> with SingleTicker
                                 ],
                               ),
                             ),
-                            const SizedBox(height: 24),
+                          ),
+                          const SizedBox(height: 24),
 
-                            // Breakdown by Person
-                            const Text(
-                              'Breakdown By Person',
-                              style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16, letterSpacing: -0.3),
+                          // Breakdown by Person
+                          Text(
+                            'Breakdown By Person',
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: -0.2,
                             ),
-                            const SizedBox(height: 12),
+                          ),
+                          const SizedBox(height: 10),
 
-                            allSummariesAsync.when(
-                              data: (summaries) {
-                                if (summaries.isEmpty) {
-                                  return const Text('No records available', style: TextStyle(color: Color(0xFF71717A)));
-                                }
+                          allSummariesAsync.when(
+                            data: (summaries) {
+                              if (summaries.isEmpty) {
+                                return const Text('No records available');
+                              }
 
-                                return ListView.builder(
-                                  shrinkWrap: true,
-                                  physics: const NeverScrollableScrollPhysics(),
-                                  itemCount: summaries.length,
-                                  itemBuilder: (ctx, index) {
-                                    final s = summaries[index];
-                                    return BentoCard(
-                                      margin: const EdgeInsets.symmetric(vertical: 4),
-                                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                                      child: Row(
-                                        children: [
-                                          AvatarWidget(name: s.person.name, radius: 18),
-                                          const SizedBox(width: 12),
-                                          Expanded(
-                                            child: Column(
-                                              crossAxisAlignment: CrossAxisAlignment.start,
-                                              children: [
-                                                Text(s.person.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                                                Text(
-                                                  'Given: ${CurrencyFormatter.formatCompact(s.totalGiven, symbol: currencySymbol)} • Received: ${CurrencyFormatter.formatCompact(s.totalReceived, symbol: currencySymbol)}',
-                                                  style: const TextStyle(fontSize: 11, color: Color(0xFF71717A)),
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                          Text(
-                                            CurrencyFormatter.format(s.balance, symbol: currencySymbol),
-                                            style: TextStyle(
-                                              fontWeight: FontWeight.w800,
-                                              fontSize: 14,
-                                              color: s.balance > 0
-                                                  ? const Color(0xFFF43F5E)
-                                                  : s.balance < 0
-                                                      ? const Color(0xFF8B5CF6)
-                                                      : const Color(0xFF10B981),
-                                            ),
-                                          ),
-                                        ],
+                              return ListView.builder(
+                                shrinkWrap: true,
+                                physics: const NeverScrollableScrollPhysics(),
+                                itemCount: summaries.length,
+                                itemBuilder: (ctx, index) {
+                                  final s = summaries[index];
+                                  return Card(
+                                    elevation: 0,
+                                    margin: const EdgeInsets.symmetric(vertical: 4),
+                                    color: colorScheme.surfaceContainerLow,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(16),
+                                      side: BorderSide(color: colorScheme.outlineVariant.withValues(alpha: 0.3)),
+                                    ),
+                                    child: ListTile(
+                                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                                      leading: AvatarWidget(name: s.person.name, radius: 20),
+                                      title: Text(s.person.name, style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
+                                      subtitle: Text(
+                                        'Given: ${CurrencyFormatter.formatCompact(s.totalGiven, symbol: currencySymbol)} • Received: ${CurrencyFormatter.formatCompact(s.totalReceived, symbol: currencySymbol)}',
+                                        style: theme.textTheme.bodySmall?.copyWith(color: colorScheme.onSurfaceVariant),
                                       ),
+                                      trailing: Text(
+                                        CurrencyFormatter.format(s.balance, symbol: currencySymbol),
+                                        style: theme.textTheme.titleSmall?.copyWith(
+                                          fontWeight: FontWeight.w800,
+                                          color: s.balance > 0
+                                              ? colorScheme.error
+                                              : s.balance < 0
+                                                  ? colorScheme.tertiary
+                                                  : colorScheme.primary,
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                },
+                              );
+                            },
+                            loading: () => const Center(child: CircularProgressIndicator()),
+                            error: (err, _) => Text('Error: $err'),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    // Tab 2: Filtered Activity List
+                    filteredTxs.isEmpty
+                        ? const EmptyStateWidget(
+                            icon: Icons.filter_list_off_rounded,
+                            title: 'No activity in this period',
+                            description: 'No transactions found for the selected date range.',
+                          )
+                        : ListView.separated(
+                            padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+                            itemCount: filteredTxs.length,
+                            separatorBuilder: (ctx, i) => Divider(
+                              height: 1,
+                              indent: 72,
+                              endIndent: 16,
+                              color: colorScheme.outlineVariant.withValues(alpha: 0.4),
+                            ),
+                            itemBuilder: (ctx, index) {
+                              final tx = filteredTxs[index];
+                              final person = personsMap[tx.personId];
+                              return Card(
+                                elevation: 0,
+                                margin: const EdgeInsets.symmetric(vertical: 4),
+                                color: colorScheme.surfaceContainerLow,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(16),
+                                  side: BorderSide(color: colorScheme.outlineVariant.withValues(alpha: 0.3)),
+                                ),
+                                child: TransactionTile(
+                                  transaction: tx,
+                                  person: person,
+                                  currencySymbol: currencySymbol,
+                                  onTap: () {
+                                    TransactionDetailsDialog.show(
+                                      context,
+                                      transaction: tx,
+                                      person: person,
                                     );
                                   },
-                                );
-                              },
-                              loading: () => const Center(child: CircularProgressIndicator()),
-                              error: (err, _) => Text('Error: $err'),
-                            ),
-                          ],
-                        ),
-                      ),
-
-                      // Tab 2: Filtered Activity List
-                      filteredTxs.isEmpty
-                          ? const EmptyStateWidget(
-                              icon: Icons.filter_list_off_rounded,
-                              title: 'No activity in this period',
-                              description: 'No transactions found for the selected date range.',
-                            )
-                          : ListView.separated(
-                              padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-                              itemCount: filteredTxs.length,
-                              separatorBuilder: (ctx, i) => Divider(
-                                height: 1,
-                                indent: 72,
-                                endIndent: 20,
-                                color: isDark ? const Color(0x18FFFFFF) : const Color(0xFFE2E8F0),
-                              ),
-                              itemBuilder: (ctx, index) {
-                                final tx = filteredTxs[index];
-                                final person = personsMap[tx.personId];
-                                return BentoCard(
-                                  margin: const EdgeInsets.symmetric(vertical: 4),
-                                  padding: EdgeInsets.zero,
-                                  child: TransactionTile(
-                                    transaction: tx,
-                                    person: person,
-                                    currencySymbol: currencySymbol,
-                                    onTap: () {
-                                      TransactionDetailsDialog.show(
-                                        context,
-                                        transaction: tx,
-                                        person: person,
-                                      );
-                                    },
-                                  ),
-                                );
-                              },
-                            ),
-                    ],
-                  );
-                },
-                loading: () => const Center(child: CircularProgressIndicator()),
-                error: (err, _) => Center(child: Text('Error: $err')),
-              ),
+                                ),
+                              );
+                            },
+                          ),
+                  ],
+                );
+              },
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (err, _) => Center(child: Text('Error: $err')),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _datePill(String label, ReportDateFilter filter, bool isDark) {
-    final isSelected = _dateFilter == filter;
-    return InkWell(
-      onTap: () => setState(() => _dateFilter = filter),
-      borderRadius: BorderRadius.circular(10),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
-        decoration: BoxDecoration(
-          color: isSelected
-              ? const Color(0xFF10B981).withValues(alpha: 0.2)
-              : isDark
-                  ? const Color(0xFF18181B)
-                  : const Color(0xFFE2E8F0),
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(
-            color: isSelected ? const Color(0xFF10B981) : Colors.transparent,
-          ),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontSize: 12,
-            fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-            color: isSelected ? const Color(0xFF10B981) : const Color(0xFF71717A),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _statBox(String label, double amount, Color color, String symbol, bool isDark) {
+  Widget _statBox(String label, double amount, Color accent, Color bg, Color fg, String symbol, BuildContext context) {
+    final theme = Theme.of(context);
     return Expanded(
       child: Container(
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.12),
+          color: bg,
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: color.withValues(alpha: 0.25)),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(label, style: TextStyle(fontSize: 10, color: color, fontWeight: FontWeight.w800, letterSpacing: 0.8)),
-            const SizedBox(height: 4),
+            Text(
+              label,
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: fg,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0.6,
+              ),
+            ),
+            const SizedBox(height: 6),
             Text(
               CurrencyFormatter.format(amount, symbol: symbol),
-              style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18, color: color),
+              style: theme.textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.w800,
+                color: fg,
+              ),
             ),
           ],
         ),

@@ -33,29 +33,25 @@ class TransactionDetailsDialog extends ConsumerWidget {
   }
 
   void _confirmDelete(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
     final personName = person?.name ?? 'the borrower';
 
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF18181B),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-          side: const BorderSide(color: Color(0x35EF4444)),
-        ),
-        title: const Text('Delete Transaction?', style: TextStyle(color: Color(0xFFEF4444), fontWeight: FontWeight.bold)),
+        title: Text('Delete Transaction?', style: TextStyle(color: colorScheme.error)),
         content: Text(
           'Are you sure you want to delete this transaction?\n\n'
           'Deleting this will recalculate $personName\'s outstanding balance.',
-          style: const TextStyle(color: Color(0xFFA1A1AA), height: 1.4),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Cancel', style: TextStyle(color: Color(0xFF71717A))),
+            child: const Text('Cancel'),
           ),
           FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: const Color(0xFFDC2626)),
+            style: FilledButton.styleFrom(backgroundColor: colorScheme.error, foregroundColor: colorScheme.onError),
             onPressed: () async {
               Navigator.of(ctx).pop();
               Navigator.of(context).pop();
@@ -88,58 +84,70 @@ class TransactionDetailsDialog extends ConsumerWidget {
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setState) {
+          final theme = Theme.of(context);
+          final colorScheme = theme.colorScheme;
+
           return AlertDialog(
-            backgroundColor: const Color(0xFF18181B),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
-              side: const BorderSide(color: Color(0x28FFFFFF)),
-            ),
-            title: Text('Edit ${transaction.type.label}', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            title: Text('Edit ${transaction.type.label}'),
             content: SingleChildScrollView(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   TextField(
                     controller: amountController,
                     keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                    decoration: const InputDecoration(labelText: 'Amount'),
+                    decoration: const InputDecoration(
+                      labelText: 'Amount',
+                      prefixText: '₹ ',
+                    ),
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 14),
                   DropdownButtonFormField<PaymentMethod>(
                     initialValue: selectedMethod,
                     decoration: const InputDecoration(labelText: 'Payment Method'),
-                    items: PaymentMethod.values.map((m) {
+                    items: PaymentMethod.values.map((method) {
                       return DropdownMenuItem(
-                        value: m,
-                        child: Text(m.label),
+                        value: method,
+                        child: Row(
+                          children: [
+                            Icon(method.icon, size: 16),
+                            const SizedBox(width: 8),
+                            Text(method.label),
+                          ],
+                        ),
                       );
                     }).toList(),
                     onChanged: (val) {
                       if (val != null) setState(() => selectedMethod = val);
                     },
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 14),
                   ListTile(
                     contentPadding: EdgeInsets.zero,
-                    title: const Text('Date', style: TextStyle(color: Color(0xFFA1A1AA), fontSize: 13)),
-                    subtitle: Text(DateFormatter.formatDate(selectedDate), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                    trailing: const Icon(Icons.calendar_today_rounded, size: 20, color: Color(0xFF10B981)),
+                    title: const Text('Date', style: TextStyle(fontSize: 13)),
+                    subtitle: Text(
+                      DateFormatter.formatDate(selectedDate),
+                      style: TextStyle(color: colorScheme.primary, fontWeight: FontWeight.bold),
+                    ),
+                    trailing: const Icon(Icons.calendar_today_rounded, size: 20),
                     onTap: () async {
                       final picked = await showDatePicker(
                         context: context,
                         initialDate: selectedDate,
-                        firstDate: DateTime(2000),
+                        firstDate: DateTime(2020),
                         lastDate: DateTime.now().add(const Duration(days: 365)),
                       );
-                      if (picked != null) {
-                        setState(() => selectedDate = picked);
-                      }
+                      if (picked != null) setState(() => selectedDate = picked);
                     },
                   ),
                   const SizedBox(height: 8),
                   TextField(
                     controller: noteController,
-                    decoration: const InputDecoration(labelText: 'Note'),
+                    decoration: const InputDecoration(
+                      labelText: 'Optional Note',
+                      hintText: 'e.g. Loan instalment',
+                    ),
                   ),
                 ],
               ),
@@ -147,10 +155,9 @@ class TransactionDetailsDialog extends ConsumerWidget {
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(ctx).pop(),
-                child: const Text('Cancel', style: TextStyle(color: Color(0xFF71717A))),
+                child: const Text('Cancel'),
               ),
               FilledButton(
-                style: FilledButton.styleFrom(backgroundColor: const Color(0xFF10B981), foregroundColor: const Color(0xFF09090B)),
                 onPressed: () async {
                   final newAmount = double.tryParse(amountController.text.trim()) ?? 0;
                   if (newAmount <= 0) return;
@@ -174,7 +181,7 @@ class TransactionDetailsDialog extends ConsumerWidget {
                     );
                   }
                 },
-                child: const Text('Save Changes', style: TextStyle(fontWeight: FontWeight.bold)),
+                child: const Text('Save Changes'),
               ),
             ],
           );
@@ -185,31 +192,23 @@ class TransactionDetailsDialog extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
     final currencySymbol = ref.watch(currencySymbolProvider);
     final isReceived = transaction.type == TransactionType.paymentReceived;
-    final color = isReceived ? const Color(0xFF10B981) : const Color(0xFFF43F5E);
+    final color = isReceived ? colorScheme.primary : colorScheme.error;
 
     return AlertDialog(
-      backgroundColor: const Color(0xFF18181B),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(24),
-        side: BorderSide(color: color.withValues(alpha: 0.3), width: 1.5),
-      ),
       titlePadding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
       contentPadding: const EdgeInsets.fromLTRB(24, 16, 24, 16),
       title: Row(
         children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.15),
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: color.withValues(alpha: 0.3)),
-            ),
+          CircleAvatar(
+            backgroundColor: isReceived ? colorScheme.primaryContainer : colorScheme.errorContainer,
             child: Icon(
-              isReceived ? Icons.arrow_downward_rounded : Icons.arrow_outward_rounded,
+              isReceived ? Icons.arrow_downward_rounded : Icons.arrow_upward_rounded,
               color: color,
-              size: 22,
+              size: 20,
             ),
           ),
           const SizedBox(width: 12),
@@ -219,12 +218,12 @@ class TransactionDetailsDialog extends ConsumerWidget {
               children: [
                 Text(
                   transaction.type.label,
-                  style: const TextStyle(fontWeight: FontWeight.w800, color: Colors.white, fontSize: 16),
+                  style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
                 ),
                 if (person != null)
                   Text(
                     person!.name,
-                    style: const TextStyle(color: Color(0xFF71717A), fontSize: 12),
+                    style: theme.textTheme.bodySmall?.copyWith(color: colorScheme.onSurfaceVariant),
                   ),
               ],
             ),
@@ -236,25 +235,24 @@ class TransactionDetailsDialog extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Divider(height: 24, color: Color(0x18FFFFFF)),
+            Divider(height: 24, color: colorScheme.outlineVariant.withValues(alpha: 0.4)),
             Center(
               child: Text(
                 CurrencyFormatter.format(transaction.amount, symbol: currencySymbol),
-                style: TextStyle(
-                  fontWeight: FontWeight.w900,
-                  fontSize: 32,
+                style: theme.textTheme.headlineMedium?.copyWith(
+                  fontWeight: FontWeight.w800,
                   letterSpacing: -0.5,
                   color: color,
                 ),
               ),
             ),
             const SizedBox(height: 18),
-            _infoRow('Date', DateFormatter.formatDate(transaction.transactionDate)),
-            _infoRow('Time', DateFormatter.formatTime(transaction.transactionDate)),
-            _infoRow('Payment Method', transaction.paymentMethod.label),
+            _infoRow('Date', DateFormatter.formatDate(transaction.transactionDate), theme),
+            _infoRow('Time', DateFormatter.formatTime(transaction.transactionDate), theme),
+            _infoRow('Payment Method', transaction.paymentMethod.label, theme),
             if (transaction.note != null && transaction.note!.isNotEmpty)
-              _infoRow('Note', transaction.note!),
-            _infoRow('Recorded On', DateFormatter.formatDateTime(transaction.createdAt)),
+              _infoRow('Note', transaction.note!, theme),
+            _infoRow('Recorded On', DateFormatter.formatDateTime(transaction.createdAt), theme),
           ],
         ),
       ),
@@ -262,15 +260,14 @@ class TransactionDetailsDialog extends ConsumerWidget {
         IconButton(
           tooltip: 'Delete Transaction',
           onPressed: () => _confirmDelete(context, ref),
-          icon: const Icon(Icons.delete_outline_rounded, color: Color(0xFFF43F5E)),
+          icon: Icon(Icons.delete_outline_rounded, color: colorScheme.error),
         ),
         const Spacer(),
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Close', style: TextStyle(color: Color(0xFF71717A))),
+          child: const Text('Close'),
         ),
         FilledButton.tonal(
-          style: FilledButton.styleFrom(backgroundColor: const Color(0xFF27272A), foregroundColor: Colors.white),
           onPressed: () => _showEditDialog(context, ref),
           child: const Text('Edit'),
         ),
@@ -278,7 +275,7 @@ class TransactionDetailsDialog extends ConsumerWidget {
     );
   }
 
-  Widget _infoRow(String label, String value) {
+  Widget _infoRow(String label, String value, ThemeData theme) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
@@ -288,13 +285,16 @@ class TransactionDetailsDialog extends ConsumerWidget {
             width: 110,
             child: Text(
               label,
-              style: const TextStyle(color: Color(0xFF71717A), fontSize: 12),
+              style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
             ),
           ),
           Expanded(
             child: Text(
               value,
-              style: const TextStyle(fontWeight: FontWeight.w600, color: Colors.white, fontSize: 12),
+              style: theme.textTheme.bodySmall?.copyWith(
+                fontWeight: FontWeight.w600,
+                color: theme.colorScheme.onSurface,
+              ),
             ),
           ),
         ],

@@ -23,9 +23,11 @@ class TransactionTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
+    final colorScheme = theme.colorScheme;
     final isReceived = transaction.type == TransactionType.paymentReceived;
-    final color = isReceived ? const Color(0xFF10B981) : const Color(0xFFF43F5E);
+
+    final fgColor = isReceived ? colorScheme.primary : colorScheme.error;
+    final bgColor = isReceived ? colorScheme.primaryContainer : colorScheme.errorContainer;
 
     return InkWell(
       onTap: onTap,
@@ -35,19 +37,14 @@ class TransactionTile extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Icon Badge with subtle glow border
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: color.withValues(alpha: 0.25), width: 1),
-              ),
+            // Leading Icon Avatar
+            CircleAvatar(
+              radius: 20,
+              backgroundColor: bgColor,
               child: Icon(
-                isReceived ? Icons.arrow_downward_rounded : Icons.arrow_outward_rounded,
-                color: color,
-                size: 20,
+                isReceived ? Icons.arrow_downward_rounded : Icons.arrow_upward_rounded,
+                color: fgColor,
+                size: 18,
               ),
             ),
             const SizedBox(width: 14),
@@ -63,11 +60,7 @@ class TransactionTile extends StatelessWidget {
                         Expanded(
                           child: Text(
                             person!.name,
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 14,
-                              color: isDark ? Colors.white : Colors.black87,
-                            ),
+                            style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -76,20 +69,15 @@ class TransactionTile extends StatelessWidget {
                         Expanded(
                           child: Text(
                             transaction.type.label,
-                            style: TextStyle(
-                              fontWeight: FontWeight.w600,
-                              fontSize: 13,
-                              color: isDark ? Colors.white : Colors.black87,
-                            ),
+                            style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
                           ),
                         ),
                       // Amount
                       Text(
                         '${isReceived ? '+' : '-'}${CurrencyFormatter.format(transaction.amount, symbol: currencySymbol)}',
-                        style: TextStyle(
-                          color: color,
+                        style: theme.textTheme.titleSmall?.copyWith(
+                          color: fgColor,
                           fontWeight: FontWeight.w800,
-                          fontSize: 15,
                         ),
                       ),
                     ],
@@ -99,17 +87,11 @@ class TransactionTile extends StatelessWidget {
                   // Metadata row: Payment Method Chip, Date, Note
                   Row(
                     children: [
-                      // Payment method chip
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                         decoration: BoxDecoration(
-                          color: isDark
-                              ? const Color(0xFF27272A).withValues(alpha: 0.7)
-                              : const Color(0xFFF1F5F9),
+                          color: colorScheme.surfaceContainerHighest,
                           borderRadius: BorderRadius.circular(6),
-                          border: Border.all(
-                            color: isDark ? const Color(0x18FFFFFF) : const Color(0xFFCBD5E1),
-                          ),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
@@ -117,15 +99,15 @@ class TransactionTile extends StatelessWidget {
                             Icon(
                               transaction.paymentMethod.icon,
                               size: 11,
-                              color: const Color(0xFFA1A1AA),
+                              color: colorScheme.onSurfaceVariant,
                             ),
                             const SizedBox(width: 3),
                             Text(
                               transaction.paymentMethod.label,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 10,
                                 fontWeight: FontWeight.w600,
-                                color: Color(0xFFA1A1AA),
+                                color: colorScheme.onSurfaceVariant,
                               ),
                             ),
                           ],
@@ -136,8 +118,8 @@ class TransactionTile extends StatelessWidget {
                       // Relative Date
                       Text(
                         DateFormatter.formatRelative(transaction.transactionDate),
-                        style: const TextStyle(
-                          color: Color(0xFF71717A),
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: colorScheme.onSurfaceVariant,
                           fontSize: 11,
                         ),
                       ),
@@ -147,8 +129,8 @@ class TransactionTile extends StatelessWidget {
                         Expanded(
                           child: Text(
                             '• "${transaction.note!.trim()}"',
-                            style: const TextStyle(
-                              color: Color(0xFF71717A),
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: colorScheme.onSurfaceVariant,
                               fontStyle: FontStyle.italic,
                               fontSize: 11,
                             ),

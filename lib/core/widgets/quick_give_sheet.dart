@@ -200,14 +200,8 @@ class _QuickGiveSheetState extends ConsumerState<QuickGiveSheet> {
           maxHeight: MediaQuery.of(context).size.height * 0.88,
         ),
         decoration: BoxDecoration(
-          color: isDark ? const Color(0xFF18181B) : Colors.white,
+          color: theme.colorScheme.surfaceContainerLow,
           borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-          border: Border(
-            top: BorderSide(
-              color: isDark ? const Color(0x28FFFFFF) : const Color(0xFFE2E8F0),
-              width: 1,
-            ),
-          ),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -607,45 +601,33 @@ class _QuickGiveSheetState extends ConsumerState<QuickGiveSheet> {
                     const SizedBox(height: 22),
 
                     // 5. Submit Action Button
-                    Container(
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(16),
-                        boxShadow: [
-                          BoxShadow(
-                            color: const Color(0xFFF43F5E).withValues(alpha: 0.35),
-                            blurRadius: 18,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
+                    FilledButton(
+                      onPressed: _isSaving ? null : _save,
+                      style: FilledButton.styleFrom(
+                        backgroundColor: theme.colorScheme.error,
+                        foregroundColor: theme.colorScheme.onError,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                       ),
-                      child: FilledButton(
-                        onPressed: _isSaving ? null : _save,
-                        style: FilledButton.styleFrom(
-                          backgroundColor: const Color(0xFFF43F5E),
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                        ),
-                        child: _isSaving
-                            ? const SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                              )
-                            : Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  const Icon(Icons.arrow_upward_rounded, size: 20),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    _currentAmount > 0
-                                        ? 'Record ${CurrencyFormatter.format(_currentAmount, symbol: currencySymbol)} Given'
-                                        : 'Record Money Given',
-                                    style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
-                                  ),
-                                ],
-                              ),
-                      ),
+                      child: _isSaving
+                          ? SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2, color: theme.colorScheme.onError),
+                            )
+                          : Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const Icon(Icons.arrow_upward_rounded, size: 20),
+                                const SizedBox(width: 8),
+                                Text(
+                                  _currentAmount > 0
+                                      ? 'Record ${CurrencyFormatter.format(_currentAmount, symbol: currencySymbol)} Given'
+                                      : 'Record Money Given',
+                                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+                                ),
+                              ],
+                            ),
                     ),
                     const SizedBox(height: 10),
                   ],

@@ -6,10 +6,8 @@ import 'package:smarava/core/utils/contacts_helper.dart';
 import 'package:smarava/core/utils/currency_formatter.dart';
 import 'package:smarava/core/utils/date_formatter.dart';
 import 'package:smarava/core/widgets/avatar_widget.dart';
-import 'package:smarava/core/widgets/bento_card.dart';
 import 'package:smarava/core/widgets/empty_state_widget.dart';
 import 'package:smarava/core/widgets/quick_receive_sheet.dart';
-import 'package:smarava/core/widgets/spotlight_background.dart';
 import 'package:smarava/data/providers/app_providers.dart';
 import 'package:smarava/domain/entities/person.dart';
 import 'package:smarava/features/people/presentation/screens/add_edit_person_screen.dart';
@@ -78,11 +76,7 @@ class _PeopleScreenState extends ConsumerState<PeopleScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            backgroundColor: const Color(0xFF10B981),
-            content: Text(
-              'Added ${newPerson.name} from contacts',
-              style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF09090B)),
-            ),
+            content: Text('Added ${newPerson.name} from contacts'),
           ),
         );
         context.go('/people/${newPerson.id}');
@@ -100,49 +94,30 @@ class _PeopleScreenState extends ConsumerState<PeopleScreen> {
 
   void _showSortMenu(BuildContext context) {
     final currentSort = ref.read(peopleSortProvider);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = Theme.of(context);
 
     showModalBottomSheet(
       context: context,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) => Container(
-        decoration: BoxDecoration(
-          color: isDark ? const Color(0xFF18181B) : Colors.white,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-          border: Border(top: BorderSide(color: isDark ? const Color(0x28FFFFFF) : const Color(0xFFE2E8F0))),
-        ),
-        child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Center(
-                  child: Container(
-                    width: 40,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: isDark ? Colors.white24 : Colors.black26,
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
+      showDragHandle: true,
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                child: Text(
+                  'Sort People',
+                  style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
                 ),
-                const SizedBox(height: 16),
-                const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                  child: Text(
-                    'Sort Directory By',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                _sortTile('Highest Outstanding', PeopleSort.highestOutstanding, currentSort, Icons.trending_up_rounded),
-                _sortTile('Recently Active', PeopleSort.recentlyActive, currentSort, Icons.schedule_rounded),
-                _sortTile('Alphabetical (A - Z)', PeopleSort.alphabetical, currentSort, Icons.sort_by_alpha_rounded),
-                _sortTile('Recently Added', PeopleSort.recentlyAdded, currentSort, Icons.fiber_new_rounded),
-              ],
-            ),
+              ),
+              _sortTile('Highest Outstanding', PeopleSort.highestOutstanding, currentSort, Icons.trending_up_rounded),
+              _sortTile('Recently Active', PeopleSort.recentlyActive, currentSort, Icons.history_rounded),
+              _sortTile('Alphabetical (A - Z)', PeopleSort.alphabetical, currentSort, Icons.sort_by_alpha_rounded),
+              _sortTile('Recently Added', PeopleSort.recentlyAdded, currentSort, Icons.schedule_rounded),
+            ],
           ),
         ),
       ),
@@ -151,29 +126,32 @@ class _PeopleScreenState extends ConsumerState<PeopleScreen> {
 
   Widget _sortTile(String title, PeopleSort sort, PeopleSort current, IconData icon) {
     final isSelected = sort == current;
-    return BentoCard(
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    return Card(
+      elevation: 0,
+      color: isSelected ? colorScheme.primaryContainer : colorScheme.surfaceContainer,
       margin: const EdgeInsets.symmetric(vertical: 4),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      glowColor: isSelected ? const Color(0xFF10B981) : null,
-      onTap: () {
-        ref.read(peopleSortProvider.notifier).setSort(sort);
-        Navigator.of(context).pop();
-      },
-      child: Row(
-        children: [
-          Icon(icon, size: 20, color: isSelected ? const Color(0xFF10B981) : const Color(0xFF71717A)),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Text(
-              title,
-              style: TextStyle(
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                color: isSelected ? const Color(0xFF10B981) : null,
-              ),
-            ),
+      child: ListTile(
+        leading: Icon(
+          icon,
+          color: isSelected ? colorScheme.onPrimaryContainer : colorScheme.onSurfaceVariant,
+        ),
+        title: Text(
+          title,
+          style: TextStyle(
+            fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+            color: isSelected ? colorScheme.onPrimaryContainer : colorScheme.onSurface,
           ),
-          if (isSelected) const Icon(Icons.check_rounded, color: Color(0xFF10B981), size: 18),
-        ],
+        ),
+        trailing: isSelected
+            ? Icon(Icons.check_rounded, color: colorScheme.onPrimaryContainer)
+            : null,
+        onTap: () {
+          ref.read(peopleSortProvider.notifier).setSort(sort);
+          Navigator.of(context).pop();
+        },
       ),
     );
   }
@@ -181,32 +159,29 @@ class _PeopleScreenState extends ConsumerState<PeopleScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
+    final colorScheme = theme.colorScheme;
     final currencySymbol = ref.watch(currencySymbolProvider);
     final currentFilter = ref.watch(peopleFilterProvider);
     final people = ref.watch(filteredPersonSummariesProvider);
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          'People Ledger',
-          style: TextStyle(fontWeight: FontWeight.w800, fontSize: 20),
-        ),
+        title: const Text('People Ledger'),
         actions: [
           _isImporting
               ? const Padding(
                   padding: EdgeInsets.symmetric(horizontal: 14.0),
                   child: Center(
                     child: SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF10B981)),
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
                     ),
                   ),
                 )
               : IconButton(
                   tooltip: 'Import from Phone Contacts',
-                  icon: const Icon(Icons.contacts_rounded, color: Color(0xFF10B981)),
+                  icon: const Icon(Icons.contacts_rounded),
                   onPressed: _importFromContacts,
                 ),
           IconButton(
@@ -217,249 +192,211 @@ class _PeopleScreenState extends ConsumerState<PeopleScreen> {
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
-        backgroundColor: const Color(0xFF10B981),
-        foregroundColor: const Color(0xFF09090B),
         onPressed: () {
           Navigator.of(context).push(
             MaterialPageRoute(builder: (ctx) => const AddEditPersonScreen()),
           );
         },
         icon: const Icon(Icons.person_add_rounded),
-        label: const Text('Add Person', style: TextStyle(fontWeight: FontWeight.bold)),
+        label: const Text('Add Person', style: TextStyle(fontWeight: FontWeight.w700)),
       ),
-      body: SpotlightBackground(
-        primaryGlow: const Color(0xFF10B981),
-        secondaryGlow: const Color(0xFF6366F1),
-        child: Column(
-          children: [
-            // Search Bar
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: TextField(
-                controller: _searchController,
-                decoration: InputDecoration(
-                  hintText: 'Search people, notes...',
-                  hintStyle: const TextStyle(color: Color(0xFF71717A), fontSize: 13),
-                  prefixIcon: const Icon(Icons.search_rounded, size: 20, color: Color(0xFF71717A)),
-                  suffixIcon: _searchController.text.isNotEmpty
-                      ? IconButton(
-                          icon: const Icon(Icons.clear_rounded, size: 18),
-                          onPressed: () {
-                            _searchController.clear();
-                            ref.read(peopleSearchQueryProvider.notifier).setQuery('');
-                          },
-                        )
-                      : null,
-                  contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+      body: Column(
+        children: [
+          // Material 3 Search Bar
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+            child: SearchBar(
+              controller: _searchController,
+              elevation: const WidgetStatePropertyAll(0),
+              backgroundColor: WidgetStatePropertyAll(colorScheme.surfaceContainerHigh),
+              hintText: 'Search people, notes...',
+              leading: const Icon(Icons.search_rounded),
+              trailing: [
+                if (_searchController.text.isNotEmpty)
+                  IconButton(
+                    icon: const Icon(Icons.clear_rounded),
+                    onPressed: () {
+                      _searchController.clear();
+                      ref.read(peopleSearchQueryProvider.notifier).setQuery('');
+                    },
+                  ),
+              ],
+              onChanged: (val) {
+                ref.read(peopleSearchQueryProvider.notifier).setQuery(val);
+              },
+            ),
+          ),
+
+          // Material 3 Filter Chips Row
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            child: Row(
+              children: [
+                FilterChip(
+                  label: const Text('Active'),
+                  selected: currentFilter == PeopleFilter.active,
+                  onSelected: (_) => ref.read(peopleFilterProvider.notifier).setFilter(PeopleFilter.active),
                 ),
-                onChanged: (val) {
-                  ref.read(peopleSearchQueryProvider.notifier).setQuery(val);
-                },
-              ),
+                const SizedBox(width: 8),
+                FilterChip(
+                  label: const Text('Settled'),
+                  selected: currentFilter == PeopleFilter.settled,
+                  onSelected: (_) => ref.read(peopleFilterProvider.notifier).setFilter(PeopleFilter.settled),
+                ),
+                const SizedBox(width: 8),
+                FilterChip(
+                  label: const Text('Archived'),
+                  selected: currentFilter == PeopleFilter.archived,
+                  onSelected: (_) => ref.read(peopleFilterProvider.notifier).setFilter(PeopleFilter.archived),
+                ),
+                const SizedBox(width: 8),
+                FilterChip(
+                  label: const Text('All Directory'),
+                  selected: currentFilter == PeopleFilter.all,
+                  onSelected: (_) => ref.read(peopleFilterProvider.notifier).setFilter(PeopleFilter.all),
+                ),
+              ],
             ),
+          ),
+          const SizedBox(height: 4),
 
-            // Aceternity Segmented Filter Pills
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-              child: Row(
-                children: [
-                  _filterPill('Active', PeopleFilter.active, currentFilter, isDark),
-                  const SizedBox(width: 8),
-                  _filterPill('Settled', PeopleFilter.settled, currentFilter, isDark),
-                  const SizedBox(width: 8),
-                  _filterPill('Archived', PeopleFilter.archived, currentFilter, isDark),
-                  const SizedBox(width: 8),
-                  _filterPill('All Directory', PeopleFilter.all, currentFilter, isDark),
-                ],
-              ),
-            ),
-            const SizedBox(height: 8),
+          // List of People
+          Expanded(
+            child: people.isEmpty
+                ? EmptyStateWidget(
+                    icon: Icons.people_outline_rounded,
+                    title: _searchController.text.isNotEmpty ? 'No matches found' : 'No records here',
+                    description: _searchController.text.isNotEmpty
+                        ? 'Try searching with a different name or phone number.'
+                        : 'Add friends or contacts to start tracking balances.',
+                    actionLabel: _searchController.text.isNotEmpty ? null : 'Add Person',
+                    onActionPressed: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(builder: (ctx) => const AddEditPersonScreen()),
+                      );
+                    },
+                  )
+                : ListView.builder(
+                    padding: const EdgeInsets.fromLTRB(16, 4, 16, 80),
+                    itemCount: people.length,
+                    itemBuilder: (ctx, index) {
+                      final summary = people[index];
+                      final person = summary.person;
+                      final balance = summary.balance;
+                      final owes = summary.owesMoney;
+                      final overpaid = summary.isOverpaid;
 
-            // List of People
-            Expanded(
-              child: people.isEmpty
-                  ? EmptyStateWidget(
-                      icon: Icons.people_outline_rounded,
-                      title: _searchController.text.isNotEmpty ? 'No matches found' : 'No records here',
-                      description: _searchController.text.isNotEmpty
-                          ? 'Try searching with a different name or phone number.'
-                          : 'Add friends or contacts to start tracking balances.',
-                      actionLabel: _searchController.text.isNotEmpty ? null : 'Add Person',
-                      onActionPressed: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(builder: (ctx) => const AddEditPersonScreen()),
-                        );
-                      },
-                    )
-                  : ListView.builder(
-                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 80),
-                      itemCount: people.length,
-                      itemBuilder: (ctx, index) {
-                        final summary = people[index];
-                        final person = summary.person;
-                        final balance = summary.balance;
-                        final owes = summary.owesMoney;
-                        final overpaid = summary.isOverpaid;
+                      Color badgeBg;
+                      Color badgeFg;
+                      String badgeText;
+                      if (owes) {
+                        badgeBg = colorScheme.errorContainer;
+                        badgeFg = colorScheme.onErrorContainer;
+                        badgeText = 'Owes ${CurrencyFormatter.format(balance, symbol: currencySymbol)}';
+                      } else if (overpaid) {
+                        badgeBg = colorScheme.tertiaryContainer;
+                        badgeFg = colorScheme.onTertiaryContainer;
+                        badgeText = 'Overpaid ${CurrencyFormatter.format(balance.abs(), symbol: currencySymbol)}';
+                      } else {
+                        badgeBg = colorScheme.primaryContainer;
+                        badgeFg = colorScheme.onPrimaryContainer;
+                        badgeText = 'Settled';
+                      }
 
-                        Color badgeColor;
-                        String badgeText;
-                        if (owes) {
-                          badgeColor = const Color(0xFFF43F5E);
-                          badgeText = 'Owes ${CurrencyFormatter.format(balance, symbol: currencySymbol)}';
-                        } else if (overpaid) {
-                          badgeColor = const Color(0xFF8B5CF6);
-                          badgeText = 'Overpaid ${CurrencyFormatter.format(balance.abs(), symbol: currencySymbol)}';
-                        } else {
-                          badgeColor = const Color(0xFF10B981);
-                          badgeText = '✓ Settled';
-                        }
-
-                        return BentoCard(
-                          margin: const EdgeInsets.symmetric(vertical: 5),
-                          padding: const EdgeInsets.all(14),
+                      return Card(
+                        elevation: 0,
+                        margin: const EdgeInsets.symmetric(vertical: 4),
+                        color: colorScheme.surfaceContainerLow,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                          side: BorderSide(color: colorScheme.outlineVariant.withValues(alpha: 0.3)),
+                        ),
+                        child: ListTile(
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
                           onTap: () => context.push('/people/${person.id}'),
-                          child: Row(
+                          leading: AvatarWidget(name: person.name, radius: 22),
+                          title: Text(
+                            person.name,
+                            style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+                          ),
+                          subtitle: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              AvatarWidget(name: person.name, radius: 22),
-                              const SizedBox(width: 14),
-
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      person.name,
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 15,
-                                        color: isDark ? Colors.white : Colors.black87,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 3),
-                                    if (summary.lastTransaction != null)
-                                      Text(
-                                        'Last: ${DateFormatter.formatRelative(summary.lastTransaction!.transactionDate)}',
-                                        style: const TextStyle(
-                                          color: Color(0xFF71717A),
-                                          fontSize: 11,
-                                        ),
-                                      )
-                                    else if (person.phone != null && person.phone!.isNotEmpty)
-                                      Text(
-                                        person.phone!,
-                                        style: const TextStyle(
-                                          color: Color(0xFF71717A),
-                                          fontSize: 11,
-                                        ),
-                                      )
-                                    else
-                                      Text(
-                                        'Added ${DateFormatter.formatShortDate(person.createdAt)}',
-                                        style: const TextStyle(
-                                          color: Color(0xFF71717A),
-                                          fontSize: 11,
-                                        ),
-                                      ),
-                                  ],
+                              const SizedBox(height: 2),
+                              if (summary.lastTransaction != null)
+                                Text(
+                                  'Last: ${DateFormatter.formatRelative(summary.lastTransaction!.transactionDate)}',
+                                  style: theme.textTheme.bodySmall?.copyWith(color: colorScheme.onSurfaceVariant),
+                                )
+                              else if (person.phone != null && person.phone!.isNotEmpty)
+                                Text(
+                                  person.phone!,
+                                  style: theme.textTheme.bodySmall?.copyWith(color: colorScheme.onSurfaceVariant),
+                                )
+                              else
+                                Text(
+                                  'Added ${DateFormatter.formatShortDate(person.createdAt)}',
+                                  style: theme.textTheme.bodySmall?.copyWith(color: colorScheme.onSurfaceVariant),
                                 ),
-                              ),
-
-                              // Balance / Status Badge
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.end,
-                                children: [
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                    decoration: BoxDecoration(
-                                      color: badgeColor.withValues(alpha: 0.15),
-                                      borderRadius: BorderRadius.circular(8),
-                                      border: Border.all(color: badgeColor.withValues(alpha: 0.3)),
-                                    ),
-                                    child: Text(
-                                      badgeText,
-                                      style: TextStyle(
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.bold,
-                                        color: badgeColor,
-                                      ),
-                                    ),
-                                  ),
-                                  if (owes) ...[
-                                    const SizedBox(height: 6),
-                                    InkWell(
-                                      onTap: () => QuickReceiveSheet.show(context, personId: person.id),
-                                      borderRadius: BorderRadius.circular(6),
-                                      child: Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                        decoration: BoxDecoration(
-                                          color: const Color(0xFF10B981).withValues(alpha: 0.15),
-                                          borderRadius: BorderRadius.circular(6),
-                                        ),
-                                        child: const Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            Icon(Icons.arrow_downward_rounded, size: 12, color: Color(0xFF10B981)),
-                                            SizedBox(width: 3),
-                                            Text(
-                                              'Receive',
-                                              style: TextStyle(
-                                                fontSize: 10,
-                                                fontWeight: FontWeight.bold,
-                                                color: Color(0xFF10B981),
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ],
-                              ),
                             ],
                           ),
-                        );
-                      },
-                    ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _filterPill(String label, PeopleFilter filter, PeopleFilter current, bool isDark) {
-    final isSelected = filter == current;
-    return InkWell(
-      onTap: () => ref.read(peopleFilterProvider.notifier).setFilter(filter),
-      borderRadius: BorderRadius.circular(10),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
-        decoration: BoxDecoration(
-          color: isSelected
-              ? const Color(0xFF10B981).withValues(alpha: 0.2)
-              : isDark
-                  ? const Color(0xFF18181B)
-                  : const Color(0xFFE2E8F0),
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(
-            color: isSelected ? const Color(0xFF10B981) : Colors.transparent,
-            width: 1,
+                          trailing: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                decoration: BoxDecoration(
+                                  color: badgeBg,
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Text(
+                                  badgeText,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w700,
+                                    color: badgeFg,
+                                  ),
+                                ),
+                              ),
+                              if (owes) ...[
+                                const SizedBox(height: 4),
+                                InkWell(
+                                  onTap: () => QuickReceiveSheet.show(context, personId: person.id),
+                                  borderRadius: BorderRadius.circular(6),
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: colorScheme.primaryContainer.withValues(alpha: 0.6),
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(Icons.arrow_downward_rounded, size: 11, color: colorScheme.primary),
+                                        const SizedBox(width: 3),
+                                        Text(
+                                          'Receive',
+                                          style: TextStyle(
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.w700,
+                                            color: colorScheme.primary,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
           ),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontSize: 12,
-            fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-            color: isSelected
-                ? const Color(0xFF10B981)
-                : isDark
-                    ? const Color(0xFFA1A1AA)
-                    : const Color(0xFF475569),
-          ),
-        ),
+        ],
       ),
     );
   }

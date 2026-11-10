@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+/// Material 3 Card component replacing legacy custom bento styling
 class BentoCard extends StatelessWidget {
   final Widget child;
   final EdgeInsetsGeometry padding;
@@ -12,7 +13,7 @@ class BentoCard extends StatelessWidget {
   const BentoCard({
     super.key,
     required this.child,
-    this.padding = const EdgeInsets.all(20),
+    this.padding = const EdgeInsets.all(16),
     this.margin,
     this.onTap,
     this.glowColor,
@@ -22,73 +23,39 @@ class BentoCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final r = borderRadius ?? BorderRadius.circular(20);
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final r = borderRadius ?? BorderRadius.circular(16);
 
-    final cardContent = Container(
-      margin: margin,
-      decoration: BoxDecoration(
+    final card = Card(
+      margin: margin ?? EdgeInsets.zero,
+      elevation: 0,
+      color: colorScheme.surfaceContainerLow,
+      shape: RoundedRectangleBorder(
         borderRadius: r,
-        gradient: backgroundGradient ??
-            LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: isDark
-                  ? [
-                      const Color(0xFF18181B).withValues(alpha: 0.85), // Zinc-900
-                      const Color(0xFF0F0F12).withValues(alpha: 0.95),
-                    ]
-                  : [
-                      Colors.white,
-                      const Color(0xFFF1F5F9), // Slate-100
-                    ],
-            ),
-        border: Border.all(
-          color: isDark
-              ? (glowColor != null
-                  ? glowColor!.withValues(alpha: 0.35)
-                  : const Color(0x1FFFFFFF)) // 12% white border
-              : (glowColor != null
-                  ? glowColor!.withValues(alpha: 0.25)
-                  : const Color(0xFFE2E8F0)),
-          width: 1.0,
+        side: BorderSide(
+          color: glowColor != null
+              ? glowColor!.withValues(alpha: 0.5)
+              : colorScheme.outlineVariant.withValues(alpha: 0.4),
+          width: glowColor != null ? 1.5 : 1.0,
         ),
-        boxShadow: [
-          if (glowColor != null && isDark)
-            BoxShadow(
-              color: glowColor!.withValues(alpha: 0.12),
-              blurRadius: 20,
-              offset: const Offset(0, 6),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: onTap != null
+          ? InkWell(
+              onTap: onTap,
+              borderRadius: r,
+              child: Padding(
+                padding: padding,
+                child: child,
+              ),
             )
-          else if (!isDark)
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.04),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
+          : Padding(
+              padding: padding,
+              child: child,
             ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: r,
-        child: Padding(
-          padding: padding,
-          child: child,
-        ),
-      ),
     );
 
-    if (onTap != null) {
-      return Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: r,
-          child: cardContent,
-        ),
-      );
-    }
-
-    return cardContent;
+    return card;
   }
 }
-

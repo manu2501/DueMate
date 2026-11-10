@@ -112,48 +112,30 @@ class _PersonPickerSheetState extends ConsumerState<PersonPickerSheet> {
     final allPersonsAsync = ref.watch(allPersonSummariesProvider);
     final currencySymbol = ref.watch(currencySymbolProvider);
 
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
     return Container(
       constraints: BoxConstraints(
         maxHeight: MediaQuery.of(context).size.height * 0.82,
       ),
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF18181B) : Colors.white,
+        color: colorScheme.surfaceContainerLow,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-        border: Border(
-          top: BorderSide(
-            color: isDark ? const Color(0x28FFFFFF) : const Color(0xFFE2E8F0),
-            width: 1,
-          ),
-        ),
       ),
       child: Column(
         children: [
-          // Handle
-          Center(
-            child: Container(
-              margin: const EdgeInsets.only(top: 12),
-              width: 36,
-              height: 4,
-              decoration: BoxDecoration(
-                color: isDark ? Colors.white24 : Colors.black26,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-          ),
-
           // Header
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
             child: Row(
               children: [
-                const Icon(Icons.people_outline_rounded, color: Color(0xFF10B981), size: 22),
+                Icon(Icons.people_outline_rounded, color: colorScheme.primary, size: 22),
                 const SizedBox(width: 10),
                 Text(
                   'Select Person',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w800,
-                    color: isDark ? Colors.white : Colors.black87,
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
                 const Spacer(),
@@ -169,81 +151,65 @@ class _PersonPickerSheetState extends ConsumerState<PersonPickerSheet> {
           // Search Field
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: TextField(
+            child: SearchBar(
               controller: _searchController,
-              decoration: InputDecoration(
-                hintText: 'Search people by name...',
-                prefixIcon: const Icon(Icons.search_rounded, size: 20),
-                suffixIcon: _searchQuery.isNotEmpty
-                    ? IconButton(
-                        icon: const Icon(Icons.clear_rounded, size: 18),
-                        onPressed: () {
-                          _searchController.clear();
-                          setState(() => _searchQuery = '');
-                        },
-                      )
-                    : null,
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              ),
+              elevation: const WidgetStatePropertyAll(0),
+              backgroundColor: WidgetStatePropertyAll(colorScheme.surfaceContainerHigh),
+              hintText: 'Search people by name...',
+              leading: const Icon(Icons.search_rounded, size: 20),
+              trailing: [
+                if (_searchQuery.isNotEmpty)
+                  IconButton(
+                    icon: const Icon(Icons.clear_rounded, size: 18),
+                    onPressed: () {
+                      _searchController.clear();
+                      setState(() => _searchQuery = '');
+                    },
+                  ),
+              ],
               onChanged: (val) => setState(() => _searchQuery = val.trim().toLowerCase()),
             ),
           ),
           const SizedBox(height: 12),
 
-          // Import From Contacts Action Pill
+          // Import From Contacts Action Card
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: InkWell(
-              onTap: _isImportingContact ? null : _pickFromContacts,
-              borderRadius: BorderRadius.circular(14),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF10B981).withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(
-                    color: const Color(0xFF10B981).withValues(alpha: 0.3),
-                    width: 1,
+            child: Card(
+              elevation: 0,
+              color: colorScheme.primaryContainer.withValues(alpha: 0.4),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14),
+                side: BorderSide(color: colorScheme.primary.withValues(alpha: 0.3)),
+              ),
+              child: ListTile(
+                onTap: _isImportingContact ? null : _pickFromContacts,
+                leading: _isImportingContact
+                    ? SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2, color: colorScheme.primary),
+                      )
+                    : Icon(Icons.contacts_rounded, color: colorScheme.primary),
+                title: Text(
+                  'Choose from Phone Contacts',
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: colorScheme.primary,
                   ),
                 ),
-                child: Row(
-                  children: [
-                    _isImportingContact
-                        ? const SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF10B981)),
-                          )
-                        : const Icon(Icons.contacts_rounded, color: Color(0xFF10B981), size: 20),
-                    const SizedBox(width: 12),
-                    const Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Choose from Phone Contacts',
-                            style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w700,
-                              color: Color(0xFF10B981),
-                            ),
-                          ),
-                          Text(
-                            'Select from device address book directly',
-                            style: TextStyle(fontSize: 11, color: Color(0xFF71717A)),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: Color(0xFF10B981)),
-                  ],
+                subtitle: Text(
+                  'Select from device address book directly',
+                  style: theme.textTheme.bodySmall?.copyWith(color: colorScheme.onSurfaceVariant),
                 ),
+                trailing: Icon(Icons.arrow_forward_ios_rounded, size: 14, color: colorScheme.primary),
               ),
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
 
-          const Divider(height: 1, thickness: 1, color: Color(0x18FFFFFF)),
+          // Divider
+          Divider(height: 1, thickness: 1, color: colorScheme.outlineVariant.withValues(alpha: 0.4)),
 
           // Persons List
           Expanded(
@@ -327,90 +293,77 @@ class _PersonPickerItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
     final balance = summary.balance;
 
-    Color badgeColor;
+    Color badgeBg;
+    Color badgeFg;
     String badgeText;
     if (balance > 0) {
-      badgeColor = const Color(0xFFF43F5E); // Rose
+      badgeBg = colorScheme.errorContainer;
+      badgeFg = colorScheme.onErrorContainer;
       badgeText = 'Owes ${CurrencyFormatter.format(balance, symbol: currencySymbol)}';
     } else if (balance < 0) {
-      badgeColor = const Color(0xFF8B5CF6); // Purple
+      badgeBg = colorScheme.tertiaryContainer;
+      badgeFg = colorScheme.onTertiaryContainer;
       badgeText = 'Overpaid ${CurrencyFormatter.format(balance.abs(), symbol: currencySymbol)}';
     } else {
-      badgeColor = const Color(0xFF10B981); // Emerald
+      badgeBg = colorScheme.primaryContainer;
+      badgeFg = colorScheme.onPrimaryContainer;
       badgeText = 'Settled';
     }
 
-    return Material(
+    return Card(
+      elevation: 0,
+      margin: const EdgeInsets.symmetric(vertical: 3),
       color: isSelected
-          ? const Color(0xFF10B981).withValues(alpha: 0.12)
-          : isDark
-              ? const Color(0xFF27272A).withValues(alpha: 0.4)
-              : const Color(0xFFF8FAFC),
-      borderRadius: BorderRadius.circular(14),
-      child: InkWell(
-        onTap: onTap,
+          ? colorScheme.primaryContainer.withValues(alpha: 0.35)
+          : colorScheme.surfaceContainer,
+      shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(14),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(
-              color: isSelected
-                  ? const Color(0xFF10B981)
-                  : isDark
-                      ? const Color(0x18FFFFFF)
-                      : const Color(0xFFE2E8F0),
-              width: isSelected ? 1.5 : 1.0,
+        side: BorderSide(
+          color: isSelected ? colorScheme.primary : colorScheme.outlineVariant.withValues(alpha: 0.3),
+          width: isSelected ? 1.5 : 1.0,
+        ),
+      ),
+      child: ListTile(
+        onTap: onTap,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
+        leading: AvatarWidget(name: summary.person.name, radius: 18),
+        title: Text(
+          summary.person.name,
+          style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+        ),
+        subtitle: (summary.person.phone != null && summary.person.phone!.isNotEmpty)
+            ? Text(
+                summary.person.phone!,
+                style: theme.textTheme.bodySmall?.copyWith(color: colorScheme.onSurfaceVariant),
+              )
+            : null,
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(
+                color: badgeBg,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                badgeText,
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: badgeFg,
+                ),
+              ),
             ),
-          ),
-          child: Row(
-            children: [
-              AvatarWidget(name: summary.person.name, radius: 18),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      summary.person.name,
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w700,
-                        color: isDark ? Colors.white : Colors.black87,
-                      ),
-                    ),
-                    if (summary.person.phone != null && summary.person.phone!.isNotEmpty)
-                      Text(
-                        summary.person.phone!,
-                        style: const TextStyle(fontSize: 11, color: Color(0xFF71717A)),
-                      ),
-                  ],
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: badgeColor.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: badgeColor.withValues(alpha: 0.25), width: 1),
-                ),
-                child: Text(
-                  badgeText,
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    color: badgeColor,
-                  ),
-                ),
-              ),
-              if (isSelected) ...[
-                const SizedBox(width: 8),
-                const Icon(Icons.check_circle_rounded, color: Color(0xFF10B981), size: 18),
-              ],
+            if (isSelected) ...[
+              const SizedBox(width: 8),
+              Icon(Icons.check_circle_rounded, color: colorScheme.primary, size: 20),
             ],
-          ),
+          ],
         ),
       ),
     );

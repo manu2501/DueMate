@@ -205,14 +205,8 @@ class _QuickReceiveSheetState extends ConsumerState<QuickReceiveSheet> {
           maxHeight: MediaQuery.of(context).size.height * 0.88,
         ),
         decoration: BoxDecoration(
-          color: isDark ? const Color(0xFF18181B) : Colors.white,
+          color: theme.colorScheme.surfaceContainerLow,
           borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-          border: Border(
-            top: BorderSide(
-              color: isDark ? const Color(0x28FFFFFF) : const Color(0xFFE2E8F0),
-              width: 1,
-            ),
-          ),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -649,45 +643,33 @@ class _QuickReceiveSheetState extends ConsumerState<QuickReceiveSheet> {
                     const SizedBox(height: 22),
 
                     // 5. Submit Action Button
-                    Container(
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(16),
-                        boxShadow: [
-                          BoxShadow(
-                            color: const Color(0xFF10B981).withValues(alpha: 0.35),
-                            blurRadius: 18,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
+                    FilledButton(
+                      onPressed: _isSaving ? null : _save,
+                      style: FilledButton.styleFrom(
+                        backgroundColor: theme.colorScheme.primary,
+                        foregroundColor: theme.colorScheme.onPrimary,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                       ),
-                      child: FilledButton(
-                        onPressed: _isSaving ? null : _save,
-                        style: FilledButton.styleFrom(
-                          backgroundColor: const Color(0xFF10B981),
-                          foregroundColor: const Color(0xFF09090B),
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                        ),
-                        child: _isSaving
-                            ? const SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF09090B)),
-                              )
-                            : Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  const Icon(Icons.check_rounded, size: 20),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    _currentAmount > 0
-                                        ? 'Record ${CurrencyFormatter.format(_currentAmount, symbol: currencySymbol)} Repayment'
-                                        : 'Record Repayment',
-                                    style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
-                                  ),
-                                ],
-                              ),
-                      ),
+                      child: _isSaving
+                          ? SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2, color: theme.colorScheme.onPrimary),
+                            )
+                          : Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const Icon(Icons.check_rounded, size: 20),
+                                const SizedBox(width: 8),
+                                Text(
+                                  _currentAmount > 0
+                                      ? 'Record ${CurrencyFormatter.format(_currentAmount, symbol: currencySymbol)} Repayment'
+                                      : 'Record Repayment',
+                                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+                                ),
+                              ],
+                            ),
                     ),
                     const SizedBox(height: 10),
                   ],

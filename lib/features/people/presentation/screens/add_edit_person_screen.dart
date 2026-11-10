@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 import 'package:smarava/core/utils/contacts_helper.dart';
-import 'package:smarava/core/widgets/bento_card.dart';
-import 'package:smarava/core/widgets/spotlight_background.dart';
 import 'package:smarava/data/providers/app_providers.dart';
 import 'package:smarava/domain/entities/person.dart';
 
@@ -61,11 +59,7 @@ class _AddEditPersonScreenState extends ConsumerState<AddEditPersonScreen> {
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            backgroundColor: const Color(0xFF10B981),
-            content: Text(
-              'Imported ${contact.name} from contacts',
-              style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF09090B)),
-            ),
+            content: Text('Imported ${contact.name} from contacts'),
           ),
         );
       }
@@ -113,18 +107,14 @@ class _AddEditPersonScreenState extends ConsumerState<AddEditPersonScreen> {
         Navigator.of(context).pop();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            backgroundColor: const Color(0xFF10B981),
-            content: Text(
-              isEditing ? 'Person updated' : 'Person added successfully',
-              style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF09090B)),
-            ),
+            content: Text(isEditing ? 'Details updated' : 'Added to ledger'),
           ),
         );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
+          SnackBar(content: Text('Error saving: $e')),
         );
       }
     } finally {
@@ -134,9 +124,12 @@ class _AddEditPersonScreenState extends ConsumerState<AddEditPersonScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
     return Scaffold(
       appBar: AppBar(
-        title: Text(isEditing ? 'Edit Profile' : 'Add Person', style: const TextStyle(fontWeight: FontWeight.w800)),
+        title: Text(isEditing ? 'Edit Details' : 'Add Person'),
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 8.0),
@@ -144,126 +137,92 @@ class _AddEditPersonScreenState extends ConsumerState<AddEditPersonScreen> {
               onPressed: _isSaving ? null : _save,
               child: _isSaving
                   ? const SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF10B981)),
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
                     )
-                  : const Text('Save', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF10B981))),
+                  : const Text('Save', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
             ),
           ),
         ],
       ),
-      body: SpotlightBackground(
-        primaryGlow: const Color(0xFF10B981),
-        secondaryGlow: const Color(0xFF6366F1),
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(20),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // Auto-fill from Contacts Banner
-                InkWell(
-                  onTap: _isImporting ? null : _importFromContacts,
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Auto-fill from Contacts Card
+              Card(
+                elevation: 0,
+                color: colorScheme.primaryContainer.withValues(alpha: 0.4),
+                shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF10B981).withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                        color: const Color(0xFF10B981).withValues(alpha: 0.35),
-                        width: 1,
-                      ),
-                    ),
-                    child: Row(
-                      children: [
-                        _isImporting
-                            ? const SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF10B981)),
-                              )
-                            : const Icon(Icons.contacts_rounded, color: Color(0xFF10B981), size: 22),
-                        const SizedBox(width: 14),
-                        const Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Import from Phone Contacts',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.w800,
-                                  fontSize: 14,
-                                  color: Color(0xFF10B981),
-                                ),
-                              ),
-                              SizedBox(height: 2),
-                              Text(
-                                'Tap to auto-fill name, phone & email',
-                                style: TextStyle(fontSize: 12, color: Color(0xFF71717A)),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: Color(0xFF10B981)),
-                      ],
+                  side: BorderSide(color: colorScheme.primary.withValues(alpha: 0.3)),
+                ),
+                child: ListTile(
+                  onTap: _isImporting ? null : _importFromContacts,
+                  leading: _isImporting
+                      ? SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2, color: colorScheme.primary),
+                        )
+                      : Icon(Icons.contacts_rounded, color: colorScheme.primary, size: 22),
+                  title: Text(
+                    'Import from Phone Contacts',
+                    style: theme.textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      color: colorScheme.primary,
                     ),
                   ),
+                  subtitle: Text(
+                    'Auto-populate name and contact number',
+                    style: theme.textTheme.bodySmall?.copyWith(color: colorScheme.onSurfaceVariant),
+                  ),
+                  trailing: Icon(Icons.arrow_forward_ios_rounded, size: 14, color: colorScheme.primary),
                 ),
-                const SizedBox(height: 16),
+              ),
+              const SizedBox(height: 16),
 
-                BentoCard(
+              Card(
+                elevation: 0,
+                color: colorScheme.surfaceContainerLow,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  side: BorderSide(color: colorScheme.outlineVariant.withValues(alpha: 0.3)),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        'CONTACT INFORMATION',
-                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: Color(0xFF71717A), letterSpacing: 1.0),
-                      ),
-                      const SizedBox(height: 16),
-                      // Name
                       TextFormField(
                         controller: _nameController,
-                        decoration: InputDecoration(
+                        decoration: const InputDecoration(
                           labelText: 'Full Name *',
                           hintText: 'e.g. Rahul Kumar',
-                          prefixIcon: const Icon(Icons.person_outline_rounded, size: 20),
-                          suffixIcon: IconButton(
-                            icon: const Icon(Icons.contacts_outlined, size: 20),
-                            tooltip: 'Pick from Contacts',
-                            onPressed: _importFromContacts,
-                          ),
+                          prefixIcon: Icon(Icons.person_outline_rounded, size: 20),
                         ),
-                        textCapitalization: TextCapitalization.words,
-                        validator: (val) {
-                          if (val == null || val.trim().isEmpty) {
+                        validator: (value) {
+                          if (value == null || value.trim().isEmpty) {
                             return 'Please enter a name';
                           }
                           return null;
                         },
+                        textCapitalization: TextCapitalization.words,
                       ),
                       const SizedBox(height: 14),
-
-                      // Phone
                       TextFormField(
                         controller: _phoneController,
-                        decoration: InputDecoration(
+                        decoration: const InputDecoration(
                           labelText: 'Phone Number (Optional)',
                           hintText: 'e.g. +91 98765 43210',
-                          prefixIcon: const Icon(Icons.phone_outlined, size: 20),
-                          suffixIcon: IconButton(
-                            icon: const Icon(Icons.contacts_outlined, size: 20),
-                            tooltip: 'Pick from Contacts',
-                            onPressed: _importFromContacts,
-                          ),
+                          prefixIcon: Icon(Icons.phone_outlined, size: 20),
                         ),
                         keyboardType: TextInputType.phone,
                       ),
                       const SizedBox(height: 14),
-
-                      // Email
                       TextFormField(
                         controller: _emailController,
                         decoration: const InputDecoration(
@@ -274,8 +233,6 @@ class _AddEditPersonScreenState extends ConsumerState<AddEditPersonScreen> {
                         keyboardType: TextInputType.emailAddress,
                       ),
                       const SizedBox(height: 14),
-
-                      // Notes
                       TextFormField(
                         controller: _notesController,
                         decoration: const InputDecoration(
@@ -288,35 +245,21 @@ class _AddEditPersonScreenState extends ConsumerState<AddEditPersonScreen> {
                     ],
                   ),
                 ),
-                const SizedBox(height: 24),
+              ),
+              const SizedBox(height: 24),
 
-                Container(
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: [
-                      BoxShadow(
-                        color: const Color(0xFF10B981).withValues(alpha: 0.35),
-                        blurRadius: 18,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: FilledButton(
-                    onPressed: _isSaving ? null : _save,
-                    style: FilledButton.styleFrom(
-                      backgroundColor: const Color(0xFF10B981),
-                      foregroundColor: const Color(0xFF09090B),
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                    ),
-                    child: Text(
-                      isEditing ? 'Save Changes' : 'Create Person Entry',
-                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
-                    ),
-                  ),
+              FilledButton(
+                onPressed: _isSaving ? null : _save,
+                style: FilledButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                 ),
-              ],
-            ),
+                child: Text(
+                  isEditing ? 'Save Changes' : 'Create Person Entry',
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                ),
+              ),
+            ],
           ),
         ),
       ),
