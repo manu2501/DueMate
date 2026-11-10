@@ -90,7 +90,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> with SingleTicker
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Reports'),
+        title: const Text('Transactions'),
         actions: [
           IconButton(
             tooltip: 'Export CSV',
@@ -175,7 +175,15 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> with SingleTicker
                             padding: const EdgeInsets.all(20),
                             decoration: BoxDecoration(
                               color: cs.surfaceContainerLow,
-                              borderRadius: BorderRadius.circular(24),
+                              borderRadius: BorderRadius.circular(22),
+                              border: Border.all(color: cs.outlineVariant),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: theme.brightness == Brightness.dark ? 0.15 : 0.03),
+                                  blurRadius: 10,
+                                  offset: const Offset(0, 3),
+                                ),
+                              ],
                             ),
                             child: Column(
                               children: [
@@ -274,7 +282,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> with SingleTicker
                                         style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
                                       ),
                                       subtitle: Text(
-                                        'Given: ${CurrencyFormatter.formatCompact(s.totalGiven, symbol: currencySymbol)} Â· Received: ${CurrencyFormatter.formatCompact(s.totalReceived, symbol: currencySymbol)}',
+                                        'Given: ${CurrencyFormatter.formatCompact(s.totalGiven, symbol: currencySymbol)} • Received: ${CurrencyFormatter.formatCompact(s.totalReceived, symbol: currencySymbol)}',
                                         style: theme.textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
                                       ),
                                       trailing: Text(

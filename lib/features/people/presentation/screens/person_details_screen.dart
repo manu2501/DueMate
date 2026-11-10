@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:duemate/core/theme/app_theme.dart';
 import 'package:duemate/core/utils/csv_exporter.dart';
 import 'package:duemate/core/utils/currency_formatter.dart';
+import 'package:duemate/core/utils/date_formatter.dart';
 import 'package:duemate/core/utils/reminder_helper.dart';
 import 'package:duemate/core/widgets/avatar_widget.dart';
 import 'package:duemate/core/widgets/empty_state_widget.dart';
@@ -54,6 +57,16 @@ class PersonDetailsScreen extends ConsumerWidget {
     );
   }
 
+  void _navigateBack(BuildContext context) {
+    if (context.canPop()) {
+      context.pop();
+    } else if (Navigator.of(context).canPop()) {
+      Navigator.of(context).pop();
+    } else {
+      context.go('/people');
+    }
+  }
+
   void _confirmDeletePerson(BuildContext context, WidgetRef ref, String name) {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
@@ -76,7 +89,7 @@ class PersonDetailsScreen extends ConsumerWidget {
               Navigator.of(ctx).pop();
               await ref.read(personRepositoryProvider).deletePerson(personId);
               if (context.mounted) {
-                context.pop();
+                _navigateBack(context);
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(content: Text('$name deleted')),
                 );
@@ -93,6 +106,7 @@ class PersonDetailsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
     final currencySymbol = ref.watch(currencySymbolProvider);
     final summaryAsync = ref.watch(personSummaryProvider(personId));
     final transactionsAsync = ref.watch(personTransactionsProvider(personId));
@@ -100,9 +114,20 @@ class PersonDetailsScreen extends ConsumerWidget {
     return summaryAsync.when(
       data: (summary) {
         if (summary == null) {
-          return Scaffold(
-            appBar: AppBar(),
-            body: const Center(child: Text('Person not found')),
+          return PopScope(
+            canPop: false,
+            onPopInvokedWithResult: (didPop, _) {
+              if (!didPop) _navigateBack(context);
+            },
+            child: Scaffold(
+              appBar: AppBar(
+                leading: IconButton(
+                  icon: const Icon(Icons.arrow_back_rounded),
+                  onPressed: () => _navigateBack(context),
+                ),
+              ),
+              body: const Center(child: Text('Person not found')),
+            ),
           );
         }
 
@@ -111,393 +136,687 @@ class PersonDetailsScreen extends ConsumerWidget {
         final owes = summary.owesMoney;
         final overpaid = summary.isOverpaid;
 
-        Color balanceColor;
-        String balanceLabel;
-        if (owes) {
-          balanceColor = cs.error;
-          balanceLabel = 'Owes you';
-        } else if (overpaid) {
-          balanceColor = cs.tertiary;
-          balanceLabel = 'Overpaid you';
-        } else {
-          balanceColor = cs.primary;
-          balanceLabel = 'All settled';
-        }
-
-        // Repaid progress calculation
+        // Progress calculation
         final double progress = summary.totalGiven > 0
             ? (summary.totalReceived / summary.totalGiven).clamp(0.0, 1.0)
-            : 1.0;
-        final int percentRepaid = (progress * 100).toInt();
+            : (balance == 0 ? 1.0 : 0.0);
 
-        return Scaffold(
-          appBar: AppBar(
-            title: Text(person.name),
-            actions: [
-              IconButton(
-                tooltip: 'Share Reminder',
-                icon: const Icon(Icons.share_outlined),
-                onPressed: () => ReminderHelper.shareReminder(summary, currencySymbol: currencySymbol),
-              ),
-              IconButton(
-                tooltip: 'Export Statement',
-                icon: const Icon(Icons.receipt_long_outlined),
-                onPressed: () {
-                  final txs = transactionsAsync.value ?? [];
-                  CsvExporter.exportAndSharePersonStatement(
-                    summary: summary,
-                    transactions: txs,
-                    currencySymbol: currencySymbol,
-                  );
-                },
-              ),
-              PopupMenuButton<String>(
-                onSelected: (value) {
-                  if (value == 'edit') {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (ctx) => AddEditPersonScreen(personToEdit: person),
-                      ),
-                    );
-                  } else if (value == 'archive') {
-                    _confirmArchive(context, ref, person.isArchived, person.name);
-                  } else if (value == 'delete') {
-                    _confirmDeletePerson(context, ref, person.name);
-                  }
-                },
-                itemBuilder: (ctx) => [
-                  const PopupMenuItem(
-                    value: 'edit',
-                    child: Row(
-                      children: [
-                        Icon(Icons.edit_outlined, size: 20),
-                        SizedBox(width: 12),
-                        Text('Edit Details'),
-                      ],
-                    ),
-                  ),
-                  PopupMenuItem(
-                    value: 'archive',
-                    child: Row(
-                      children: [
-                        Icon(person.isArchived ? Icons.unarchive_outlined : Icons.archive_outlined, size: 20),
-                        SizedBox(width: 12),
-                        Text(person.isArchived ? 'Unarchive' : 'Archive'),
-                      ],
-                    ),
-                  ),
-                  PopupMenuItem(
-                    value: 'delete',
-                    child: Row(
-                      children: [
-                        Icon(Icons.delete_outline, size: 20, color: cs.error),
-                        SizedBox(width: 12),
-                        Text('Delete Person', style: TextStyle(color: cs.error)),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-          body: Column(
-            children: [
-              // Hero Summary Card
-              Container(
-                margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                padding: const EdgeInsets.all(22),
-                decoration: BoxDecoration(
-                  color: cs.surfaceContainerLow,
-                  borderRadius: BorderRadius.circular(24),
-                ),
-                child: Column(
-                  children: [
-                    Row(
-                      children: [
-                        AvatarWidget(
-                          name: person.name,
-                          radius: 28,
-                          heroTag: 'avatar-${person.id}',
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                person.name,
-                                style: theme.textTheme.titleMedium?.copyWith(
-                                  fontWeight: FontWeight.w700,
-                                ),
+        final transactions = transactionsAsync.value ?? [];
+
+        return PopScope(
+          canPop: false,
+          onPopInvokedWithResult: (didPop, _) {
+            if (!didPop) _navigateBack(context);
+          },
+          child: Scaffold(
+            appBar: PreferredSize(
+              preferredSize: const Size.fromHeight(64),
+              child: SafeArea(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                  child: Row(
+                    children: [
+                      // Back button in rounded white box (Screen 2 from screenshot)
+                      InkWell(
+                        onTap: () => _navigateBack(context),
+                        borderRadius: BorderRadius.circular(14),
+                        child: Container(
+                          width: 42,
+                          height: 42,
+                          decoration: BoxDecoration(
+                            color: cs.surfaceContainerLow,
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(color: cs.outlineVariant),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.04),
+                                blurRadius: 8,
+                                offset: const Offset(0, 2),
                               ),
-                              if (person.phone != null && person.phone!.isNotEmpty) ...[
-                                const SizedBox(height: 2),
-                                Text(
-                                  person.phone!,
-                                  style: theme.textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
-                                ),
-                              ],
-                              if (person.notes != null && person.notes!.isNotEmpty) ...[
-                                const SizedBox(height: 2),
-                                Text(
-                                  person.notes!,
-                                  style: theme.textTheme.bodySmall?.copyWith(
-                                    color: cs.onSurfaceVariant,
-                                    fontStyle: FontStyle.italic,
-                                  ),
-                                ),
-                              ],
+                            ],
+                          ),
+                          child: Icon(
+                            Icons.arrow_back_rounded,
+                            size: 20,
+                            color: cs.onSurface,
+                          ),
+                        ),
+                      ),
+                    const Spacer(),
+
+                    // Action buttons (Share reminder + Menu)
+                    IconButton(
+                      tooltip: 'Share Reminder',
+                      icon: const Icon(Icons.share_outlined),
+                      onPressed: () => ReminderHelper.shareReminder(summary, currencySymbol: currencySymbol),
+                    ),
+                    IconButton(
+                      tooltip: 'Export Statement',
+                      icon: const Icon(Icons.receipt_long_outlined),
+                      onPressed: () {
+                        CsvExporter.exportAndSharePersonStatement(
+                          summary: summary,
+                          transactions: transactions,
+                          currencySymbol: currencySymbol,
+                        );
+                      },
+                    ),
+
+                    // Help / Options button in rounded white box (Screen 2 from screenshot)
+                    PopupMenuButton<String>(
+                      onSelected: (value) {
+                        if (value == 'edit') {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (ctx) => AddEditPersonScreen(personToEdit: person),
+                            ),
+                          );
+                        } else if (value == 'archive') {
+                          _confirmArchive(context, ref, person.isArchived, person.name);
+                        } else if (value == 'delete') {
+                          _confirmDeletePerson(context, ref, person.name);
+                        }
+                      },
+                      itemBuilder: (ctx) => [
+                        const PopupMenuItem(
+                          value: 'edit',
+                          child: Row(
+                            children: [
+                              Icon(Icons.edit_outlined, size: 20),
+                              SizedBox(width: 12),
+                              Text('Edit Details'),
                             ],
                           ),
                         ),
-                        if (person.isArchived)
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                            decoration: BoxDecoration(
-                              color: cs.surfaceContainerHigh,
-                              borderRadius: BorderRadius.circular(8),
+                        PopupMenuItem(
+                          value: 'archive',
+                          child: Row(
+                            children: [
+                              Icon(person.isArchived ? Icons.unarchive_outlined : Icons.archive_outlined, size: 20),
+                              SizedBox(width: 12),
+                              Text(person.isArchived ? 'Unarchive' : 'Archive'),
+                            ],
+                          ),
+                        ),
+                        PopupMenuItem(
+                          value: 'delete',
+                          child: Row(
+                            children: [
+                              Icon(Icons.delete_outline, size: 20, color: cs.error),
+                              SizedBox(width: 12),
+                              Text('Delete Person', style: TextStyle(color: cs.error)),
+                            ],
+                          ),
+                        ),
+                      ],
+                      child: Container(
+                        width: 42,
+                        height: 42,
+                        decoration: BoxDecoration(
+                          color: cs.surfaceContainerLow,
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(color: cs.outlineVariant),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.04),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
                             ),
-                            child: Text(
-                              'Archived',
-                              style: theme.textTheme.labelSmall?.copyWith(color: cs.onSurfaceVariant),
+                          ],
+                        ),
+                        child: Icon(
+                          Icons.help_outline_rounded,
+                          size: 20,
+                          color: cs.onSurface,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          body: SingleChildScrollView(
+            padding: const EdgeInsets.only(bottom: 40),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: 12),
+
+                // Title: "Active loan" / Contact Heading from screenshot
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Row(
+                    children: [
+                      AvatarWidget(
+                        name: person.name,
+                        radius: 22,
+                        heroTag: 'avatar-${person.id}',
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Active ledger',
+                              style: GoogleFonts.inter(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w500,
+                                color: AppTheme.mutedLabel,
+                              ),
+                            ),
+                            Text(
+                              person.name,
+                              style: GoogleFonts.dmSans(
+                                fontSize: 24,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: -0.4,
+                                color: isDark ? Colors.white : const Color(0xFF131438),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      if (person.isArchived)
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: cs.surfaceContainerHigh,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Text(
+                            'Archived',
+                            style: GoogleFonts.inter(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: cs.onSurfaceVariant,
                             ),
                           ),
+                        ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 20),
+
+                // 1. Soft Peach / Coral Alert Card ("Penalty accrued" style in screenshot)
+                if (owes || overpaid)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: Container(
+                      padding: const EdgeInsets.all(18),
+                      decoration: BoxDecoration(
+                        color: isDark ? const Color(0xFF2C1919) : AppTheme.peachAccent,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: isDark
+                              ? const Color(0xFF5A2C2C)
+                              : const Color(0xFFF7D1C6),
+                        ),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                owes ? 'Payment due' : 'Overpaid balance',
+                                style: GoogleFonts.dmSans(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w700,
+                                  color: isDark ? const Color(0xFFFFB4AB) : AppTheme.peachAccentText,
+                                ),
+                              ),
+                              Text(
+                                CurrencyFormatter.format(balance.abs(), symbol: currencySymbol),
+                                style: GoogleFonts.dmSans(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.w800,
+                                  color: isDark ? Colors.white : const Color(0xFF131438),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            owes
+                                ? 'Outstanding debt in your ledger. Use the action button below to record received payments.'
+                                : 'Borrower has paid more than the initial principal. Credit available in your ledger.',
+                            style: GoogleFonts.inter(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w400,
+                              color: isDark ? const Color(0xFFE5B5B5) : const Color(0xFF6B433C),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                const SizedBox(height: 16),
+
+                // 2. Main White Payment Card with Progress Bar (The signature card in Screenshot 2)
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Container(
+                    padding: const EdgeInsets.all(22),
+                    decoration: BoxDecoration(
+                      color: cs.surfaceContainerLow,
+                      borderRadius: BorderRadius.circular(22),
+                      border: Border.all(color: cs.outlineVariant),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.04),
+                          blurRadius: 14,
+                          offset: const Offset(0, 4),
+                        ),
                       ],
                     ),
-                    const SizedBox(height: 18),
-
-                    // Balance Display
-                    Column(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        // Row 1: "Paid" and "Rs 500 / 2515"
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              'Paid',
+                              style: GoogleFonts.inter(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w500,
+                                color: AppTheme.mutedLabel,
+                              ),
+                            ),
+                            Text(
+                              '${CurrencyFormatter.format(summary.totalReceived, symbol: currencySymbol)} / ${CurrencyFormatter.format(summary.totalGiven, symbol: currencySymbol)}',
+                              style: GoogleFonts.dmSans(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w700,
+                                color: isDark ? Colors.white : const Color(0xFF131438),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+
+                        // Progress Bar (Sleek linear bar matching screenshot)
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(6),
+                          child: TweenAnimationBuilder<double>(
+                            tween: Tween<double>(begin: 0.0, end: progress),
+                            duration: const Duration(milliseconds: 700),
+                            curve: Curves.easeOutCubic,
+                            builder: (context, val, _) {
+                              return LinearProgressIndicator(
+                                value: val,
+                                minHeight: 6,
+                                backgroundColor: isDark
+                                    ? cs.surfaceContainerHighest
+                                    : const Color(0xFFEDEDF5),
+                                valueColor: AlwaysStoppedAnimation<Color>(cs.primary),
+                              );
+                            },
+                          ),
+                        ),
+
+                        const SizedBox(height: 24),
+
+                        // Row 2: "Pay" label with "Overdue" / "Active" badge
+                        Row(
+                          children: [
+                            Text(
+                              owes ? 'Pay' : 'Balance',
+                              style: GoogleFonts.inter(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w500,
+                                color: AppTheme.mutedLabel,
+                              ),
+                            ),
+                            const Spacer(),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: owes
+                                    ? (isDark ? const Color(0xFF4C1D1D) : AppTheme.peachBadge)
+                                    : cs.surfaceContainer,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Text(
+                                owes
+                                    ? 'Overdue'
+                                    : (overpaid ? 'Credit' : 'Settled'),
+                                style: GoogleFonts.inter(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                  color: owes
+                                      ? (isDark ? const Color(0xFFFFB4AB) : AppTheme.peachBadgeText)
+                                      : cs.primary,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+
+                        const SizedBox(height: 6),
+
+                        // Huge Bold Amount: "Rs 265"
                         Text(
-                          balanceLabel,
-                          style: theme.textTheme.bodySmall?.copyWith(
+                          CurrencyFormatter.format(balance.abs(), symbol: currencySymbol),
+                          style: GoogleFonts.dmSans(
+                            fontSize: 32,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: -0.6,
+                            color: isDark ? Colors.white : const Color(0xFF131438),
+                          ),
+                        ),
+
+                        const SizedBox(height: 12),
+
+                        // Breakdown lines: e.g. "Rs 250 — Monthly payment"
+                        Text(
+                          '${CurrencyFormatter.format(summary.totalGiven, symbol: currencySymbol)} — Total money lent',
+                          style: GoogleFonts.inter(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w400,
                             color: cs.onSurfaceVariant,
-                            fontWeight: FontWeight.w500,
                           ),
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          CurrencyFormatter.format(balance.abs(), symbol: currencySymbol),
-                          style: theme.textTheme.headlineMedium?.copyWith(
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: -0.5,
-                            color: balanceColor,
+                          '${CurrencyFormatter.format(summary.totalReceived, symbol: currencySymbol)} — Total repayments collected',
+                          style: GoogleFonts.inter(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w400,
+                            color: cs.onSurfaceVariant,
+                          ),
+                        ),
+
+                        const SizedBox(height: 20),
+                        Divider(color: cs.outlineVariant.withValues(alpha: 0.6), height: 1),
+                        const SizedBox(height: 14),
+
+                        // Billing details / Statement link
+                        InkWell(
+                          onTap: () {
+                            CsvExporter.exportAndSharePersonStatement(
+                              summary: summary,
+                              transactions: transactions,
+                              currencySymbol: currencySymbol,
+                            );
+                          },
+                          child: Row(
+                            children: [
+                              Text(
+                                'Billing details & statement',
+                                style: GoogleFonts.inter(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                  color: cs.primary,
+                                ),
+                              ),
+                              const Spacer(),
+                              Icon(Icons.arrow_forward_rounded, size: 18, color: cs.primary),
+                            ],
+                          ),
+                        ),
+
+                        const SizedBox(height: 20),
+
+                        // Full-width Primary Action Button: "Pay Rs 265" / "Receive Rs 265"
+                        SizedBox(
+                          width: double.infinity,
+                          height: 52,
+                          child: FilledButton(
+                            onPressed: () {
+                              if (owes) {
+                                QuickReceiveSheet.show(context, personId: personId);
+                              } else {
+                                QuickGiveSheet.show(context, personId: personId);
+                              }
+                            },
+                            style: FilledButton.styleFrom(
+                              backgroundColor: cs.primary,
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                            ),
+                            child: Text(
+                              owes
+                                  ? 'Record Repayment ${CurrencyFormatter.format(balance.abs(), symbol: currencySymbol)}'
+                                  : 'Give Advance / Loan',
+                              style: GoogleFonts.inter(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
                           ),
                         ),
                       ],
                     ),
+                  ),
+                ),
 
-                    // Repaid Progress Bar (only if there is a lending history)
-                    if (summary.totalGiven > 0) ...[
-                      const SizedBox(height: 14),
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(8),
-                        child: TweenAnimationBuilder<double>(
-                          tween: Tween<double>(begin: 0.0, end: progress),
-                          duration: const Duration(milliseconds: 700),
-                          curve: Curves.easeOutCubic,
-                          builder: (context, value, _) {
-                            return LinearProgressIndicator(
-                              value: value,
-                              minHeight: 6,
-                              backgroundColor: cs.surfaceContainerHigh,
-                              valueColor: AlwaysStoppedAnimation<Color>(
-                                value >= 1.0 ? cs.primary : cs.secondary,
+                const SizedBox(height: 16),
+
+                // 3. Date / Reminder Card (matching Screen 2 from screenshot)
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: cs.surfaceContainerLow,
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: cs.outlineVariant),
+                    ),
+                    child: Column(
+                      children: [
+                        Row(
+                          children: [
+                            // Calendar Icon Tile (Lavender square with "12")
+                            Container(
+                              width: 48,
+                              height: 48,
+                              decoration: BoxDecoration(
+                                color: isDark
+                                    ? cs.surfaceContainerHigh
+                                    : const Color(0xFFEEF0FA),
+                                borderRadius: BorderRadius.circular(14),
                               ),
-                            );
-                          },
+                              child: Center(
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    const Icon(
+                                      Icons.calendar_month_rounded,
+                                      size: 18,
+                                      color: Color(0xFF4F46E5),
+                                    ),
+                                    Text(
+                                      '${DateTime.now().day}',
+                                      style: GoogleFonts.dmSans(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w800,
+                                        color: const Color(0xFF4F46E5),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 14),
+
+                            // Column with Date Info
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    '${DateFormatter.formatRelative(DateTime.now())} — Due date',
+                                    style: GoogleFonts.dmSans(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w700,
+                                      color: isDark ? Colors.white : const Color(0xFF131438),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    'Send a friendly reminder message via WhatsApp or SMS.',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w400,
+                                      color: cs.onSurfaceVariant,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+
+                        const SizedBox(height: 16),
+                        Divider(color: cs.outlineVariant.withValues(alpha: 0.6), height: 1),
+                        const SizedBox(height: 12),
+
+                        // Action: "Move the payment date" / "Send reminder"
+                        InkWell(
+                          onTap: () => ReminderHelper.shareReminder(summary, currencySymbol: currencySymbol),
+                          child: Row(
+                            children: [
+                              Text(
+                                'Send payment reminder',
+                                style: GoogleFonts.inter(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                  color: cs.primary,
+                                ),
+                              ),
+                              const Spacer(),
+                              Icon(Icons.arrow_forward_rounded, size: 18, color: cs.primary),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 24),
+
+                // 4. Transaction History Header
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Transaction History',
+                        style: GoogleFonts.dmSans(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: -0.2,
+                          color: isDark ? Colors.white : const Color(0xFF131438),
                         ),
                       ),
-                      const SizedBox(height: 6),
                       Text(
-                        '$percentRepaid% repaid',
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: cs.onSurfaceVariant,
-                          fontSize: 11,
+                        '${transactions.length} entries',
+                        style: GoogleFonts.inter(
+                          fontSize: 13,
                           fontWeight: FontWeight.w500,
+                          color: cs.onSurfaceVariant,
                         ),
                       ),
                     ],
-
-                    const SizedBox(height: 16),
-
-                    // Given / Received breakdown
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                            decoration: BoxDecoration(
-                              color: cs.surfaceContainer,
-                              borderRadius: BorderRadius.circular(14),
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text('Given', style: theme.textTheme.labelSmall?.copyWith(color: cs.onSurfaceVariant)),
-                                const SizedBox(height: 2),
-                                Text(
-                                  CurrencyFormatter.format(summary.totalGiven, symbol: currencySymbol),
-                                  style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                            decoration: BoxDecoration(
-                              color: cs.surfaceContainer,
-                              borderRadius: BorderRadius.circular(14),
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text('Received', style: theme.textTheme.labelSmall?.copyWith(color: cs.onSurfaceVariant)),
-                                const SizedBox(height: 2),
-                                Text(
-                                  CurrencyFormatter.format(summary.totalReceived, symbol: currencySymbol),
-                                  style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-
-                    // Actions Row
-                    Row(
-                      children: [
-                        Expanded(
-                          flex: 3,
-                          child: FilledButton.tonal(
-                            onPressed: () => QuickReceiveSheet.show(context, personId: personId),
-                            style: FilledButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(vertical: 13),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                            ),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(Icons.south_west_rounded, size: 16, color: cs.primary),
-                                const SizedBox(width: 6),
-                                const Text('Receive'),
-                              ],
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          flex: 2,
-                          child: FilledButton(
-                            onPressed: () => QuickGiveSheet.show(context, personId: personId),
-                            style: FilledButton.styleFrom(
-                              backgroundColor: cs.error,
-                              foregroundColor: cs.onError,
-                              padding: const EdgeInsets.symmetric(vertical: 13),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                            ),
-                            child: const Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(Icons.north_east_rounded, size: 16),
-                                SizedBox(width: 6),
-                                Text('Give'),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
+                  ),
                 ),
-              ),
 
-              // Timeline Header
-              Padding(
-                padding: const EdgeInsets.fromLTRB(24, 12, 24, 8),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'History',
-                      style: theme.textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: -0.2,
-                      ),
+                const SizedBox(height: 10),
+
+                // Transaction list or empty state
+                if (transactions.isEmpty)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                    child: EmptyStateWidget(
+                      icon: Icons.receipt_long_outlined,
+                      title: 'No transactions yet',
+                      description: 'Tap the button above to record your first transaction with ${person.name}.',
+                      actionLabel: 'Give Money',
+                      onActionPressed: () => QuickGiveSheet.show(context, personId: personId),
                     ),
-                    transactionsAsync.maybeWhen(
-                      data: (list) => Text(
-                        '${list.length} ${list.length == 1 ? 'entry' : 'entries'}',
-                        style: theme.textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
-                      ),
-                      orElse: () => const SizedBox.shrink(),
+                  )
+                else
+                  Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 20),
+                    decoration: BoxDecoration(
+                      color: cs.surfaceContainerLow,
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: cs.outlineVariant),
                     ),
-                  ],
-                ),
-              ),
-
-              // Transactions List
-              Expanded(
-                child: transactionsAsync.when(
-                  data: (txList) {
-                    if (txList.isEmpty) {
-                      return EmptyStateWidget(
-                        icon: Icons.receipt_long_outlined,
-                        title: 'No transactions yet',
-                        description: 'Record loans or repayments with ${person.name}.',
-                        actionLabel: 'Give Money',
-                        onActionPressed: () => QuickGiveSheet.show(context, personId: personId),
-                      );
-                    }
-
-                    return Container(
-                      margin: const EdgeInsets.fromLTRB(20, 0, 20, 16),
-                      decoration: BoxDecoration(
-                        color: cs.surfaceContainerLow,
-                        borderRadius: BorderRadius.circular(20),
+                    child: ListView.separated(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: transactions.length,
+                      separatorBuilder: (ctx, i) => Divider(
+                        height: 1,
+                        indent: 68,
+                        endIndent: 16,
+                        color: cs.outlineVariant.withValues(alpha: 0.6),
                       ),
-                      child: ListView.separated(
-                        padding: const EdgeInsets.symmetric(vertical: 6),
-                        itemCount: txList.length,
-                        separatorBuilder: (ctx, i) => Divider(
-                          height: 1,
-                          indent: 68,
-                          endIndent: 16,
-                          color: cs.outlineVariant,
-                        ),
-                        itemBuilder: (ctx, index) {
-                          final tx = txList[index];
-                          return TransactionTile(
-                            transaction: tx,
-                            currencySymbol: currencySymbol,
-                            onTap: () {
-                              TransactionDetailsDialog.show(
-                                context,
-                                transaction: tx,
-                                person: person,
-                              );
-                            },
-                          );
-                        },
-                      ),
-                    );
-                  },
-                  loading: () => const Center(child: CircularProgressIndicator()),
-                  error: (err, _) => Center(child: Text('Error: $err')),
-                ),
-              ),
-            ],
+                      itemBuilder: (ctx, index) {
+                        final tx = transactions[index];
+                        return TransactionTile(
+                          transaction: tx,
+                          person: person,
+                          currencySymbol: currencySymbol,
+                          onTap: () {
+                            TransactionDetailsDialog.show(
+                              context,
+                              transaction: tx,
+                              person: person,
+                            );
+                          },
+                        );
+                      },
+                    ),
+                  ),
+              ],
+            ),
           ),
-        );
-      },
-      loading: () => const Scaffold(body: Center(child: CircularProgressIndicator())),
-      error: (err, _) => Scaffold(body: Center(child: Text('Error: $err'))),
+        ),
+      );
+    },
+      loading: () => PopScope(
+        canPop: false,
+        onPopInvokedWithResult: (didPop, _) {
+          if (!didPop) _navigateBack(context);
+        },
+        child: Scaffold(
+          appBar: AppBar(
+            leading: IconButton(
+              icon: const Icon(Icons.arrow_back_rounded),
+              onPressed: () => _navigateBack(context),
+            ),
+          ),
+          body: const Center(child: CircularProgressIndicator()),
+        ),
+      ),
+      error: (err, _) => PopScope(
+        canPop: false,
+        onPopInvokedWithResult: (didPop, _) {
+          if (!didPop) _navigateBack(context);
+        },
+        child: Scaffold(
+          appBar: AppBar(
+            leading: IconButton(
+              icon: const Icon(Icons.arrow_back_rounded),
+              onPressed: () => _navigateBack(context),
+            ),
+          ),
+          body: Center(child: Text('Error: $err')),
+        ),
+      ),
     );
   }
 }

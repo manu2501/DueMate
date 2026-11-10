@@ -30,10 +30,29 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 500));
 
-    // Verify bottom navigation bar destinations on dashboard
-    expect(find.text('Home'), findsOneWidget);
-    expect(find.text('Ledger'), findsOneWidget);
-    expect(find.text('Reports'), findsOneWidget);
+    // Verify dashboard renders with new floating dock navigation
+    expect(find.text('DueMate'), findsWidgets);
+    expect(find.text('Settlement Progress'), findsOneWidget);
+    expect(find.text('Top Dues'), findsOneWidget);
+    expect(find.text('They owe you'), findsOneWidget);
+    expect(find.text('You owe'), findsOneWidget);
+    expect(find.byTooltip('Dashboard'), findsOneWidget);
+    expect(find.byTooltip('Ledger'), findsOneWidget);
+    expect(find.byTooltip('Transactions'), findsOneWidget);
+    expect(find.byTooltip('Notifications'), findsNothing);
+
+    // Tap on Ledger tab to leave dashboard
+    await tester.tap(find.byTooltip('Ledger'));
+    await tester.pumpAndSettle();
+    expect(find.text('Search people or notes...'), findsOneWidget);
+
+    // Simulate system back button: should navigate back to Dashboard
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+
+    // Verify we are back on Dashboard, not closing app
+    expect(find.text('Settlement Progress'), findsOneWidget);
+    expect(find.text('Top Dues'), findsOneWidget);
 
     await testDb.close();
   });

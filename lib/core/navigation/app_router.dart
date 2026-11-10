@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:duemate/core/widgets/dock_nav_icon.dart';
 import 'package:duemate/features/dashboard/presentation/screens/dashboard_screen.dart';
 import 'package:duemate/features/people/presentation/screens/add_edit_person_screen.dart';
 import 'package:duemate/features/people/presentation/screens/people_screen.dart';
@@ -175,34 +176,123 @@ class AppShell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final selectedIndex = _calculateSelectedIndex(context);
-    final cs = Theme.of(context).colorScheme;
+    final location = GoRouterState.of(context).uri.path;
+    final isDashboard = location == '/';
 
-    return Scaffold(
-      body: child,
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          border: Border(top: BorderSide(color: cs.outlineVariant, width: 0.5)),
-        ),
-        child: NavigationBar(
+    return BackButtonListener(
+      onBackButtonPressed: () async {
+        if (!isDashboard) {
+          context.go('/');
+          return true;
+        }
+        return false;
+      },
+      child: Scaffold(
+        extendBody: true,
+        body: child,
+        bottomNavigationBar: _FloatingDockNavBar(
           selectedIndex: selectedIndex,
-          onDestinationSelected: (index) => _onItemTapped(index, context),
-          destinations: const [
-            NavigationDestination(
-              icon: Icon(Icons.home_outlined),
-              selectedIcon: Icon(Icons.home_rounded),
-              label: 'Home',
+          onItemSelected: (index) => _onItemTapped(index, context),
+        ),
+      ),
+    );
+  }
+}
+
+class _FloatingDockNavBar extends StatelessWidget {
+  final int selectedIndex;
+  final ValueChanged<int> onItemSelected;
+
+  const _FloatingDockNavBar({
+    required this.selectedIndex,
+    required this.onItemSelected,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+
+    final labels = const [
+      'Dashboard',
+      'Ledger',
+      'Transactions',
+    ];
+
+    return SafeArea(
+      top: false,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+        child: Container(
+          height: 66,
+          decoration: BoxDecoration(
+            color: cs.surfaceContainerLow,
+            borderRadius: BorderRadius.circular(32),
+            border: Border.all(
+              color: cs.outlineVariant.withValues(alpha: 0.9),
+              width: 1.2,
             ),
-            NavigationDestination(
-              icon: Icon(Icons.people_outline_rounded),
-              selectedIcon: Icon(Icons.people_rounded),
-              label: 'Ledger',
-            ),
-            NavigationDestination(
-              icon: Icon(Icons.insights_outlined),
-              selectedIcon: Icon(Icons.insights_rounded),
-              label: 'Reports',
-            ),
-          ],
+            boxShadow: [
+              BoxShadow(
+                color: (isDark ? Colors.black : const Color(0xFF101124))
+                    .withValues(alpha: isDark ? 0.35 : 0.08),
+                blurRadius: 20,
+                offset: const Offset(0, 8),
+              ),
+            ],
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: List.generate(labels.length, (index) {
+              final isSelected = selectedIndex == index;
+              final label = labels[index];
+
+              return Tooltip(
+                message: label,
+                child: InkWell(
+                  onTap: () => onItemSelected(index),
+                  borderRadius: BorderRadius.circular(20),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 250),
+                    curve: Curves.easeOutCubic,
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: isSelected
+                          ? (isDark
+                              ? cs.surfaceContainerHigh
+                              : const Color(0xFFEFF1FB))
+                          : Colors.transparent,
+                      borderRadius: BorderRadius.circular(20),
+                      border: isSelected
+                          ? Border.all(
+                              color: cs.outlineVariant.withValues(alpha: 0.9),
+                              width: 1,
+                            )
+                          : null,
+                      boxShadow: isSelected && !isDark
+                          ? [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.04),
+                                blurRadius: 6,
+                                offset: const Offset(0, 2),
+                              ),
+                            ]
+                          : null,
+                    ),
+                    child: DockNavIcon(
+                      index: index,
+                      isSelected: isSelected,
+                      color: isSelected
+                          ? (isDark ? Colors.white : const Color(0xFF131438))
+                          : cs.onSurfaceVariant.withValues(alpha: 0.75),
+                      size: 22,
+                    ),
+                  ),
+                ),
+              );
+            }),
+          ),
         ),
       ),
     );
