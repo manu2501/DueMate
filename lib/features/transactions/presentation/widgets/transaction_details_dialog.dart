@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:smarava/core/constants/app_constants.dart';
 import 'package:smarava/core/utils/currency_formatter.dart';
 import 'package:smarava/core/utils/date_formatter.dart';
+import 'package:smarava/core/widgets/avatar_widget.dart';
 import 'package:smarava/data/database/tables.dart';
 import 'package:smarava/data/providers/app_providers.dart';
 import 'package:smarava/domain/entities/ledger_transaction.dart';
@@ -19,13 +20,21 @@ class TransactionDetailsDialog extends ConsumerWidget {
     this.person,
   });
 
+  /// Opens the transaction details modal sheet
   static Future<void> show(
     BuildContext context, {
     required LedgerTransaction transaction,
     Person? person,
   }) {
-    return showDialog(
+    return showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      showDragHandle: true,
+      backgroundColor: Theme.of(context).colorScheme.surfaceContainerLow,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
       builder: (ctx) => TransactionDetailsDialog(
         transaction: transaction,
         person: person,
@@ -52,10 +61,13 @@ class TransactionDetailsDialog extends ConsumerWidget {
             child: const Text('Cancel'),
           ),
           FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: cs.error, foregroundColor: cs.onError),
+            style: FilledButton.styleFrom(
+              backgroundColor: cs.error,
+              foregroundColor: cs.onError,
+            ),
             onPressed: () async {
-              Navigator.of(ctx).pop();
-              Navigator.of(context).pop();
+              Navigator.of(ctx).pop(); // Dismiss alert dialog
+              Navigator.of(context).pop(); // Dismiss bottom sheet
               await ref.read(transactionRepositoryProvider).deleteTransaction(transaction.id);
 
               if (context.mounted) {
@@ -197,115 +209,184 @@ class TransactionDetailsDialog extends ConsumerWidget {
     final cs = theme.colorScheme;
     final currencySymbol = ref.watch(currencySymbolProvider);
     final isReceived = transaction.type == TransactionType.paymentReceived;
-    final color = isReceived ? cs.primary : cs.error;
+    final accentColor = isReceived ? cs.primary : cs.error;
 
-    return AlertDialog(
-      titlePadding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
-      contentPadding: const EdgeInsets.fromLTRB(24, 16, 24, 16),
-      title: Row(
-        children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(
-              isReceived ? Icons.south_west_rounded : Icons.north_east_rounded,
-              color: color,
-              size: 20,
-            ),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Header with type badge & close
+            Row(
               children: [
-                Text(
-                  transaction.type.label,
-                  style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
-                ),
-                if (person != null)
-                  Text(
-                    person!.name,
-                    style: theme.textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: accentColor.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(12),
                   ),
+                  child: Icon(
+                    isReceived ? Icons.south_west_rounded : Icons.north_east_rounded,
+                    color: accentColor,
+                    size: 20,
+                  ),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        transaction.type.label,
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      Text(
+                        isReceived ? 'Money received into your ledger' : 'Money lent or advanced',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: cs.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close_rounded),
+                  onPressed: () => Navigator.of(context).pop(),
+                  visualDensity: VisualDensity.compact,
+                ),
               ],
             ),
-          ),
-        ],
-      ),
-      content: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const SizedBox(height: 8),
-            Center(
-              child: Text(
-                '${isReceived ? '+' : '-'}${CurrencyFormatter.format(transaction.amount, symbol: currencySymbol)}',
-                style: GoogleFonts.dmSans(
-                  fontWeight: FontWeight.w800,
-                  fontSize: 32,
-                  letterSpacing: -0.5,
-                  color: color,
-                ),
+            const SizedBox(height: 20),
+
+            // Large Hero Amount Card
+            Container(
+              padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+              decoration: BoxDecoration(
+                color: cs.surfaceContainer,
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Column(
+                children: [
+                  Text(
+                    '${isReceived ? '+' : '-'}${CurrencyFormatter.format(transaction.amount, symbol: currencySymbol)}',
+                    style: GoogleFonts.dmSans(
+                      fontWeight: FontWeight.w800,
+                      fontSize: 34,
+                      letterSpacing: -0.8,
+                      color: accentColor,
+                    ),
+                  ),
+                  if (person != null) ...[
+                    const SizedBox(height: 8),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        AvatarWidget(name: person!.name, radius: 12),
+                        const SizedBox(width: 8),
+                        Text(
+                          person!.name,
+                          style: theme.textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ],
               ),
             ),
-            const SizedBox(height: 20),
-            _infoRow('Date', DateFormatter.formatDate(transaction.transactionDate), theme),
-            _infoRow('Time', DateFormatter.formatTime(transaction.transactionDate), theme),
-            _infoRow('Method', transaction.paymentMethod.label, theme),
-            if (transaction.note != null && transaction.note!.isNotEmpty)
-              _infoRow('Note', transaction.note!, theme),
-            _infoRow('Recorded', DateFormatter.formatDateTime(transaction.createdAt), theme),
+            const SizedBox(height: 18),
+
+            // Metadata rows
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: cs.surfaceContainer,
+                borderRadius: BorderRadius.circular(18),
+              ),
+              child: Column(
+                children: [
+                  _infoRow('Date', DateFormatter.formatDate(transaction.transactionDate), theme),
+                  Divider(height: 16, color: cs.outlineVariant),
+                  _infoRow('Time', DateFormatter.formatTime(transaction.transactionDate), theme),
+                  Divider(height: 16, color: cs.outlineVariant),
+                  _infoRow('Payment Method', transaction.paymentMethod.label, theme),
+                  if (transaction.note != null && transaction.note!.trim().isNotEmpty) ...[
+                    Divider(height: 16, color: cs.outlineVariant),
+                    _infoRow('Note', transaction.note!.trim(), theme),
+                  ],
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+
+            // Action Buttons Row: Delete, Edit
+            Row(
+              children: [
+                IconButton.filledTonal(
+                  tooltip: 'Delete Entry',
+                  onPressed: () => _confirmDelete(context, ref),
+                  style: IconButton.styleFrom(
+                    backgroundColor: cs.errorContainer.withValues(alpha: 0.5),
+                    foregroundColor: cs.error,
+                    padding: const EdgeInsets.all(14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
+                  icon: const Icon(Icons.delete_outline_rounded, size: 20),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: FilledButton.tonal(
+                    onPressed: () => _showEditDialog(context, ref),
+                    style: FilledButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                    child: const Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.edit_outlined, size: 18),
+                        SizedBox(width: 8),
+                        Text('Edit Entry'),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ],
         ),
       ),
-      actions: [
-        IconButton(
-          tooltip: 'Delete Transaction',
-          onPressed: () => _confirmDelete(context, ref),
-          icon: Icon(Icons.delete_outline_rounded, color: cs.error, size: 22),
-        ),
-        const Spacer(),
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Close'),
-        ),
-        FilledButton.tonal(
-          onPressed: () => _showEditDialog(context, ref),
-          child: const Text('Edit'),
-        ),
-      ],
     );
   }
 
   Widget _infoRow(String label, String value, ThemeData theme) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 5),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 90,
-            child: Text(
-              label,
-              style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
-            ),
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          label,
+          style: theme.textTheme.bodyMedium?.copyWith(
+            color: theme.colorScheme.onSurfaceVariant,
           ),
-          Expanded(
-            child: Text(
-              value,
-              style: theme.textTheme.bodySmall?.copyWith(
-                fontWeight: FontWeight.w600,
-                color: theme.colorScheme.onSurface,
-              ),
-            ),
+        ),
+        Text(
+          value,
+          style: theme.textTheme.bodyMedium?.copyWith(
+            fontWeight: FontWeight.w600,
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
