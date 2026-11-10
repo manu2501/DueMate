@@ -148,7 +148,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
                       ),
                       const SizedBox(height: 10),
                       Text(
-                        'Track what you lend.\nKnow whatâ€™s owed, effortlessly.',
+                        'Track what you lend.\nKnow what\'s owed, effortlessly.',
                         style: theme.textTheme.titleMedium?.copyWith(
                           color: cs.onSurfaceVariant,
                           height: 1.4,

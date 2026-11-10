@@ -367,7 +367,7 @@ class SettingsScreen extends ConsumerWidget {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    '100% Private Â· Zero Analytics Â· Local SQLite Vault',
+                    '100% Private • Zero Analytics • Local SQLite Vault',
                     style: theme.textTheme.labelSmall?.copyWith(
                       color: cs.outline,
                     ),

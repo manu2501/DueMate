@@ -56,7 +56,7 @@ class _PeopleScreenState extends ConsumerState<PeopleScreen> {
               content: Text('${existing.person.name} is already in your ledger'),
             ),
           );
-          context.go('/people/${existing.person.id}');
+          context.push('/people/${existing.person.id}');
         }
         return;
       }
@@ -80,7 +80,7 @@ class _PeopleScreenState extends ConsumerState<PeopleScreen> {
             content: Text('Added ${newPerson.name} to ledger'),
           ),
         );
-        context.go('/people/${newPerson.id}');
+        context.push('/people/${newPerson.id}');
       }
     } catch (e) {
       if (mounted) {
@@ -188,14 +188,17 @@ class _PeopleScreenState extends ConsumerState<PeopleScreen> {
           const SizedBox(width: 4),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () {
-          Navigator.of(context).push(
-            MaterialPageRoute(builder: (ctx) => const AddEditPersonScreen()),
-          );
-        },
-        icon: const Icon(Icons.person_add_rounded, size: 20),
-        label: Text('Add Person', style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
+      floatingActionButton: Padding(
+        padding: const EdgeInsets.only(bottom: 80),
+        child: FloatingActionButton.extended(
+          onPressed: () {
+            Navigator.of(context).push(
+              MaterialPageRoute(builder: (ctx) => const AddEditPersonScreen()),
+            );
+          },
+          icon: const Icon(Icons.person_add_rounded, size: 20),
+          label: Text('Add Person', style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
+        ),
       ),
       body: Column(
         children: [
@@ -205,7 +208,13 @@ class _PeopleScreenState extends ConsumerState<PeopleScreen> {
             child: SearchBar(
               controller: _searchController,
               elevation: const WidgetStatePropertyAll(0),
-              backgroundColor: WidgetStatePropertyAll(cs.surfaceContainerHigh),
+              backgroundColor: WidgetStatePropertyAll(cs.surfaceContainerLow),
+              shape: WidgetStatePropertyAll(
+                RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  side: BorderSide(color: cs.outlineVariant),
+                ),
+              ),
               hintText: 'Search people or notes...',
               hintStyle: WidgetStatePropertyAll(
                 TextStyle(color: cs.onSurfaceVariant, fontSize: 14),
@@ -239,7 +248,7 @@ class _PeopleScreenState extends ConsumerState<PeopleScreen> {
                 const SizedBox(width: 8),
                 _filterChip('Archived', PeopleFilter.archived, currentFilter),
                 const SizedBox(width: 8),
-                _filterChip('All Directory', PeopleFilter.all, currentFilter),
+                _filterChip('All', PeopleFilter.all, currentFilter),
               ],
             ),
           ),
@@ -293,10 +302,18 @@ class _PeopleScreenState extends ConsumerState<PeopleScreen> {
                           onTap: () => context.push('/people/${person.id}'),
                           borderRadius: BorderRadius.circular(18),
                           child: Container(
-                            padding: const EdgeInsets.all(14),
+                            padding: const EdgeInsets.all(16),
                             decoration: BoxDecoration(
                               color: cs.surfaceContainerLow,
-                              borderRadius: BorderRadius.circular(18),
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(color: cs.outlineVariant),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: theme.brightness == Brightness.dark ? 0.15 : 0.03),
+                                  blurRadius: 10,
+                                  offset: const Offset(0, 3),
+                                ),
+                              ],
                             ),
                             child: Row(
                               children: [

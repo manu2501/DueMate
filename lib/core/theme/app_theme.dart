@@ -18,6 +18,16 @@ class AppTheme {
   static const Color settledColor = _indigo;
   static const Color overpaidColor = _violet;
 
+  // Screenshot inspired styling tokens
+  static const Color darkBannerBackground = Color(0xFF131438);
+  static const Color darkBannerSubtitle = Color(0xFFB4B3D4);
+  static const Color peachAccent = Color(0xFFFDECE7);
+  static const Color peachAccentText = Color(0xFF7F1D1D);
+  static const Color peachBadge = Color(0xFFFCE3DC);
+  static const Color peachBadgeText = Color(0xFFDC2626);
+  static const Color cardBorderColor = Color(0xFFECECF6);
+  static const Color mutedLabel = Color(0xFF8C8CA8);
+
   // ── Typography ───────────────────────────────────────────────────────
   static TextTheme _buildTextTheme(Brightness brightness) {
     final Color base =
@@ -65,16 +75,16 @@ class AppTheme {
       onError: Colors.white,
       errorContainer: Color(0xFFFEF2F2),
       onErrorContainer: Color(0xFF991B1B),
-      surface: Color(0xFFFAFAF9),
-      onSurface: Color(0xFF1C1917),
-      onSurfaceVariant: Color(0xFF78716C),
-      outline: Color(0xFFD6D3D1),
-      outlineVariant: Color(0xFFE7E5E4),
+      surface: Color(0xFFF6F7FB),
+      onSurface: Color(0xFF111227),
+      onSurfaceVariant: Color(0xFF74758C),
+      outline: Color(0xFFE2E4F0),
+      outlineVariant: Color(0xFFECECF6),
       surfaceContainerLowest: Colors.white,
-      surfaceContainerLow: Color(0xFFF5F5F4),
-      surfaceContainer: Color(0xFFEFEEEC),
-      surfaceContainerHigh: Color(0xFFE7E5E4),
-      surfaceContainerHighest: Color(0xFFD6D3D1),
+      surfaceContainerLow: Colors.white,
+      surfaceContainer: Color(0xFFEFF1FA),
+      surfaceContainerHigh: Color(0xFFE5E7F4),
+      surfaceContainerHighest: Color(0xFFDCDFEF),
     );
 
     return _buildTheme(colorScheme, Brightness.light);
