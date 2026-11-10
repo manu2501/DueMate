@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:duemate/core/utils/csv_exporter.dart';
 import 'package:duemate/core/utils/currency_formatter.dart';
@@ -9,6 +10,8 @@ import 'package:duemate/core/widgets/empty_state_widget.dart';
 import 'package:duemate/core/widgets/transaction_tile.dart';
 import 'package:duemate/data/database/tables.dart';
 import 'package:duemate/data/providers/app_providers.dart';
+import 'package:duemate/domain/entities/ledger_transaction.dart';
+import 'package:duemate/domain/entities/person_summary.dart';
 import 'package:duemate/features/transactions/presentation/widgets/transaction_details_dialog.dart';
 
 enum ReportDateFilter { allTime, thisMonth, lastMonth, thisYear, custom }
@@ -161,6 +164,56 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> with SingleTicker
                 }
                 final net = given - received;
 
+                // Group filtered transactions by personId to update breakdown as per filters
+                final Map<String, ({double given, double received, LedgerTransaction? lastTx, int count})> personStats = {};
+                for (final tx in filteredTxs) {
+                  final current = personStats[tx.personId];
+                  final isGiven = tx.type == TransactionType.moneyGiven;
+                  final g = (current?.given ?? 0.0) + (isGiven ? tx.amount : 0.0);
+                  final r = (current?.received ?? 0.0) + (!isGiven ? tx.amount : 0.0);
+                  final last = current?.lastTx == null || tx.transactionDate.isAfter(current!.lastTx!.transactionDate)
+                      ? tx
+                      : current.lastTx;
+                  final c = (current?.count ?? 0) + 1;
+                  personStats[tx.personId] = (given: g, received: r, lastTx: last, count: c);
+                }
+
+                final List<PersonSummary> filteredPersonSummaries = [];
+                for (final entry in personStats.entries) {
+                  final person = personsMap[entry.key];
+                  if (person != null) {
+                    filteredPersonSummaries.add(
+                      PersonSummary(
+                        person: person,
+                        totalGiven: entry.value.given,
+                        totalReceived: entry.value.received,
+                        balance: entry.value.given - entry.value.received,
+                        lastTransaction: entry.value.lastTx,
+                        transactionCount: entry.value.count,
+                      ),
+                    );
+                  }
+                }
+
+                // In "All Time" mode, also include remaining persons from directory
+                if (_dateFilter == ReportDateFilter.allTime) {
+                  final allSummaries = allSummariesAsync.value ?? [];
+                  for (final s in allSummaries) {
+                    if (!personStats.containsKey(s.person.id)) {
+                      filteredPersonSummaries.add(s);
+                    }
+                  }
+                }
+
+                // Sort by highest activity volume, then name
+                filteredPersonSummaries.sort((a, b) {
+                  final volumeA = a.totalGiven + a.totalReceived;
+                  final volumeB = b.totalGiven + b.totalReceived;
+                  final cmp = volumeB.compareTo(volumeA);
+                  if (cmp != 0) return cmp;
+                  return a.person.name.compareTo(b.person.name);
+                });
+
                 return TabBarView(
                   controller: _tabController,
                   children: [
@@ -250,61 +303,90 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> with SingleTicker
                           ),
                           const SizedBox(height: 12),
 
-                          allSummariesAsync.when(
-                            data: (summaries) {
-                              if (summaries.isEmpty) {
-                                return const Text('No records available');
-                              }
-
-                              return Container(
-                                decoration: BoxDecoration(
-                                  color: cs.surfaceContainerLow,
-                                  borderRadius: BorderRadius.circular(20),
+                          if (filteredPersonSummaries.isEmpty)
+                            Container(
+                              padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 20),
+                              decoration: BoxDecoration(
+                                color: cs.surfaceContainerLow,
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(color: cs.outlineVariant),
+                              ),
+                              child: Center(
+                                child: Column(
+                                  children: [
+                                    Icon(
+                                      Icons.people_outline_rounded,
+                                      size: 32,
+                                      color: cs.onSurfaceVariant.withValues(alpha: 0.6),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      'No person activity in this period',
+                                      style: GoogleFonts.inter(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w600,
+                                        color: cs.onSurfaceVariant,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      'Try selecting another date filter above.',
+                                      style: GoogleFonts.inter(
+                                        fontSize: 12,
+                                        color: cs.outline,
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                                child: ListView.separated(
-                                  shrinkWrap: true,
-                                  physics: const NeverScrollableScrollPhysics(),
-                                  padding: const EdgeInsets.symmetric(vertical: 6),
-                                  itemCount: summaries.length,
-                                  separatorBuilder: (ctx, i) => Divider(
-                                    height: 1,
-                                    indent: 68,
-                                    endIndent: 16,
-                                    color: cs.outlineVariant,
-                                  ),
-                                  itemBuilder: (ctx, index) {
-                                    final s = summaries[index];
-                                    return ListTile(
-                                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                                      leading: AvatarWidget(name: s.person.name, radius: 20),
-                                      title: Text(
-                                        s.person.name,
-                                        style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
-                                      ),
-                                      subtitle: Text(
-                                        'Given: ${CurrencyFormatter.formatCompact(s.totalGiven, symbol: currencySymbol)} • Received: ${CurrencyFormatter.formatCompact(s.totalReceived, symbol: currencySymbol)}',
-                                        style: theme.textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
-                                      ),
-                                      trailing: Text(
-                                        CurrencyFormatter.format(s.balance, symbol: currencySymbol),
-                                        style: GoogleFonts.inter(
-                                          fontWeight: FontWeight.w800,
-                                          fontSize: 14,
-                                          color: s.balance > 0
-                                              ? cs.error
-                                              : s.balance < 0
-                                                  ? cs.tertiary
-                                                  : cs.primary,
-                                        ),
-                                      ),
-                                    );
-                                  },
+                              ),
+                            )
+                          else
+                            Container(
+                              decoration: BoxDecoration(
+                                color: cs.surfaceContainerLow,
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: ListView.separated(
+                                shrinkWrap: true,
+                                physics: const NeverScrollableScrollPhysics(),
+                                padding: const EdgeInsets.symmetric(vertical: 6),
+                                itemCount: filteredPersonSummaries.length,
+                                separatorBuilder: (ctx, i) => Divider(
+                                  height: 1,
+                                  indent: 68,
+                                  endIndent: 16,
+                                  color: cs.outlineVariant,
                                 ),
-                              );
-                            },
-                            loading: () => const Center(child: CircularProgressIndicator()),
-                            error: (err, _) => Text('Error: $err'),
-                          ),
+                                itemBuilder: (ctx, index) {
+                                  final s = filteredPersonSummaries[index];
+                                  return ListTile(
+                                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                                    leading: AvatarWidget(name: s.person.name, radius: 20),
+                                    title: Text(
+                                      s.person.name,
+                                      style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+                                    ),
+                                    subtitle: Text(
+                                      'Given: ${CurrencyFormatter.formatCompact(s.totalGiven, symbol: currencySymbol)} • Received: ${CurrencyFormatter.formatCompact(s.totalReceived, symbol: currencySymbol)}',
+                                      style: theme.textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+                                    ),
+                                    trailing: Text(
+                                      CurrencyFormatter.format(s.balance, symbol: currencySymbol),
+                                      style: GoogleFonts.inter(
+                                        fontWeight: FontWeight.w800,
+                                        fontSize: 14,
+                                        color: s.balance > 0.001
+                                            ? cs.error
+                                            : s.balance < -0.001
+                                                ? cs.tertiary
+                                                : cs.primary,
+                                      ),
+                                    ),
+                                    onTap: () => context.push('/people/${s.person.id}'),
+                                  );
+                                },
+                              ),
+                            ),
                         ],
                       ),
                     ),
