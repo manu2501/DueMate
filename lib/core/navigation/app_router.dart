@@ -39,11 +39,12 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             path: '/reports',
             builder: (context, state) => const ReportsScreen(),
           ),
-          GoRoute(
-            path: '/settings',
-            builder: (context, state) => const SettingsScreen(),
-          ),
         ],
+      ),
+      GoRoute(
+        parentNavigatorKey: _rootNavigatorKey,
+        path: '/settings',
+        builder: (context, state) => const SettingsScreen(),
       ),
       GoRoute(
         parentNavigatorKey: _rootNavigatorKey,
@@ -72,7 +73,6 @@ class AppShell extends StatelessWidget {
     if (location == '/') return 0;
     if (location.startsWith('/people')) return 1;
     if (location.startsWith('/reports')) return 2;
-    if (location.startsWith('/settings')) return 3;
     return 0;
   }
 
@@ -86,9 +86,6 @@ class AppShell extends StatelessWidget {
         break;
       case 2:
         context.go('/reports');
-        break;
-      case 3:
-        context.go('/settings');
         break;
     }
   }
@@ -122,11 +119,6 @@ class AppShell extends StatelessWidget {
               icon: Icon(Icons.insights_outlined),
               selectedIcon: Icon(Icons.insights_rounded),
               label: 'Reports',
-            ),
-            NavigationDestination(
-              icon: Icon(Icons.tune_outlined),
-              selectedIcon: Icon(Icons.tune_rounded),
-              label: 'Settings',
             ),
           ],
         ),

@@ -34,7 +34,6 @@ void main() {
     expect(find.text('Home'), findsOneWidget);
     expect(find.text('Ledger'), findsOneWidget);
     expect(find.text('Reports'), findsOneWidget);
-    expect(find.text('Settings'), findsOneWidget);
 
     await testDb.close();
   });

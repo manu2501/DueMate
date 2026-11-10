@@ -77,20 +77,16 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         ),
         actions: [
           IconButton(
-            tooltip: 'Add Person',
+            tooltip: 'Settings',
             icon: Container(
               padding: const EdgeInsets.all(7),
               decoration: BoxDecoration(
                 color: cs.surfaceContainerHigh,
                 shape: BoxShape.circle,
               ),
-              child: Icon(Icons.person_add_rounded, size: 18, color: cs.onSurface),
+              child: Icon(Icons.settings_outlined, size: 20, color: cs.onSurface),
             ),
-            onPressed: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(builder: (ctx) => const AddEditPersonScreen()),
-              );
-            },
+            onPressed: () => context.push('/settings'),
           ),
           const SizedBox(width: 8),
         ],
