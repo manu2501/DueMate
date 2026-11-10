@@ -133,10 +133,10 @@ class _QuickReceiveSheetState extends ConsumerState<QuickReceiveSheet> {
         Navigator.of(context).pop();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            backgroundColor: const Color(0xFF16A34A),
+            backgroundColor: const Color(0xFF10B981),
             content: Text(
               'Received ${CurrencyFormatter.format(amount, symbol: currencySymbol)} from $personName',
-              style: const TextStyle(fontWeight: FontWeight.bold),
+              style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF09090B)),
             ),
           ),
         );
@@ -155,14 +155,16 @@ class _QuickReceiveSheetState extends ConsumerState<QuickReceiveSheet> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     final currencySymbol = ref.watch(currencySymbolProvider);
     final allPersonsAsync = ref.watch(allPersonSummariesProvider);
     final mediaQuery = MediaQuery.of(context);
 
     return Container(
       decoration: BoxDecoration(
-        color: theme.scaffoldBackgroundColor,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        color: isDark ? const Color(0xFF18181B) : Colors.white,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+        border: Border(top: BorderSide(color: isDark ? const Color(0x28FFFFFF) : const Color(0xFFE2E8F0))),
       ),
       padding: EdgeInsets.only(
         left: 20,
@@ -181,12 +183,12 @@ class _QuickReceiveSheetState extends ConsumerState<QuickReceiveSheet> {
                 width: 40,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: theme.colorScheme.onSurface.withValues(alpha: 0.2),
+                  color: isDark ? Colors.white24 : Colors.black26,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
             ),
-            const SizedBox(height: 14),
+            const SizedBox(height: 16),
 
             // Header Row
             Row(
@@ -194,21 +196,23 @@ class _QuickReceiveSheetState extends ConsumerState<QuickReceiveSheet> {
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF16A34A).withValues(alpha: 0.12),
+                    color: const Color(0xFF10B981).withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: const Color(0xFF10B981).withValues(alpha: 0.3)),
                   ),
                   child: const Icon(
                     Icons.arrow_downward_rounded,
-                    color: Color(0xFF16A34A),
+                    color: Color(0xFF10B981),
                     size: 20,
                   ),
                 ),
                 const SizedBox(width: 12),
                 Text(
-                  'Receive Payment',
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
+                  'Quick Receive Repayment',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w800,
                     fontSize: 18,
+                    color: isDark ? Colors.white : Colors.black87,
                   ),
                 ),
                 const Spacer(),
@@ -250,7 +254,7 @@ class _QuickReceiveSheetState extends ConsumerState<QuickReceiveSheet> {
                           value: s.person.id,
                           child: Row(
                             children: [
-                              Text(s.person.name),
+                              Text(s.person.name, style: const TextStyle(fontWeight: FontWeight.w600)),
                               const Spacer(),
                               Text(
                                 s.balance > 0
@@ -261,11 +265,11 @@ class _QuickReceiveSheetState extends ConsumerState<QuickReceiveSheet> {
                                 style: TextStyle(
                                   fontSize: 12,
                                   color: s.balance > 0
-                                      ? const Color(0xFFDC2626)
+                                      ? const Color(0xFFF43F5E)
                                       : s.balance < 0
-                                          ? const Color(0xFF9333EA)
-                                          : const Color(0xFF16A34A),
-                                  fontWeight: FontWeight.w500,
+                                          ? const Color(0xFF8B5CF6)
+                                          : const Color(0xFF10B981),
+                                  fontWeight: FontWeight.bold,
                                 ),
                               ),
                             ],
@@ -281,25 +285,26 @@ class _QuickReceiveSheetState extends ConsumerState<QuickReceiveSheet> {
                       const SizedBox(height: 8),
                       InkWell(
                         onTap: () => _setAmount(selectedSummary.balance),
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(10),
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF16A34A).withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: const Color(0xFF16A34A).withValues(alpha: 0.3)),
+                            color: const Color(0xFF10B981).withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: const Color(0xFF10B981).withValues(alpha: 0.3)),
                           ),
                           child: Row(
-                            mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Icon(Icons.check_circle_outline_rounded, size: 14, color: Color(0xFF16A34A)),
-                              const SizedBox(width: 6),
-                              Text(
-                                'Tap to settle full balance: ${CurrencyFormatter.format(selectedSummary.balance, symbol: currencySymbol)}',
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                  color: Color(0xFF16A34A),
+                              const Icon(Icons.check_circle_outline_rounded, size: 16, color: Color(0xFF10B981)),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  'Tap to settle full balance: ${CurrencyFormatter.format(selectedSummary.balance, symbol: currencySymbol)}',
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                    color: Color(0xFF10B981),
+                                  ),
                                 ),
                               ),
                             ],
@@ -315,21 +320,24 @@ class _QuickReceiveSheetState extends ConsumerState<QuickReceiveSheet> {
             ),
             const SizedBox(height: 16),
 
-            // Amount Input Field
+            // Amount Input Field (Glowing Emerald)
             TextField(
               controller: _amountController,
               focusNode: _focusNode,
               keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              style: theme.textTheme.headlineMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: const Color(0xFF16A34A),
+              style: TextStyle(
+                fontWeight: FontWeight.w900,
+                fontSize: 32,
+                letterSpacing: -0.5,
+                color: isDark ? const Color(0xFF10B981) : const Color(0xFF0D9488),
               ),
               decoration: InputDecoration(
                 labelText: 'Amount Received',
                 prefixText: '$currencySymbol ',
-                prefixStyle: theme.textTheme.headlineMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: const Color(0xFF16A34A),
+                prefixStyle: TextStyle(
+                  fontWeight: FontWeight.w900,
+                  fontSize: 32,
+                  color: isDark ? const Color(0xFF10B981) : const Color(0xFF0D9488),
                 ),
                 hintText: '0',
               ),
@@ -342,15 +350,15 @@ class _QuickReceiveSheetState extends ConsumerState<QuickReceiveSheet> {
               scrollDirection: Axis.horizontal,
               child: Row(
                 children: [
-                  _presetChip('+100', 100),
+                  _presetChip('+100', 100, isDark),
                   const SizedBox(width: 8),
-                  _presetChip('+500', 500),
+                  _presetChip('+500', 500, isDark),
                   const SizedBox(width: 8),
-                  _presetChip('+1,000', 1000),
+                  _presetChip('+1,000', 1000, isDark),
                   const SizedBox(width: 8),
-                  _presetChip('+2,000', 2000),
+                  _presetChip('+2,000', 2000, isDark),
                   const SizedBox(width: 8),
-                  _presetChip('+5,000', 5000),
+                  _presetChip('+5,000', 5000, isDark),
                 ],
               ),
             ),
@@ -359,7 +367,6 @@ class _QuickReceiveSheetState extends ConsumerState<QuickReceiveSheet> {
             // Date & Payment Method Row
             Row(
               children: [
-                // Date Button
                 Expanded(
                   child: OutlinedButton.icon(
                     onPressed: _selectDate,
@@ -376,8 +383,6 @@ class _QuickReceiveSheetState extends ConsumerState<QuickReceiveSheet> {
                   ),
                 ),
                 const SizedBox(width: 12),
-
-                // Payment Method Selector
                 Expanded(
                   child: DropdownButtonFormField<PaymentMethod>(
                     initialValue: _selectedPaymentMethod,
@@ -417,30 +422,43 @@ class _QuickReceiveSheetState extends ConsumerState<QuickReceiveSheet> {
             ),
             const SizedBox(height: 20),
 
-            // Big Receive Action Button
-            FilledButton(
-              onPressed: _isSaving ? null : _save,
-              style: FilledButton.styleFrom(
-                backgroundColor: const Color(0xFF16A34A),
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+            // Big Receive Action Button with Glow
+            Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF10B981).withValues(alpha: 0.35),
+                    blurRadius: 18,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
               ),
-              child: _isSaving
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                    )
-                  : Text(
-                      _currentAmount > 0
-                          ? 'Receive ${CurrencyFormatter.format(_currentAmount, symbol: currencySymbol)}'
-                          : 'Save Repayment',
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
+              child: FilledButton(
+                onPressed: _isSaving ? null : _save,
+                style: FilledButton.styleFrom(
+                  backgroundColor: const Color(0xFF10B981),
+                  foregroundColor: const Color(0xFF09090B),
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                ),
+                child: _isSaving
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.black),
+                      )
+                    : Text(
+                        _currentAmount > 0
+                            ? 'Receive ${CurrencyFormatter.format(_currentAmount, symbol: currencySymbol)}'
+                            : 'Save Repayment',
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 0.5,
+                        ),
                       ),
-                    ),
+              ),
             ),
           ],
         ),
@@ -448,12 +466,26 @@ class _QuickReceiveSheetState extends ConsumerState<QuickReceiveSheet> {
     );
   }
 
-  Widget _presetChip(String label, double amount) {
-    return ActionChip(
-      label: Text(label),
-      onPressed: () => _addAmount(amount),
-      visualDensity: VisualDensity.compact,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+  Widget _presetChip(String label, double amount, bool isDark) {
+    return InkWell(
+      onTap: () => _addAmount(amount),
+      borderRadius: BorderRadius.circular(10),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF27272A) : const Color(0xFFE2E8F0),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: isDark ? const Color(0x18FFFFFF) : const Color(0xFFCBD5E1)),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.bold,
+            color: isDark ? Colors.white : Colors.black87,
+          ),
+        ),
+      ),
     );
   }
 }

@@ -23,29 +23,31 @@ class TransactionTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     final isReceived = transaction.type == TransactionType.paymentReceived;
-    final color = isReceived ? const Color(0xFF16A34A) : const Color(0xFFDC2626);
+    final color = isReceived ? const Color(0xFF10B981) : const Color(0xFFF43F5E);
 
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(16),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Icon Badge
+            // Icon Badge with subtle glow border
             Container(
-              width: 42,
-              height: 42,
+              width: 40,
+              height: 40,
               decoration: BoxDecoration(
                 color: color.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: color.withValues(alpha: 0.25), width: 1),
               ),
               child: Icon(
                 isReceived ? Icons.arrow_downward_rounded : Icons.arrow_outward_rounded,
                 color: color,
-                size: 22,
+                size: 20,
               ),
             ),
             const SizedBox(width: 14),
@@ -61,8 +63,10 @@ class TransactionTile extends StatelessWidget {
                         Expanded(
                           child: Text(
                             person!.name,
-                            style: theme.textTheme.titleSmall?.copyWith(
+                            style: TextStyle(
                               fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                              color: isDark ? Colors.white : Colors.black87,
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
@@ -72,17 +76,20 @@ class TransactionTile extends StatelessWidget {
                         Expanded(
                           child: Text(
                             transaction.type.label,
-                            style: theme.textTheme.titleSmall?.copyWith(
+                            style: TextStyle(
                               fontWeight: FontWeight.w600,
+                              fontSize: 13,
+                              color: isDark ? Colors.white : Colors.black87,
                             ),
                           ),
                         ),
                       // Amount
                       Text(
                         '${isReceived ? '+' : '-'}${CurrencyFormatter.format(transaction.amount, symbol: currencySymbol)}',
-                        style: theme.textTheme.titleMedium?.copyWith(
+                        style: TextStyle(
                           color: color,
-                          fontWeight: FontWeight.bold,
+                          fontWeight: FontWeight.w800,
+                          fontSize: 15,
                         ),
                       ),
                     ],
@@ -96,8 +103,13 @@ class TransactionTile extends StatelessWidget {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                         decoration: BoxDecoration(
-                          color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.6),
+                          color: isDark
+                              ? const Color(0xFF27272A).withValues(alpha: 0.7)
+                              : const Color(0xFFF1F5F9),
                           borderRadius: BorderRadius.circular(6),
+                          border: Border.all(
+                            color: isDark ? const Color(0x18FFFFFF) : const Color(0xFFCBD5E1),
+                          ),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
@@ -105,15 +117,15 @@ class TransactionTile extends StatelessWidget {
                             Icon(
                               transaction.paymentMethod.icon,
                               size: 11,
-                              color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+                              color: const Color(0xFFA1A1AA),
                             ),
                             const SizedBox(width: 3),
                             Text(
                               transaction.paymentMethod.label,
-                              style: theme.textTheme.labelSmall?.copyWith(
+                              style: const TextStyle(
                                 fontSize: 10,
-                                fontWeight: FontWeight.w500,
-                                color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFFA1A1AA),
                               ),
                             ),
                           ],
@@ -124,8 +136,8 @@ class TransactionTile extends StatelessWidget {
                       // Relative Date
                       Text(
                         DateFormatter.formatRelative(transaction.transactionDate),
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+                        style: const TextStyle(
+                          color: Color(0xFF71717A),
                           fontSize: 11,
                         ),
                       ),
@@ -135,8 +147,8 @@ class TransactionTile extends StatelessWidget {
                         Expanded(
                           child: Text(
                             '• "${transaction.note!.trim()}"',
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                            style: const TextStyle(
+                              color: Color(0xFF71717A),
                               fontStyle: FontStyle.italic,
                               fontSize: 11,
                             ),

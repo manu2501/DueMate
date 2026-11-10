@@ -6,7 +6,7 @@ import 'package:smarava/data/providers/app_providers.dart';
 import 'package:smarava/main.dart';
 
 void main() {
-  testWidgets('DueMate app renders dashboard with bottom navigation', (WidgetTester tester) async {
+  testWidgets('DueMate app renders welcome animation and transitions to dashboard', (WidgetTester tester) async {
     final testDb = AppDatabase(NativeDatabase.memory());
 
     await tester.pumpWidget(
@@ -18,14 +18,19 @@ void main() {
       ),
     );
 
-    // Initial pump and a couple frames for async streams to settle
+    // Initial pump for welcome animation
     await tester.pump();
-    await tester.pump(const Duration(milliseconds: 100));
+    await tester.pump(const Duration(milliseconds: 500));
 
-    // Verify app title appears
-    expect(find.text('DueMate'), findsWidgets);
+    // Verify Welcome screen renders
+    expect(find.text('Open Ledger'), findsOneWidget);
 
-    // Verify bottom navigation bar destinations
+    // Tap "Open Ledger" button to enter Dashboard
+    await tester.tap(find.text('Open Ledger'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+
+    // Verify bottom navigation bar destinations on dashboard
     expect(find.text('Dashboard'), findsOneWidget);
     expect(find.text('People'), findsOneWidget);
     expect(find.text('Reports'), findsOneWidget);

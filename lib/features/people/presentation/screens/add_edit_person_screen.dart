@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
+import 'package:smarava/core/widgets/bento_card.dart';
+import 'package:smarava/core/widgets/spotlight_background.dart';
 import 'package:smarava/data/providers/app_providers.dart';
 import 'package:smarava/domain/entities/person.dart';
 
@@ -74,7 +76,11 @@ class _AddEditPersonScreenState extends ConsumerState<AddEditPersonScreen> {
         Navigator.of(context).pop();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(isEditing ? 'Person updated' : 'Person added successfully'),
+            backgroundColor: const Color(0xFF10B981),
+            content: Text(
+              isEditing ? 'Person updated' : 'Person added successfully',
+              style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF09090B)),
+            ),
           ),
         );
       }
@@ -93,93 +99,126 @@ class _AddEditPersonScreenState extends ConsumerState<AddEditPersonScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(isEditing ? 'Edit Person' : 'Add Person'),
+        title: Text(isEditing ? 'Edit Profile' : 'Add Person', style: const TextStyle(fontWeight: FontWeight.w800)),
         actions: [
-          TextButton(
-            onPressed: _isSaving ? null : _save,
-            child: _isSaving
-                ? const SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Text('Save', style: TextStyle(fontWeight: FontWeight.bold)),
+          Padding(
+            padding: const EdgeInsets.only(right: 8.0),
+            child: TextButton(
+              onPressed: _isSaving ? null : _save,
+              child: _isSaving
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF10B981)),
+                    )
+                  : const Text('Save', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF10B981))),
+            ),
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // Name
-              TextFormField(
-                controller: _nameController,
-                decoration: const InputDecoration(
-                  labelText: 'Full Name *',
-                  hintText: 'e.g. Rahul Kumar',
-                  prefixIcon: Icon(Icons.person_outline_rounded),
-                ),
-                textCapitalization: TextCapitalization.words,
-                validator: (val) {
-                  if (val == null || val.trim().isEmpty) {
-                    return 'Please enter a name';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 16),
+      body: SpotlightBackground(
+        primaryGlow: const Color(0xFF10B981),
+        secondaryGlow: const Color(0xFF6366F1),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(20),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                BentoCard(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'CONTACT INFORMATION',
+                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: Color(0xFF71717A), letterSpacing: 1.0),
+                      ),
+                      const SizedBox(height: 16),
+                      // Name
+                      TextFormField(
+                        controller: _nameController,
+                        decoration: const InputDecoration(
+                          labelText: 'Full Name *',
+                          hintText: 'e.g. Rahul Kumar',
+                          prefixIcon: Icon(Icons.person_outline_rounded, size: 20),
+                        ),
+                        textCapitalization: TextCapitalization.words,
+                        validator: (val) {
+                          if (val == null || val.trim().isEmpty) {
+                            return 'Please enter a name';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 14),
 
-              // Phone
-              TextFormField(
-                controller: _phoneController,
-                decoration: const InputDecoration(
-                  labelText: 'Phone Number (Optional)',
-                  hintText: 'e.g. +91 98765 43210',
-                  prefixIcon: Icon(Icons.phone_outlined),
-                ),
-                keyboardType: TextInputType.phone,
-              ),
-              const SizedBox(height: 16),
+                      // Phone
+                      TextFormField(
+                        controller: _phoneController,
+                        decoration: const InputDecoration(
+                          labelText: 'Phone Number (Optional)',
+                          hintText: 'e.g. +91 98765 43210',
+                          prefixIcon: Icon(Icons.phone_outlined, size: 20),
+                        ),
+                        keyboardType: TextInputType.phone,
+                      ),
+                      const SizedBox(height: 14),
 
-              // Email
-              TextFormField(
-                controller: _emailController,
-                decoration: const InputDecoration(
-                  labelText: 'Email Address (Optional)',
-                  hintText: 'e.g. rahul@example.com',
-                  prefixIcon: Icon(Icons.email_outlined),
-                ),
-                keyboardType: TextInputType.emailAddress,
-              ),
-              const SizedBox(height: 16),
+                      // Email
+                      TextFormField(
+                        controller: _emailController,
+                        decoration: const InputDecoration(
+                          labelText: 'Email Address (Optional)',
+                          hintText: 'e.g. rahul@example.com',
+                          prefixIcon: Icon(Icons.email_outlined, size: 20),
+                        ),
+                        keyboardType: TextInputType.emailAddress,
+                      ),
+                      const SizedBox(height: 14),
 
-              // Notes
-              TextFormField(
-                controller: _notesController,
-                decoration: const InputDecoration(
-                  labelText: 'Notes (Optional)',
-                  hintText: 'e.g. Office friend, neighbor, roommate',
-                  prefixIcon: Icon(Icons.notes_rounded),
+                      // Notes
+                      TextFormField(
+                        controller: _notesController,
+                        decoration: const InputDecoration(
+                          labelText: 'Notes (Optional)',
+                          hintText: 'e.g. Office friend, neighbor, roommate',
+                          prefixIcon: Icon(Icons.notes_rounded, size: 20),
+                        ),
+                        maxLines: 3,
+                      ),
+                    ],
+                  ),
                 ),
-                maxLines: 3,
-              ),
-              const SizedBox(height: 24),
+                const SizedBox(height: 24),
 
-              FilledButton(
-                onPressed: _isSaving ? null : _save,
-                style: FilledButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF10B981).withValues(alpha: 0.35),
+                        blurRadius: 18,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: FilledButton(
+                    onPressed: _isSaving ? null : _save,
+                    style: FilledButton.styleFrom(
+                      backgroundColor: const Color(0xFF10B981),
+                      foregroundColor: const Color(0xFF09090B),
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    ),
+                    child: Text(
+                      isEditing ? 'Save Changes' : 'Create Person Entry',
+                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
+                    ),
+                  ),
                 ),
-                child: Text(
-                  isEditing ? 'Save Changes' : 'Add Person',
-                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

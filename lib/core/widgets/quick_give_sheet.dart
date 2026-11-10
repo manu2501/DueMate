@@ -128,7 +128,7 @@ class _QuickGiveSheetState extends ConsumerState<QuickGiveSheet> {
         Navigator.of(context).pop();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            backgroundColor: const Color(0xFFDC2626),
+            backgroundColor: const Color(0xFFF43F5E),
             content: Text(
               'Gave ${CurrencyFormatter.format(amount, symbol: currencySymbol)} to $personName',
               style: const TextStyle(fontWeight: FontWeight.bold),
@@ -150,14 +150,16 @@ class _QuickGiveSheetState extends ConsumerState<QuickGiveSheet> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     final currencySymbol = ref.watch(currencySymbolProvider);
     final allPersonsAsync = ref.watch(allPersonSummariesProvider);
     final mediaQuery = MediaQuery.of(context);
 
     return Container(
       decoration: BoxDecoration(
-        color: theme.scaffoldBackgroundColor,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        color: isDark ? const Color(0xFF18181B) : Colors.white,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+        border: Border(top: BorderSide(color: isDark ? const Color(0x28FFFFFF) : const Color(0xFFE2E8F0))),
       ),
       padding: EdgeInsets.only(
         left: 20,
@@ -176,12 +178,12 @@ class _QuickGiveSheetState extends ConsumerState<QuickGiveSheet> {
                 width: 40,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: theme.colorScheme.onSurface.withValues(alpha: 0.2),
+                  color: isDark ? Colors.white24 : Colors.black26,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
             ),
-            const SizedBox(height: 14),
+            const SizedBox(height: 16),
 
             // Header Row
             Row(
@@ -189,21 +191,23 @@ class _QuickGiveSheetState extends ConsumerState<QuickGiveSheet> {
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFDC2626).withValues(alpha: 0.12),
+                    color: const Color(0xFFF43F5E).withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: const Color(0xFFF43F5E).withValues(alpha: 0.3)),
                   ),
                   child: const Icon(
                     Icons.arrow_outward_rounded,
-                    color: Color(0xFFDC2626),
+                    color: Color(0xFFF43F5E),
                     size: 20,
                   ),
                 ),
                 const SizedBox(width: 12),
                 Text(
-                  'Give Money',
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
+                  'Record Money Given',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w800,
                     fontSize: 18,
+                    color: isDark ? Colors.white : Colors.black87,
                   ),
                 ),
                 const Spacer(),
@@ -231,18 +235,18 @@ class _QuickGiveSheetState extends ConsumerState<QuickGiveSheet> {
                   decoration: InputDecoration(
                     labelText: 'Person',
                     prefixIcon: selectedSummary != null
-                            ? Padding(
-                                padding: const EdgeInsets.all(8.0),
-                                child: AvatarWidget(name: selectedSummary.person.name, radius: 14),
-                              )
-                            : const Icon(Icons.person_outline_rounded),
+                        ? Padding(
+                            padding: const EdgeInsets.all(8.0),
+                            child: AvatarWidget(name: selectedSummary.person.name, radius: 14),
+                          )
+                        : const Icon(Icons.person_outline_rounded),
                   ),
                   items: activeSummaries.map((s) {
                     return DropdownMenuItem<String>(
                       value: s.person.id,
                       child: Row(
                         children: [
-                          Text(s.person.name),
+                          Text(s.person.name, style: const TextStyle(fontWeight: FontWeight.w600)),
                           const Spacer(),
                           Text(
                             s.balance > 0
@@ -253,11 +257,11 @@ class _QuickGiveSheetState extends ConsumerState<QuickGiveSheet> {
                             style: TextStyle(
                               fontSize: 12,
                               color: s.balance > 0
-                                  ? const Color(0xFFDC2626)
+                                  ? const Color(0xFFF43F5E)
                                   : s.balance < 0
-                                      ? const Color(0xFF9333EA)
-                                      : const Color(0xFF16A34A),
-                              fontWeight: FontWeight.w500,
+                                      ? const Color(0xFF8B5CF6)
+                                      : const Color(0xFF10B981),
+                              fontWeight: FontWeight.bold,
                             ),
                           ),
                         ],
@@ -274,21 +278,24 @@ class _QuickGiveSheetState extends ConsumerState<QuickGiveSheet> {
             ),
             const SizedBox(height: 16),
 
-            // Amount Input Field
+            // Amount Input Field (Glowing Rose)
             TextField(
               controller: _amountController,
               focusNode: _focusNode,
               keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              style: theme.textTheme.headlineMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: const Color(0xFFDC2626),
+              style: TextStyle(
+                fontWeight: FontWeight.w900,
+                fontSize: 32,
+                letterSpacing: -0.5,
+                color: const Color(0xFFF43F5E),
               ),
               decoration: InputDecoration(
                 labelText: 'Amount Given',
                 prefixText: '$currencySymbol ',
-                prefixStyle: theme.textTheme.headlineMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: const Color(0xFFDC2626),
+                prefixStyle: const TextStyle(
+                  fontWeight: FontWeight.w900,
+                  fontSize: 32,
+                  color: Color(0xFFF43F5E),
                 ),
                 hintText: '0',
               ),
@@ -301,15 +308,15 @@ class _QuickGiveSheetState extends ConsumerState<QuickGiveSheet> {
               scrollDirection: Axis.horizontal,
               child: Row(
                 children: [
-                  _presetChip('+500', 500),
+                  _presetChip('+500', 500, isDark),
                   const SizedBox(width: 8),
-                  _presetChip('+1,000', 1000),
+                  _presetChip('+1,000', 1000, isDark),
                   const SizedBox(width: 8),
-                  _presetChip('+2,000', 2000),
+                  _presetChip('+2,000', 2000, isDark),
                   const SizedBox(width: 8),
-                  _presetChip('+5,000', 5000),
+                  _presetChip('+5,000', 5000, isDark),
                   const SizedBox(width: 8),
-                  _presetChip('+10,000', 10000),
+                  _presetChip('+10,000', 10000, isDark),
                 ],
               ),
             ),
@@ -318,7 +325,6 @@ class _QuickGiveSheetState extends ConsumerState<QuickGiveSheet> {
             // Date & Payment Method Row
             Row(
               children: [
-                // Date Button
                 Expanded(
                   child: OutlinedButton.icon(
                     onPressed: _selectDate,
@@ -335,8 +341,6 @@ class _QuickGiveSheetState extends ConsumerState<QuickGiveSheet> {
                   ),
                 ),
                 const SizedBox(width: 12),
-
-                // Payment Method Selector
                 Expanded(
                   child: DropdownButtonFormField<PaymentMethod>(
                     initialValue: _selectedPaymentMethod,
@@ -376,30 +380,43 @@ class _QuickGiveSheetState extends ConsumerState<QuickGiveSheet> {
             ),
             const SizedBox(height: 20),
 
-            // Big Give Action Button
-            FilledButton(
-              onPressed: _isSaving ? null : _save,
-              style: FilledButton.styleFrom(
-                backgroundColor: const Color(0xFFDC2626),
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+            // Big Give Action Button with Glow
+            Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFFF43F5E).withValues(alpha: 0.35),
+                    blurRadius: 18,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
               ),
-              child: _isSaving
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                    )
-                  : Text(
-                      _currentAmount > 0
-                          ? 'Give ${CurrencyFormatter.format(_currentAmount, symbol: currencySymbol)}'
-                          : 'Save Transaction',
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
+              child: FilledButton(
+                onPressed: _isSaving ? null : _save,
+                style: FilledButton.styleFrom(
+                  backgroundColor: const Color(0xFFF43F5E),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                ),
+                child: _isSaving
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                      )
+                    : Text(
+                        _currentAmount > 0
+                            ? 'Give ${CurrencyFormatter.format(_currentAmount, symbol: currencySymbol)}'
+                            : 'Save Transaction',
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 0.5,
+                        ),
                       ),
-                    ),
+              ),
             ),
           ],
         ),
@@ -407,12 +424,26 @@ class _QuickGiveSheetState extends ConsumerState<QuickGiveSheet> {
     );
   }
 
-  Widget _presetChip(String label, double amount) {
-    return ActionChip(
-      label: Text(label),
-      onPressed: () => _addAmount(amount),
-      visualDensity: VisualDensity.compact,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+  Widget _presetChip(String label, double amount, bool isDark) {
+    return InkWell(
+      onTap: () => _addAmount(amount),
+      borderRadius: BorderRadius.circular(10),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF27272A) : const Color(0xFFE2E8F0),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: isDark ? const Color(0x18FFFFFF) : const Color(0xFFCBD5E1)),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.bold,
+            color: isDark ? Colors.white : Colors.black87,
+          ),
+        ),
+      ),
     );
   }
 }
