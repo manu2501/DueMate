@@ -118,30 +118,22 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
 
                       // Brand Mark / Logo
                       Container(
-                        width: 64,
-                        height: 64,
+                        width: 68,
+                        height: 68,
                         decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                            colors: [
-                              cs.primary,
-                              cs.primary.withValues(alpha: 0.75),
-                            ],
-                          ),
                           borderRadius: BorderRadius.circular(20),
                           boxShadow: [
                             BoxShadow(
-                              color: cs.primary.withValues(alpha: 0.3),
-                              blurRadius: 20,
+                              color: cs.primary.withValues(alpha: 0.35),
+                              blurRadius: 24,
                               offset: const Offset(0, 8),
                             ),
                           ],
                         ),
-                        child: const Icon(
-                          Icons.account_balance_wallet_rounded,
-                          color: Colors.white,
-                          size: 32,
+                        clipBehavior: Clip.antiAlias,
+                        child: Image.asset(
+                          'assets/images/app_logo.png',
+                          fit: BoxFit.cover,
                         ),
                       ),
                       const SizedBox(height: 28),
