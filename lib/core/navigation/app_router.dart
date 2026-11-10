@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:duemate/core/widgets/screenshot_nav_icons.dart';
 import 'package:duemate/features/dashboard/presentation/screens/dashboard_screen.dart';
 import 'package:duemate/features/people/presentation/screens/add_edit_person_screen.dart';
 import 'package:duemate/features/people/presentation/screens/people_screen.dart';
@@ -226,11 +227,11 @@ class _FloatingDockNavBar extends StatelessWidget {
     final cs = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;
 
-    final items = const [
-      (Icons.account_balance_wallet_outlined, Icons.account_balance_wallet_rounded, 'Dashboard'),
-      (Icons.outlined_flag_rounded, Icons.flag_rounded, 'Directory'),
-      (Icons.chat_bubble_outline_rounded, Icons.chat_bubble_rounded, 'Reports'),
-      (Icons.notifications_none_rounded, Icons.notifications_rounded, 'Notifications'),
+    final labels = const [
+      'Dashboard',
+      'Directory',
+      'Reports',
+      'Notifications',
     ];
 
     return SafeArea(
@@ -257,12 +258,12 @@ class _FloatingDockNavBar extends StatelessWidget {
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: List.generate(items.length, (index) {
+            children: List.generate(labels.length, (index) {
               final isSelected = selectedIndex == index;
-              final item = items[index];
+              final label = labels[index];
 
               return Tooltip(
-                message: item.$3,
+                message: label,
                 child: InkWell(
                   onTap: () => onItemSelected(index),
                   borderRadius: BorderRadius.circular(20),
@@ -293,12 +294,13 @@ class _FloatingDockNavBar extends StatelessWidget {
                             ]
                           : null,
                     ),
-                    child: Icon(
-                      isSelected ? item.$2 : item.$1,
-                      size: 22,
+                    child: ScreenshotNavIcon(
+                      index: index,
+                      isSelected: isSelected,
                       color: isSelected
                           ? (isDark ? Colors.white : const Color(0xFF131438))
                           : cs.onSurfaceVariant.withValues(alpha: 0.75),
+                      size: 22,
                     ),
                   ),
                 ),
