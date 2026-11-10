@@ -1,4 +1,5 @@
 import 'package:flutter_contacts/flutter_contacts.dart';
+import 'package:smarava/core/utils/permission_manager.dart';
 
 class ContactData {
   final String name;
@@ -15,12 +16,12 @@ class ContactData {
 class ContactsHelper {
   /// Request read permission
   static Future<bool> requestPermission() async {
-    try {
-      final status = await FlutterContacts.permissions.request(PermissionType.read);
-      return status == PermissionStatus.granted;
-    } catch (_) {
-      return false;
-    }
+    return await PermissionManager.requestContacts();
+  }
+
+  /// Check if read permission is currently granted
+  static Future<bool> hasPermission() async {
+    return await PermissionManager.hasContactsPermission();
   }
 
   /// Open native Android contact picker and return selected contact

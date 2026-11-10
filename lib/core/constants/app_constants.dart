@@ -5,6 +5,11 @@ class AppConstants {
   static const String appName = 'DueMate';
   static const String appTagline = 'Personal Lending & Repayment Tracker';
 
+  // App Versioning
+  static const String appVersion = '1.0.0';
+  static const int appBuildNumber = 1;
+  static const String appVersionString = 'v$appVersion+$appBuildNumber';
+
   // Currency
   static const String defaultCurrencySymbol = '₹';
   static const String defaultCurrencyCode = 'INR';

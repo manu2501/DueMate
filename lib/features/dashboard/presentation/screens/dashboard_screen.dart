@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:smarava/core/constants/app_constants.dart';
 import 'package:smarava/core/utils/currency_formatter.dart';
 import 'package:smarava/core/utils/date_formatter.dart';
+import 'package:smarava/core/utils/permission_manager.dart';
 import 'package:smarava/core/widgets/avatar_widget.dart';
 import 'package:smarava/core/widgets/bento_card.dart';
 import 'package:smarava/core/widgets/empty_state_widget.dart';
@@ -15,8 +16,24 @@ import 'package:smarava/data/providers/app_providers.dart';
 import 'package:smarava/features/people/presentation/screens/add_edit_person_screen.dart';
 import 'package:smarava/features/transactions/presentation/widgets/transaction_details_dialog.dart';
 
-class DashboardScreen extends ConsumerWidget {
+class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
+
+  @override
+  ConsumerState<DashboardScreen> createState() => _DashboardScreenState();
+}
+
+class _DashboardScreenState extends ConsumerState<DashboardScreen> {
+  @override
+  void initState() {
+    super.initState();
+    // Ask for the permissions that are needed at start of app or on update
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (mounted) {
+        await PermissionManager.checkAndPromptOnStartupOrUpdate(context);
+      }
+    });
+  }
 
   String _getGreeting() {
     final hour = DateTime.now().hour;
@@ -30,7 +47,7 @@ class DashboardScreen extends ConsumerWidget {
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final currencySymbol = ref.watch(currencySymbolProvider);

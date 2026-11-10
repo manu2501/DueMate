@@ -31,7 +31,7 @@ class _PeopleScreenState extends ConsumerState<PeopleScreen> {
     super.dispose();
   }
 
-  Future<void> _importFromContacts(BuildContext context) async {
+  Future<void> _importFromContacts() async {
     setState(() => _isImporting = true);
     try {
       final contact = await ContactsHelper.pickContact();
@@ -207,7 +207,7 @@ class _PeopleScreenState extends ConsumerState<PeopleScreen> {
               : IconButton(
                   tooltip: 'Import from Phone Contacts',
                   icon: const Icon(Icons.contacts_rounded, color: Color(0xFF10B981)),
-                  onPressed: () => _importFromContacts(context),
+                  onPressed: _importFromContacts,
                 ),
           IconButton(
             tooltip: 'Sort Options',

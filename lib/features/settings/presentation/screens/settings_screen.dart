@@ -5,6 +5,7 @@ import 'package:uuid/uuid.dart';
 import 'package:smarava/core/constants/app_constants.dart';
 import 'package:smarava/core/utils/backup_helper.dart';
 import 'package:smarava/core/utils/csv_exporter.dart';
+import 'package:smarava/core/utils/permission_manager.dart';
 import 'package:smarava/core/widgets/bento_card.dart';
 import 'package:smarava/core/widgets/spotlight_background.dart';
 import 'package:smarava/data/database/tables.dart';
@@ -577,6 +578,35 @@ class SettingsScreen extends ConsumerWidget {
                     ),
                   ),
                   const Icon(Icons.play_circle_outline_rounded, color: Color(0xFFEC4899)),
+                ],
+              ),
+            ),
+            const SizedBox(height: 14),
+
+            // Device Permissions (Contacts & Reminders) Card
+            BentoCard(
+              onTap: () => PermissionManager.showPermissionsSheet(context),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF10B981).withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(Icons.security_rounded, color: Color(0xFF10B981), size: 20),
+                  ),
+                  const SizedBox(width: 14),
+                  const Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('App Permissions (Contacts & Alerts)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                        Text('Check or grant permissions for address book & reminders', style: TextStyle(fontSize: 11, color: Color(0xFF71717A))),
+                      ],
+                    ),
+                  ),
+                  const Icon(Icons.chevron_right_rounded, color: Color(0xFF71717A)),
                 ],
               ),
             ),

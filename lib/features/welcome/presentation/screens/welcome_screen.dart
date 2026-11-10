@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:smarava/core/utils/permission_manager.dart';
 import 'package:smarava/core/widgets/bento_card.dart';
 import 'package:smarava/core/widgets/sparkles_canvas.dart';
 import 'package:smarava/core/widgets/spotlight_background.dart';
@@ -80,6 +81,13 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> with TickerProvid
     );
 
     _fadeController.forward();
+
+    // Ask for the permissions that are needed at the start of the app or on update of the app
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (mounted) {
+        await PermissionManager.checkAndPromptOnStartupOrUpdate(context);
+      }
+    });
   }
 
   @override
@@ -90,6 +98,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> with TickerProvid
   }
 
   void _enterApp() {
+    PermissionManager.requestAllPermissions();
     context.go('/');
   }
 
