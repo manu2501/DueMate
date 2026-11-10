@@ -3,10 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:duemate/core/utils/csv_exporter.dart';
+import 'package:duemate/core/utils/pdf_exporter.dart';
 import 'package:duemate/core/utils/currency_formatter.dart';
 import 'package:duemate/core/utils/date_formatter.dart';
 import 'package:duemate/core/widgets/avatar_widget.dart';
 import 'package:duemate/core/widgets/empty_state_widget.dart';
+import 'package:duemate/core/widgets/export_options_sheet.dart';
 import 'package:duemate/core/widgets/transaction_tile.dart';
 import 'package:duemate/data/database/tables.dart';
 import 'package:duemate/data/providers/app_providers.dart';
@@ -96,15 +98,33 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> with SingleTicker
         title: const Text('Transactions'),
         actions: [
           IconButton(
-            tooltip: 'Export CSV',
+            tooltip: 'Share Report',
             icon: const Icon(Icons.share_outlined),
             onPressed: () {
               final txs = allTxsAsync.value ?? [];
               final filteredTxs = txs.where((t) => _isDateInRange(t.transactionDate)).toList();
-              CsvExporter.exportAndShareAllTransactions(
-                transactions: filteredTxs,
-                personsMap: personsMap,
-                currencySymbol: currencySymbol,
+              final filterName = switch (_dateFilter) {
+                ReportDateFilter.allTime => 'All Time',
+                ReportDateFilter.thisMonth => 'This Month',
+                ReportDateFilter.lastMonth => 'Last Month',
+                ReportDateFilter.thisYear => 'This Year',
+                ReportDateFilter.custom => 'Custom Range',
+              };
+
+              ExportOptionsSheet.show(
+                context: context,
+                title: 'Share Activity Report ($filterName)',
+                onSharePdf: () => PdfExporter.exportAndShareAllTransactions(
+                  transactions: filteredTxs,
+                  personsMap: personsMap,
+                  currencySymbol: currencySymbol,
+                  filterTitle: filterName,
+                ),
+                onShareCsv: () => CsvExporter.exportAndShareAllTransactions(
+                  transactions: filteredTxs,
+                  personsMap: personsMap,
+                  currencySymbol: currencySymbol,
+                ),
               );
             },
           ),

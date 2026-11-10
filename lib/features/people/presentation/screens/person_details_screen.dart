@@ -4,11 +4,12 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:duemate/core/theme/app_theme.dart';
 import 'package:duemate/core/utils/csv_exporter.dart';
+import 'package:duemate/core/utils/pdf_exporter.dart';
 import 'package:duemate/core/utils/currency_formatter.dart';
-import 'package:duemate/core/utils/date_formatter.dart';
 import 'package:duemate/core/utils/reminder_helper.dart';
 import 'package:duemate/core/widgets/avatar_widget.dart';
 import 'package:duemate/core/widgets/empty_state_widget.dart';
+import 'package:duemate/core/widgets/export_options_sheet.dart';
 import 'package:duemate/core/widgets/quick_give_sheet.dart';
 import 'package:duemate/core/widgets/quick_receive_sheet.dart';
 import 'package:duemate/core/widgets/transaction_tile.dart';
@@ -191,13 +192,22 @@ class PersonDetailsScreen extends ConsumerWidget {
                       onPressed: () => ReminderHelper.shareReminder(summary, currencySymbol: currencySymbol),
                     ),
                     IconButton(
-                      tooltip: 'Export Statement',
+                      tooltip: 'Share Statement',
                       icon: const Icon(Icons.receipt_long_outlined),
                       onPressed: () {
-                        CsvExporter.exportAndSharePersonStatement(
-                          summary: summary,
-                          transactions: transactions,
-                          currencySymbol: currencySymbol,
+                        ExportOptionsSheet.show(
+                          context: context,
+                          title: 'Statement for ${person.name}',
+                          onSharePdf: () => PdfExporter.exportAndSharePersonStatement(
+                            summary: summary,
+                            transactions: transactions,
+                            currencySymbol: currencySymbol,
+                          ),
+                          onShareCsv: () => CsvExporter.exportAndSharePersonStatement(
+                            summary: summary,
+                            transactions: transactions,
+                            currencySymbol: currencySymbol,
+                          ),
                         );
                       },
                     ),
@@ -205,7 +215,19 @@ class PersonDetailsScreen extends ConsumerWidget {
                     // Help / Options button in rounded white box (Screen 2 from screenshot)
                     PopupMenuButton<String>(
                       onSelected: (value) {
-                        if (value == 'edit') {
+                        if (value == 'pdf') {
+                          PdfExporter.exportAndSharePersonStatement(
+                            summary: summary,
+                            transactions: transactions,
+                            currencySymbol: currencySymbol,
+                          );
+                        } else if (value == 'csv') {
+                          CsvExporter.exportAndSharePersonStatement(
+                            summary: summary,
+                            transactions: transactions,
+                            currencySymbol: currencySymbol,
+                          );
+                        } else if (value == 'edit') {
                           Navigator.of(context).push(
                             MaterialPageRoute(
                               builder: (ctx) => AddEditPersonScreen(personToEdit: person),
@@ -218,6 +240,27 @@ class PersonDetailsScreen extends ConsumerWidget {
                         }
                       },
                       itemBuilder: (ctx) => [
+                        const PopupMenuItem(
+                          value: 'pdf',
+                          child: Row(
+                            children: [
+                              Icon(Icons.picture_as_pdf_outlined, size: 20, color: Colors.red),
+                              SizedBox(width: 12),
+                              Text('Share PDF Statement'),
+                            ],
+                          ),
+                        ),
+                        const PopupMenuItem(
+                          value: 'csv',
+                          child: Row(
+                            children: [
+                              Icon(Icons.table_chart_outlined, size: 20, color: Colors.green),
+                              SizedBox(width: 12),
+                              Text('Export CSV Statement'),
+                            ],
+                          ),
+                        ),
+                        const PopupMenuDivider(),
                         const PopupMenuItem(
                           value: 'edit',
                           child: Row(
@@ -382,7 +425,7 @@ class PersonDetailsScreen extends ConsumerWidget {
                           const SizedBox(height: 8),
                           Text(
                             owes
-                                ? 'Outstanding debt in your ledger. Use the action buttons below to record repayments or give more.'
+                                ? 'Outstanding debt in your ledger.'
                                 : 'Borrower has paid more than the initial principal. Credit available in your ledger.',
                             style: GoogleFonts.inter(
                               fontSize: 13,
@@ -540,10 +583,19 @@ class PersonDetailsScreen extends ConsumerWidget {
                         // Billing details / Statement link
                         InkWell(
                           onTap: () {
-                            CsvExporter.exportAndSharePersonStatement(
-                              summary: summary,
-                              transactions: transactions,
-                              currencySymbol: currencySymbol,
+                            ExportOptionsSheet.show(
+                              context: context,
+                              title: 'Statement for ${person.name}',
+                              onSharePdf: () => PdfExporter.exportAndSharePersonStatement(
+                                summary: summary,
+                                transactions: transactions,
+                                currencySymbol: currencySymbol,
+                              ),
+                              onShareCsv: () => CsvExporter.exportAndSharePersonStatement(
+                                summary: summary,
+                                transactions: transactions,
+                                currencySymbol: currencySymbol,
+                              ),
                             );
                           },
                           child: Row(
@@ -641,107 +693,73 @@ class PersonDetailsScreen extends ConsumerWidget {
 
                 const SizedBox(height: 16),
 
-                // 3. Date / Reminder Card (matching Screen 2 from screenshot)
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  child: Container(
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: cs.surfaceContainerLow,
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: cs.outlineVariant),
-                    ),
-                    child: Column(
-                      children: [
-                        Row(
-                          children: [
-                            // Calendar Icon Tile (Lavender square with "12")
-                            Container(
-                              width: 48,
-                              height: 48,
-                              decoration: BoxDecoration(
-                                color: isDark
-                                    ? cs.surfaceContainerHigh
-                                    : const Color(0xFFEEF0FA),
-                                borderRadius: BorderRadius.circular(14),
-                              ),
-                              child: Center(
-                                child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    const Icon(
-                                      Icons.calendar_month_rounded,
-                                      size: 18,
-                                      color: Color(0xFF4F46E5),
-                                    ),
-                                    Text(
-                                      '${DateTime.now().day}',
-                                      style: GoogleFonts.dmSans(
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.w800,
-                                        color: const Color(0xFF4F46E5),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
+                // 3. Payment Reminder Card (Send Reminder Option)
+                if (owes)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: Container(
+                      padding: const EdgeInsets.all(18),
+                      decoration: BoxDecoration(
+                        color: cs.surfaceContainerLow,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: cs.outlineVariant),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 44,
+                            height: 44,
+                            decoration: BoxDecoration(
+                              color: cs.primary.withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(14),
                             ),
-                            const SizedBox(width: 14),
-
-                            // Column with Date Info
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    '${DateFormatter.formatRelative(DateTime.now())} — Due date',
-                                    style: GoogleFonts.dmSans(
-                                      fontSize: 15,
-                                      fontWeight: FontWeight.w700,
-                                      color: isDark ? Colors.white : const Color(0xFF131438),
-                                    ),
-                                  ),
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    'Send a friendly reminder message via WhatsApp or SMS.',
-                                    style: GoogleFonts.inter(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w400,
-                                      color: cs.onSurfaceVariant,
-                                    ),
-                                  ),
-                                ],
-                              ),
+                            child: Icon(
+                              Icons.notifications_active_outlined,
+                              size: 22,
+                              color: cs.primary,
                             ),
-                          ],
-                        ),
-
-                        const SizedBox(height: 16),
-                        Divider(color: cs.outlineVariant.withValues(alpha: 0.6), height: 1),
-                        const SizedBox(height: 12),
-
-                        // Action: "Move the payment date" / "Send reminder"
-                        InkWell(
-                          onTap: () => ReminderHelper.shareReminder(summary, currencySymbol: currencySymbol),
-                          child: Row(
-                            children: [
-                              Text(
-                                'Send payment reminder',
-                                style: GoogleFonts.inter(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w600,
-                                  color: cs.primary,
-                                ),
-                              ),
-                              const Spacer(),
-                              Icon(Icons.arrow_forward_rounded, size: 18, color: cs.primary),
-                            ],
                           ),
-                        ),
-                      ],
+                          const SizedBox(width: 14),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Payment Reminder',
+                                  style: GoogleFonts.dmSans(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w700,
+                                    color: isDark ? Colors.white : const Color(0xFF131438),
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  'Send balance details via WhatsApp or SMS',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w400,
+                                    color: cs.onSurfaceVariant,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          FilledButton.tonalIcon(
+                            onPressed: () => ReminderHelper.shareReminder(summary, currencySymbol: currencySymbol),
+                            icon: const Icon(Icons.share_rounded, size: 16),
+                            label: const Text('Remind'),
+                            style: FilledButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-                ),
 
                 const SizedBox(height: 24),
 
