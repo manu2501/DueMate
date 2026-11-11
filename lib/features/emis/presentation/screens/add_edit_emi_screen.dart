@@ -1034,7 +1034,6 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
                         icon: const Icon(Icons.clear_rounded, size: 18),
                         onPressed: () {
                           _chargesController.clear();
-                          _manualMonthlyEdit = false;
                           _onAmountOrChargesChanged();
                         },
                       )
