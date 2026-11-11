@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:uuid/uuid.dart';
@@ -9,27 +8,14 @@ import 'package:duemate/core/widgets/avatar_widget.dart';
 import 'package:duemate/core/widgets/person_picker_sheet.dart';
 import 'package:duemate/data/providers/app_providers.dart';
 import 'package:duemate/domain/entities/credit_card_emi.dart';
+import 'package:duemate/features/emis/presentation/widgets/add_edit_emi_suggestions.dart';
+import 'package:duemate/features/emis/presentation/widgets/emi_breakdown_card.dart';
+import 'package:duemate/features/emis/presentation/widgets/emi_tenure_selector.dart';
+import 'package:duemate/features/emis/presentation/widgets/emi_type_selector.dart';
 
 enum EmiType {
   creditCard,
   loan,
-}
-
-class _ItemSuggestion {
-  final String label;
-  final String fillValue;
-  final IconData icon;
-
-  const _ItemSuggestion(this.label, this.fillValue, this.icon);
-}
-
-class _CardSuggestion {
-  final String name;
-  final String fillValue;
-  final IconData icon;
-  final Color color;
-
-  const _CardSuggestion(this.name, this.fillValue, this.icon, this.color);
 }
 
 class AddEditEmiScreen extends ConsumerStatefulWidget {
@@ -75,81 +61,11 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
   int _dueDayOfMonth = DateTime.now().day;
   bool _isSaving = false;
 
-  final List<_ItemSuggestion> _itemSuggestions = const [
-    _ItemSuggestion('iPhone / Mobile', 'iPhone', Icons.phone_iphone_rounded),
-    _ItemSuggestion('MacBook / Laptop', 'MacBook Laptop', Icons.laptop_mac_rounded),
-    _ItemSuggestion('iPad / Tablet', 'iPad Tablet', Icons.tablet_mac_rounded),
-    _ItemSuggestion('Smartwatch', 'Smartwatch', Icons.watch_rounded),
-    _ItemSuggestion('Headphones', 'Headphones', Icons.headphones_rounded),
-    _ItemSuggestion('Smart TV', 'Smart TV', Icons.tv_rounded),
-    _ItemSuggestion('Air Conditioner', 'Air Conditioner', Icons.ac_unit_rounded),
-    _ItemSuggestion('Refrigerator', 'Refrigerator', Icons.kitchen_rounded),
-    _ItemSuggestion('Washing Machine', 'Washing Machine', Icons.local_laundry_service_rounded),
-    _ItemSuggestion('Flight Tickets', 'Flight Tickets', Icons.flight_takeoff_rounded),
-    _ItemSuggestion('Hotel / Stay', 'Hotel Booking', Icons.hotel_rounded),
-    _ItemSuggestion('Camera / Gadget', 'Camera', Icons.photo_camera_rounded),
-    _ItemSuggestion('Bike / Scooter', 'Two Wheeler', Icons.two_wheeler_rounded),
-    _ItemSuggestion('Furniture / Sofa', 'Furniture', Icons.chair_rounded),
-    _ItemSuggestion('Jewelry / Gold', 'Jewelry', Icons.diamond_rounded),
-    _ItemSuggestion('Medical / Dental', 'Medical Treatment', Icons.local_hospital_rounded),
-    _ItemSuggestion('Course / Study', 'Education Course', Icons.school_rounded),
-    _ItemSuggestion('Microwave / Oven', 'Microwave Oven', Icons.microwave_rounded),
-    _ItemSuggestion('Gaming / PS5', 'Gaming Console', Icons.sports_esports_rounded),
-    _ItemSuggestion('Shopping / Clothes', 'Shopping', Icons.shopping_bag_outlined),
-  ];
-
-  final List<_ItemSuggestion> _loanPurposeSuggestions = const [
-    _ItemSuggestion('Personal Loan', 'Personal Loan', Icons.person_outline_rounded),
-    _ItemSuggestion('Emergency Loan', 'Emergency Loan', Icons.health_and_safety_outlined),
-    _ItemSuggestion('Education Loan', 'Education Loan', Icons.school_rounded),
-    _ItemSuggestion('Vehicle / Bike', 'Vehicle Loan', Icons.two_wheeler_rounded),
-    _ItemSuggestion('Business Loan', 'Business Loan', Icons.storefront_rounded),
-    _ItemSuggestion('Home / Rent Loan', 'Home Rent Loan', Icons.home_outlined),
-    _ItemSuggestion('Cash Advance', 'Cash Advance', Icons.payments_outlined),
-    _ItemSuggestion('Medical Loan', 'Medical Loan', Icons.local_hospital_rounded),
-    _ItemSuggestion('Wedding Loan', 'Wedding Loan', Icons.celebration_rounded),
-    _ItemSuggestion('Travel Loan', 'Travel Loan', Icons.flight_takeoff_rounded),
-    _ItemSuggestion('Gadget Loan', 'Gadget Loan', Icons.devices_other_rounded),
-    _ItemSuggestion('Salary Advance', 'Salary Advance', Icons.work_outline_rounded),
-  ];
-
-  final List<_CardSuggestion> _cardSuggestions = const [
-    _CardSuggestion('HDFC Bank', 'HDFC Credit Card', Icons.account_balance_rounded, Color(0xFF004C8F)),
-    _CardSuggestion('ICICI Bank', 'ICICI Credit Card', Icons.credit_card_rounded, Color(0xFFB02A30)),
-    _CardSuggestion('SBI Card', 'SBI Credit Card', Icons.credit_score_rounded, Color(0xFF0A66C2)),
-    _CardSuggestion('Axis Bank', 'Axis Credit Card', Icons.account_balance_wallet_rounded, Color(0xFF97144D)),
-    _CardSuggestion('Kotak', 'Kotak Credit Card', Icons.account_balance_rounded, Color(0xFFED1C24)),
-    _CardSuggestion('Amex', 'Amex Credit Card', Icons.credit_card_rounded, Color(0xFF0077A6)),
-    _CardSuggestion('OneCard', 'OneCard', Icons.style_rounded, Color(0xFF1E293B)),
-    _CardSuggestion('IndusInd', 'IndusInd Credit Card', Icons.account_balance_rounded, Color(0xFF8B1D24)),
-    _CardSuggestion('RBL Bank', 'RBL Credit Card', Icons.credit_card_rounded, Color(0xFF0B3B60)),
-    _CardSuggestion('IDFC FIRST', 'IDFC FIRST Card', Icons.account_balance_rounded, Color(0xFF861F41)),
-    _CardSuggestion('Federal Bank', 'Federal Credit Card', Icons.account_balance_rounded, Color(0xFF002B49)),
-    _CardSuggestion('Standard Chartered', 'StanChart Card', Icons.credit_card_rounded, Color(0xFF009933)),
-    _CardSuggestion('Bank of Baroda', 'BOB Credit Card', Icons.account_balance_rounded, Color(0xFFE84E1B)),
-    _CardSuggestion('HSBC', 'HSBC Credit Card', Icons.account_balance_rounded, Color(0xFFDB0011)),
-    _CardSuggestion('AU Small Finance', 'AU Bank Card', Icons.credit_card_rounded, Color(0xFF6B21A8)),
-    _CardSuggestion('Yes Bank', 'Yes Bank Card', Icons.account_balance_rounded, Color(0xFF005A9C)),
-    _CardSuggestion('PNB', 'PNB Credit Card', Icons.account_balance_rounded, Color(0xFF9A1B2F)),
-    _CardSuggestion('Canara Bank', 'Canara Bank Card', Icons.account_balance_rounded, Color(0xFF00529B)),
-    _CardSuggestion('Union Bank', 'Union Bank Card', Icons.account_balance_rounded, Color(0xFF003366)),
-  ];
-
-  final List<_CardSuggestion> _loanSourceSuggestions = const [
-    _CardSuggestion('Cash Loan', 'Cash Loan', Icons.payments_rounded, Color(0xFF059669)),
-    _CardSuggestion('Bank Transfer', 'Bank Transfer Loan', Icons.account_balance_rounded, Color(0xFF0284C7)),
-    _CardSuggestion('UPI Transfer', 'UPI Loan', Icons.qr_code_rounded, Color(0xFF7C3AED)),
-    _CardSuggestion('SBI Loan', 'SBI Personal Loan', Icons.account_balance_rounded, Color(0xFF0A66C2)),
-    _CardSuggestion('HDFC Loan', 'HDFC Personal Loan', Icons.account_balance_rounded, Color(0xFF004C8F)),
-    _CardSuggestion('ICICI Loan', 'ICICI Personal Loan', Icons.account_balance_rounded, Color(0xFFB02A30)),
-    _CardSuggestion('Axis Bank', 'Axis Bank Loan', Icons.account_balance_wallet_rounded, Color(0xFF97144D)),
-    _CardSuggestion('Kotak Loan', 'Kotak Loan', Icons.account_balance_rounded, Color(0xFFED1C24)),
-    _CardSuggestion('NBFC / FinTech', 'FinTech Loan', Icons.domain_rounded, Color(0xFFD97706)),
-    _CardSuggestion('Cheque Loan', 'Cheque Loan', Icons.receipt_long_rounded, Color(0xFF475569)),
-    _CardSuggestion('Peer to Peer', 'P2P Loan', Icons.handshake_rounded, Color(0xFF0D9488)),
-  ];
-
-  final List<int> _tenureOptions = [3, 6, 9, 12, 18, 24, 36];
+  List<EmiItemSuggestion> get _itemSuggestions => EmiSuggestionsData.itemSuggestions;
+  List<EmiItemSuggestion> get _loanPurposeSuggestions => EmiSuggestionsData.loanPurposeSuggestions;
+  List<EmiCardSuggestion> get _cardSuggestions => EmiSuggestionsData.cardSuggestions;
+  List<EmiCardSuggestion> get _loanSourceSuggestions => EmiSuggestionsData.loanSourceSuggestions;
+  List<int> get _tenureOptions => EmiSuggestionsData.defaultTenureOptions;
 
   bool get isEditing => widget.emiToEdit != null;
 
@@ -425,92 +341,13 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
           children: [
             // Category Selector: Credit Card vs Loan
-            Container(
-              decoration: BoxDecoration(
-                color: cs.surfaceContainerLow,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: cs.outlineVariant),
-              ),
-              padding: const EdgeInsets.all(4),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: InkWell(
-                      onTap: () {
-                        setState(() {
-                          _emiType = EmiType.creditCard;
-                        });
-                      },
-                      borderRadius: BorderRadius.circular(12),
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 200),
-                        padding: const EdgeInsets.symmetric(vertical: 10),
-                        decoration: BoxDecoration(
-                          color: !isLoan ? cs.primary : Colors.transparent,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.credit_card_rounded,
-                              size: 18,
-                              color: !isLoan ? Colors.white : cs.onSurfaceVariant,
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              'Credit Card EMI',
-                              style: GoogleFonts.dmSans(
-                                fontSize: 13.5,
-                                fontWeight: FontWeight.w700,
-                                color: !isLoan ? Colors.white : cs.onSurfaceVariant,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 4),
-                  Expanded(
-                    child: InkWell(
-                      onTap: () {
-                        setState(() {
-                          _emiType = EmiType.loan;
-                        });
-                      },
-                      borderRadius: BorderRadius.circular(12),
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 200),
-                        padding: const EdgeInsets.symmetric(vertical: 10),
-                        decoration: BoxDecoration(
-                          color: isLoan ? const Color(0xFF0D9488) : Colors.transparent,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.account_balance_wallet_rounded,
-                              size: 18,
-                              color: isLoan ? Colors.white : cs.onSurfaceVariant,
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              'Loan / Cash EMI',
-                              style: GoogleFonts.dmSans(
-                                fontSize: 13.5,
-                                fontWeight: FontWeight.w700,
-                                color: isLoan ? Colors.white : cs.onSurfaceVariant,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+            EmiTypeSelector(
+              selectedType: _emiType,
+              onChanged: (newType) {
+                setState(() {
+                  _emiType = newType;
+                });
+              },
             ),
 
             const SizedBox(height: 20),
@@ -744,7 +581,7 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
                 final itemQuery = _itemController.text.trim().toLowerCase();
                 final itemSource = isLoan ? _loanPurposeSuggestions : _itemSuggestions;
                 final itemMatches = itemQuery.isEmpty
-                    ? <_ItemSuggestion>[]
+                    ? <EmiItemSuggestion>[]
                     : itemSource.where((item) =>
                         item.label.toLowerCase().contains(itemQuery) ||
                         item.fillValue.toLowerCase().contains(itemQuery)).toList();
@@ -876,7 +713,7 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
                 final cardQuery = _cardController.text.trim().toLowerCase();
                 final cardSource = isLoan ? _loanSourceSuggestions : _cardSuggestions;
                 final cardMatches = cardQuery.isEmpty
-                    ? <_CardSuggestion>[]
+                    ? <EmiCardSuggestion>[]
                     : cardSource.where((b) =>
                         b.name.toLowerCase().contains(cardQuery) ||
                         b.fillValue.toLowerCase().contains(cardQuery)).toList();
@@ -1109,159 +946,29 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
             const SizedBox(height: 18),
 
             // 7. Tenure Selection (Months)
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'Tenure (Months)',
-                  style: GoogleFonts.inter(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: cs.onSurfaceVariant,
-                  ),
-                ),
-                if (_tenureMonths > 0)
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                    decoration: BoxDecoration(
-                      color: cs.primaryContainer,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      '$_tenureMonths ${_tenureMonths == 1 ? 'Month' : 'Months'}',
-                      style: GoogleFonts.inter(
-                        fontSize: 11.5,
-                        fontWeight: FontWeight.w600,
-                        color: cs.onPrimaryContainer,
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-            const SizedBox(height: 8),
-
-            // Custom Tenure Number Field
-            TextFormField(
+            EmiTenureSelector(
               controller: _tenureController,
-              keyboardType: TextInputType.number,
-              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-              decoration: InputDecoration(
-                prefixIcon: const Icon(Icons.timer_outlined),
-                labelText: 'Enter Tenure (Number of Months)',
-                hintText: 'e.g. 1, 4, 5, 10, 15, 60...',
-                suffixText: 'months',
-                filled: true,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              validator: (value) {
-                final val = int.tryParse(value?.trim() ?? '');
-                if (val == null || val <= 0) {
-                  return 'Please enter a valid tenure in months (at least 1)';
-                }
-                return null;
+              currentTenureMonths: _tenureMonths,
+              presetOptions: _tenureOptions,
+              onSelectPreset: (months) {
+                _tenureController.text = months.toString();
+                setState(() {
+                  _tenureMonths = months;
+                });
               },
-            ),
-            const SizedBox(height: 10),
-
-            // Quick Preset Chips
-            Text(
-              'Quick Presets:',
-              style: GoogleFonts.inter(
-                fontSize: 11.5,
-                fontWeight: FontWeight.w500,
-                color: cs.onSurfaceVariant.withValues(alpha: 0.8),
-              ),
-            ),
-            const SizedBox(height: 6),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: _tenureOptions.map((months) {
-                final isSelected = _tenureMonths == months;
-                return ChoiceChip(
-                  label: Text('$months mo'),
-                  selected: isSelected,
-                  onSelected: (selected) {
-                    if (selected) {
-                      _tenureController.text = months.toString();
-                      setState(() {
-                        _tenureMonths = months;
-                      });
-                    }
-                  },
-                );
-              }).toList(),
             ),
 
             const SizedBox(height: 18),
 
             // Live EMI Split Breakdown Card
-            Container(
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: (isLoan ? const Color(0xFF0D9488) : Colors.purple).withValues(alpha: 0.08),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: (isLoan ? const Color(0xFF0D9488) : Colors.purple).withValues(alpha: 0.25),
-                ),
-              ),
-              child: Column(
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        isLoan ? 'Principal Loan:' : 'Base Amount:',
-                        style: GoogleFonts.inter(fontSize: 12.5, color: cs.onSurfaceVariant),
-                      ),
-                      Text(
-                        CurrencyFormatter.format(_baseAmount, symbol: currencySymbol),
-                        style: GoogleFonts.dmSans(fontSize: 13, fontWeight: FontWeight.w600),
-                      ),
-                    ],
-                  ),
-                  if (_charges > 0) ...[
-                    const SizedBox(height: 4),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          isLoan ? 'Interest / Extra Charges:' : 'Additional Charges:',
-                          style: GoogleFonts.inter(fontSize: 12.5, color: cs.error),
-                        ),
-                        Text(
-                          '+ ${CurrencyFormatter.format(_charges, symbol: currencySymbol)}',
-                          style: GoogleFonts.dmSans(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w700,
-                            color: cs.error,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                  const Divider(height: 16),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        isLoan ? 'Total Repayable:' : 'Total Payable:',
-                        style: GoogleFonts.dmSans(fontSize: 14, fontWeight: FontWeight.w700),
-                      ),
-                      Text(
-                        CurrencyFormatter.format(_totalPayable, symbol: currencySymbol),
-                        style: GoogleFonts.dmSans(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w800,
-                          color: cs.primary,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
+            EmiBreakdownCard(
+              isLoan: isLoan,
+              baseAmount: _baseAmount,
+              charges: _charges,
+              totalPayable: _totalPayable,
+              monthlyInstallment: _monthlyInstallment,
+              tenureMonths: _tenureMonths,
+              currencySymbol: currencySymbol,
             ),
 
             const SizedBox(height: 16),
