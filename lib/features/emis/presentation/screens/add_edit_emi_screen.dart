@@ -63,7 +63,6 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
   late final TextEditingController _cardController;
   late final TextEditingController _baseAmountController;
   late final TextEditingController _chargesController;
-  late final TextEditingController _monthlyInstallmentController;
   late final TextEditingController _notesController;
 
   EmiType _emiType = EmiType.creditCard;
@@ -73,7 +72,6 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
   DateTime _startDate = DateTime.now();
   int _dueDayOfMonth = DateTime.now().day;
   bool _isSaving = false;
-  bool _manualMonthlyEdit = false;
 
   final List<_ItemSuggestion> _itemSuggestions = const [
     _ItemSuggestion('iPhone / Mobile', 'iPhone', Icons.phone_iphone_rounded),
@@ -156,6 +154,11 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
   double get _baseAmount => double.tryParse(_baseAmountController.text.trim()) ?? 0.0;
   double get _charges => double.tryParse(_chargesController.text.trim()) ?? 0.0;
   double get _totalPayable => _baseAmount + _charges;
+  double get _monthlyInstallment {
+    if (_totalPayable <= 0 || _tenureMonths <= 0) return 0.0;
+    final raw = _totalPayable / _tenureMonths;
+    return double.parse(raw.toStringAsFixed(2));
+  }
 
   @override
   void initState() {
@@ -168,9 +171,6 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
       text: emi != null ? emi.totalAmount.toStringAsFixed(0) : '',
     );
     _chargesController = TextEditingController(text: '');
-    _monthlyInstallmentController = TextEditingController(
-      text: emi != null ? emi.monthlyInstallment.toStringAsFixed(0) : '',
-    );
     _notesController = TextEditingController(text: emi?.notes ?? '');
 
     if (emi != null) {
@@ -185,7 +185,6 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
       _tenureMonths = emi.totalTenureMonths;
       _startDate = emi.startDate;
       _dueDayOfMonth = emi.dueDayOfMonth;
-      _manualMonthlyEdit = true;
     }
 
     _baseAmountController.addListener(_onAmountOrChargesChanged);
@@ -204,7 +203,6 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
     _chargesController.removeListener(_onAmountOrChargesChanged);
     _baseAmountController.dispose();
     _chargesController.dispose();
-    _monthlyInstallmentController.dispose();
     _notesController.dispose();
     super.dispose();
   }
@@ -215,27 +213,12 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
 
   void _onAmountOrChargesChanged() {
     setState(() {});
-    if (_manualMonthlyEdit) return;
-
-    if (_totalPayable > 0 && _tenureMonths > 0) {
-      final monthly = (_totalPayable / _tenureMonths).roundToDouble();
-      _monthlyInstallmentController.text = monthly.toStringAsFixed(0);
-    }
-  }
-
-  void _recalcMonthly() {
-    if (_totalPayable > 0 && _tenureMonths > 0) {
-      final monthly = (_totalPayable / _tenureMonths).roundToDouble();
-      _monthlyInstallmentController.text = monthly.toStringAsFixed(0);
-      setState(() => _manualMonthlyEdit = false);
-    }
   }
 
   void _applyQuickCharge(double add) {
     final current = _charges;
     final updated = current + add;
     _chargesController.text = updated % 1 == 0 ? updated.toInt().toString() : updated.toStringAsFixed(2);
-    _manualMonthlyEdit = false;
     _onAmountOrChargesChanged();
   }
 
@@ -244,7 +227,6 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
     final gst = (_baseAmount * (percent / 100.0)).roundToDouble();
     final updated = _charges + gst;
     _chargesController.text = updated.toStringAsFixed(0);
-    _manualMonthlyEdit = false;
     _onAmountOrChargesChanged();
   }
 
@@ -284,7 +266,7 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
     }
 
     final totalAmount = _totalPayable;
-    final monthly = double.tryParse(_monthlyInstallmentController.text.trim()) ?? (totalAmount / _tenureMonths);
+    final monthly = _monthlyInstallment;
 
     if (totalAmount <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -1126,7 +1108,6 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
                     if (selected) {
                       setState(() {
                         _tenureMonths = months;
-                        _recalcMonthly();
                       });
                     }
                   },
@@ -1199,63 +1180,161 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 6),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Monthly Installment ($_tenureMonths months):',
-                        style: GoogleFonts.inter(fontSize: 12.5, color: cs.onSurfaceVariant),
-                      ),
-                      Text(
-                        '${CurrencyFormatter.format(_totalPayable > 0 ? (_totalPayable / _tenureMonths) : 0, symbol: currencySymbol)} / mo',
-                        style: GoogleFonts.dmSans(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w800,
-                          color: isLoan ? const Color(0xFF0D9488) : Colors.purple,
-                        ),
-                      ),
-                    ],
-                  ),
                 ],
               ),
             ),
 
-            const SizedBox(height: 18),
+            const SizedBox(height: 16),
 
-            // 8. Monthly Installment (Auto-calculated, editable)
-            TextFormField(
-              controller: _monthlyInstallmentController,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              onChanged: (_) {
-                _manualMonthlyEdit = true;
-              },
-              decoration: InputDecoration(
-                labelText: 'Monthly Installment (Recorded each month) *',
-                prefixIcon: Padding(
-                  padding: const EdgeInsets.only(left: 14, right: 8),
-                  child: Center(
-                    widthFactor: 0.0,
-                    child: Text(
-                      currencySymbol,
-                      style: const TextStyle(fontWeight: FontWeight.w700),
+            // 8. Monthly Installment Card (Non-editable, standout card with great UI)
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: isLoan
+                      ? [
+                          const Color(0xFF0D9488).withValues(alpha: 0.14),
+                          const Color(0xFF0D9488).withValues(alpha: 0.04),
+                        ]
+                      : [
+                          cs.primary.withValues(alpha: 0.14),
+                          cs.primary.withValues(alpha: 0.04),
+                        ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: (isLoan ? const Color(0xFF0D9488) : cs.primary).withValues(alpha: 0.35),
+                  width: 1.5,
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: (isLoan ? const Color(0xFF0D9488) : cs.primary).withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Icon(
+                          Icons.calendar_month_rounded,
+                          size: 18,
+                          color: isLoan ? const Color(0xFF0D9488) : cs.primary,
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              isLoan ? 'MONTHLY REPAYMENT' : 'MONTHLY INSTALLMENT',
+                              style: GoogleFonts.inter(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 0.8,
+                                color: isLoan ? const Color(0xFF0D9488) : cs.primary,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              'Auto-calculated based on tenure',
+                              style: GoogleFonts.inter(
+                                fontSize: 11,
+                                color: cs.onSurfaceVariant,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: cs.surfaceContainerHighest,
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.5)),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.lock_rounded, size: 12, color: cs.onSurfaceVariant),
+                            const SizedBox(width: 4),
+                            Text(
+                              'Auto-Split',
+                              style: GoogleFonts.inter(
+                                fontSize: 10.5,
+                                fontWeight: FontWeight.w600,
+                                color: cs.onSurfaceVariant,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.baseline,
+                    textBaseline: TextBaseline.alphabetic,
+                    children: [
+                      Text(
+                        CurrencyFormatter.format(_monthlyInstallment, symbol: currencySymbol),
+                        style: GoogleFonts.dmSans(
+                          fontSize: 28,
+                          fontWeight: FontWeight.w800,
+                          color: isLoan ? const Color(0xFF0D9488) : cs.primary,
+                          letterSpacing: -0.5,
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        '/ month',
+                        style: GoogleFonts.inter(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: cs.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: cs.surface.withValues(alpha: 0.7),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.4)),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.info_outline_rounded,
+                          size: 15,
+                          color: isLoan ? const Color(0xFF0D9488) : cs.primary,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            _totalPayable > 0
+                                ? '${CurrencyFormatter.format(_totalPayable, symbol: currencySymbol)} total ÷ $_tenureMonths months • Automatically added on day $_dueDayOfMonth'
+                                : 'Enter amount above to view monthly split',
+                            style: GoogleFonts.inter(
+                              fontSize: 11.5,
+                              color: cs.onSurfaceVariant,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                ),
-                suffixIcon: IconButton(
-                  tooltip: 'Reset to auto-calculated split',
-                  icon: const Icon(Icons.refresh_rounded, size: 20),
-                  onPressed: _recalcMonthly,
-                ),
-                helperText: 'Auto-computed as Total ÷ Months. Editable if your installment differs.',
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+                ],
               ),
-              validator: (v) {
-                if (v == null || v.trim().isEmpty) return 'Enter monthly installment';
-                final n = double.tryParse(v.trim());
-                if (n == null || n <= 0) return 'Invalid monthly amount';
-                return null;
-              },
             ),
 
             const SizedBox(height: 18),
@@ -1322,7 +1401,7 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
-                      'Every month on the ${_dueDayOfMonth.toString().padLeft(2, '0')}th, DueMate will automatically add an installment of ${CurrencyFormatter.format(double.tryParse(_monthlyInstallmentController.text.trim()) ?? (_totalPayable / _tenureMonths), symbol: currencySymbol)} to the ledger.',
+                      'Every month on the ${_dueDayOfMonth.toString().padLeft(2, '0')}th, DueMate will automatically add an installment of ${CurrencyFormatter.format(_monthlyInstallment, symbol: currencySymbol)} to the ledger.',
                       style: GoogleFonts.inter(
                         fontSize: 12,
                         color: cs.onSurfaceVariant,
