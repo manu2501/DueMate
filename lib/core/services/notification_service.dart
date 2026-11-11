@@ -40,7 +40,7 @@ class NotificationService {
       );
 
       await _notificationsPlugin.initialize(
-        initSettings,
+        settings: initSettings,
         onDidReceiveNotificationResponse: (NotificationResponse details) {
           debugPrint('Notification clicked with payload: ${details.payload}');
         },
@@ -122,10 +122,10 @@ class NotificationService {
 
     try {
       await _notificationsPlugin.show(
-        9999,
-        '🔔 DueMate Notification Test',
-        'Smart due date notifications are working perfectly!',
-        details,
+        id: 9999,
+        title: '🔔 DueMate Notification Test',
+        body: 'Smart due date notifications are working perfectly!',
+        notificationDetails: details,
       );
       return true;
     } catch (e) {
@@ -172,14 +172,12 @@ class NotificationService {
       final tzScheduled = tz.TZDateTime.from(dueDateTime, tz.local);
 
       await _notificationsPlugin.zonedSchedule(
-        id,
-        '⏰ Upcoming EMI Due: ${emi.itemName}',
-        '$personName owes $monthlyStr (${emi.installmentsPaid + 1}/${emi.totalTenureMonths} mo due today)',
-        tzScheduled,
-        notificationDetails,
+        id: id,
+        title: '⏰ Upcoming EMI Due: ${emi.itemName}',
+        body: '$personName owes $monthlyStr (${emi.installmentsPaid + 1}/${emi.totalTenureMonths} mo due today)',
+        scheduledDate: tzScheduled,
+        notificationDetails: notificationDetails,
         androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-        uiLocalNotificationDateInterpretation:
-            UILocalNotificationDateInterpretation.absoluteTime,
       );
       debugPrint('Scheduled notification #$id for ${emi.itemName} at $dueDateTime');
     } catch (e) {
@@ -189,7 +187,7 @@ class NotificationService {
 
   /// Cancel a specific scheduled notification
   Future<void> cancelReminder(int id) async {
-    await _notificationsPlugin.cancel(id);
+    await _notificationsPlugin.cancel(id: id);
   }
 
   /// Cancel all scheduled notifications

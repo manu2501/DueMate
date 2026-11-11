@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:duemate/core/widgets/whatsapp_icon.dart';
 import 'package:duemate/core/utils/currency_formatter.dart';
 import 'package:duemate/core/utils/date_formatter.dart';
 import 'package:duemate/core/utils/whatsapp_helper.dart';
@@ -455,7 +456,7 @@ class EmiDetailsSheet extends ConsumerWidget {
                         context: context,
                       );
                     },
-                    icon: const Icon(Icons.chat_bubble_outline_rounded, size: 18, color: Color(0xFF25D366)),
+                    icon: const WhatsAppIcon(size: 18),
                     label: Text(
                       'Remind $personName on WhatsApp',
                       style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: const Color(0xFF25D366)),

@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:duemate/core/widgets/whatsapp_icon.dart';
 import 'package:duemate/core/theme/app_theme.dart';
 import 'package:duemate/core/utils/csv_exporter.dart';
+import 'package:duemate/core/utils/date_formatter.dart';
 import 'package:duemate/core/utils/pdf_exporter.dart';
 import 'package:duemate/core/utils/currency_formatter.dart';
 import 'package:duemate/core/utils/reminder_helper.dart';
@@ -15,6 +17,8 @@ import 'package:duemate/core/widgets/quick_give_sheet.dart';
 import 'package:duemate/core/widgets/quick_receive_sheet.dart';
 import 'package:duemate/core/widgets/transaction_tile.dart';
 import 'package:duemate/data/providers/app_providers.dart';
+import 'package:duemate/domain/entities/person.dart';
+import 'package:duemate/domain/entities/person_summary.dart';
 import 'package:duemate/features/emis/presentation/screens/add_edit_emi_screen.dart';
 import 'package:duemate/features/emis/presentation/widgets/emi_card.dart';
 import 'package:duemate/features/people/presentation/screens/add_edit_person_screen.dart';
@@ -106,6 +110,172 @@ class PersonDetailsScreen extends ConsumerWidget {
     );
   }
 
+  void _showPersonInfoSheet(
+    BuildContext context,
+    Person person,
+    PersonSummary summary,
+    String currencySymbol,
+  ) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      showDragHandle: true,
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  AvatarWidget(
+                    name: person.name,
+                    radius: 24,
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          person.name,
+                          style: GoogleFonts.dmSans(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w800,
+                            color: isDark ? Colors.white : const Color(0xFF131438),
+                          ),
+                        ),
+                        if (person.phone != null && person.phone!.isNotEmpty)
+                          Text(
+                            person.phone!,
+                            style: GoogleFonts.inter(
+                              fontSize: 13,
+                              color: cs.onSurfaceVariant,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                  IconButton.filledTonal(
+                    onPressed: () {
+                      Navigator.of(ctx).pop();
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => AddEditPersonScreen(personToEdit: person),
+                        ),
+                      );
+                    },
+                    icon: const Icon(Icons.edit_outlined, size: 18),
+                    tooltip: 'Edit Contact Details',
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+
+              Text(
+                'CONTACT INFORMATION',
+                style: GoogleFonts.inter(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.8,
+                  color: cs.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(height: 10),
+
+              Container(
+                decoration: BoxDecoration(
+                  color: cs.surfaceContainerLow,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: cs.outlineVariant),
+                ),
+                child: Column(
+                  children: [
+                    ListTile(
+                      leading: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF25D366).withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const WhatsAppIcon(size: 18),
+                      ),
+                      title: const Text('WhatsApp Number'),
+                      subtitle: Text(person.phone ?? 'No phone number added'),
+                      trailing: (person.phone != null && person.phone!.isNotEmpty)
+                          ? const Icon(Icons.arrow_forward_ios_rounded, size: 14)
+                          : null,
+                      onTap: (person.phone != null && person.phone!.isNotEmpty)
+                          ? () {
+                              Navigator.of(ctx).pop();
+                              final msg = WhatsAppHelper.generateLedgerReminderMessage(summary, currencySymbol: currencySymbol);
+                              WhatsAppHelper.sendWhatsAppMessage(
+                                phoneNumber: person.phone,
+                                message: msg,
+                                context: context,
+                              );
+                            }
+                          : null,
+                    ),
+                    if (person.email != null && person.email!.isNotEmpty) ...[
+                      Divider(height: 1, indent: 56, color: cs.outlineVariant),
+                      ListTile(
+                        leading: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: cs.primary.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Icon(Icons.email_outlined, size: 18, color: cs.primary),
+                        ),
+                        title: const Text('Email Address'),
+                        subtitle: Text(person.email!),
+                      ),
+                    ],
+                    if (person.notes != null && person.notes!.isNotEmpty) ...[
+                      Divider(height: 1, indent: 56, color: cs.outlineVariant),
+                      ListTile(
+                        leading: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: cs.secondary.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Icon(Icons.note_alt_outlined, size: 18, color: cs.secondary),
+                        ),
+                        title: const Text('Notes'),
+                        subtitle: Text(person.notes!),
+                      ),
+                    ],
+                    Divider(height: 1, indent: 56, color: cs.outlineVariant),
+                    ListTile(
+                      leading: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: cs.tertiary.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Icon(Icons.calendar_today_outlined, size: 18, color: cs.tertiary),
+                      ),
+                      title: const Text('Added to Ledger'),
+                      subtitle: Text(DateFormatter.formatDate(person.createdAt)),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
@@ -189,10 +359,10 @@ class PersonDetailsScreen extends ConsumerWidget {
                       ),
                     const Spacer(),
 
-                    // Action buttons (WhatsApp + Share reminder + Menu)
+                    // Action buttons (WhatsApp + Share reminder + Person Info + Options)
                     IconButton(
                       tooltip: 'WhatsApp Reminder',
-                      icon: const Icon(Icons.chat_bubble_outline_rounded, color: Color(0xFF25D366)),
+                      icon: const WhatsAppIcon(size: 22),
                       onPressed: () {
                         final msg = WhatsAppHelper.generateLedgerReminderMessage(summary, currencySymbol: currencySymbol);
                         WhatsAppHelper.sendWhatsAppMessage(
@@ -201,6 +371,11 @@ class PersonDetailsScreen extends ConsumerWidget {
                           context: context,
                         );
                       },
+                    ),
+                    IconButton(
+                      tooltip: 'Person Information',
+                      icon: const Icon(Icons.info_outline_rounded),
+                      onPressed: () => _showPersonInfoSheet(context, person, summary, currencySymbol),
                     ),
                     IconButton(
                       tooltip: 'Share Reminder',
@@ -336,7 +511,7 @@ class PersonDetailsScreen extends ConsumerWidget {
                           ],
                         ),
                         child: Icon(
-                          Icons.help_outline_rounded,
+                          Icons.more_vert_rounded,
                           size: 20,
                           color: cs.onSurface,
                         ),
@@ -784,7 +959,7 @@ class PersonDetailsScreen extends ConsumerWidget {
                                     context: context,
                                   );
                                 },
-                                icon: const Icon(Icons.chat_rounded, size: 18, color: Color(0xFF25D366)),
+                                icon: const WhatsAppIcon(size: 18),
                                 tooltip: 'WhatsApp Reminder',
                               ),
                               const SizedBox(width: 8),
