@@ -928,17 +928,21 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   void _showQuickActionSheet(BuildContext context) {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
+    final bottomPadding = MediaQuery.of(context).padding.bottom;
 
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
       showDragHandle: true,
       builder: (ctx) => SafeArea(
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
+          padding: EdgeInsets.fromLTRB(20, 0, 20, 16 + bottomPadding),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
               Text(
                 'Record Entry',
                 style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
@@ -1033,6 +1037,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           ),
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 }

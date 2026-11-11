@@ -7,6 +7,7 @@ import 'package:duemate/core/utils/csv_exporter.dart';
 import 'package:duemate/core/utils/pdf_exporter.dart';
 import 'package:duemate/core/utils/currency_formatter.dart';
 import 'package:duemate/core/utils/reminder_helper.dart';
+import 'package:duemate/core/utils/whatsapp_helper.dart';
 import 'package:duemate/core/widgets/avatar_widget.dart';
 import 'package:duemate/core/widgets/empty_state_widget.dart';
 import 'package:duemate/core/widgets/export_options_sheet.dart';
@@ -188,7 +189,19 @@ class PersonDetailsScreen extends ConsumerWidget {
                       ),
                     const Spacer(),
 
-                    // Action buttons (Share reminder + Menu)
+                    // Action buttons (WhatsApp + Share reminder + Menu)
+                    IconButton(
+                      tooltip: 'WhatsApp Reminder',
+                      icon: const Icon(Icons.chat_bubble_outline_rounded, color: Color(0xFF25D366)),
+                      onPressed: () {
+                        final msg = WhatsAppHelper.generateLedgerReminderMessage(summary, currencySymbol: currencySymbol);
+                        WhatsAppHelper.sendWhatsAppMessage(
+                          phoneNumber: person.phone,
+                          message: msg,
+                          context: context,
+                        );
+                      },
+                    ),
                     IconButton(
                       tooltip: 'Share Reminder',
                       icon: const Icon(Icons.share_outlined),
@@ -760,16 +773,33 @@ class PersonDetailsScreen extends ConsumerWidget {
                             ),
                           ),
                           const SizedBox(width: 10),
-                          FilledButton.tonalIcon(
-                            onPressed: () => ReminderHelper.shareReminder(summary, currencySymbol: currencySymbol),
-                            icon: const Icon(Icons.share_rounded, size: 16),
-                            label: const Text('Remind'),
-                            style: FilledButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
+                          Row(
+                            children: [
+                              IconButton.filledTonal(
+                                onPressed: () {
+                                  final msg = WhatsAppHelper.generateLedgerReminderMessage(summary, currencySymbol: currencySymbol);
+                                  WhatsAppHelper.sendWhatsAppMessage(
+                                    phoneNumber: person.phone,
+                                    message: msg,
+                                    context: context,
+                                  );
+                                },
+                                icon: const Icon(Icons.chat_rounded, size: 18, color: Color(0xFF25D366)),
+                                tooltip: 'WhatsApp Reminder',
                               ),
-                            ),
+                              const SizedBox(width: 8),
+                              FilledButton.tonalIcon(
+                                onPressed: () => ReminderHelper.shareReminder(summary, currencySymbol: currencySymbol),
+                                icon: const Icon(Icons.share_rounded, size: 16),
+                                label: const Text('Share'),
+                                style: FilledButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ),

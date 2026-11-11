@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:duemate/core/utils/currency_formatter.dart';
 import 'package:duemate/core/utils/date_formatter.dart';
+import 'package:duemate/core/utils/whatsapp_helper.dart';
 import 'package:duemate/data/providers/app_providers.dart';
 import 'package:duemate/domain/entities/credit_card_emi.dart';
 import 'package:duemate/domain/entities/person.dart';
@@ -434,6 +435,34 @@ class EmiDetailsSheet extends ConsumerWidget {
                       backgroundColor: accentColor,
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                ],
+
+                if (!isCompleted && person != null) ...[
+                  OutlinedButton.icon(
+                    onPressed: () {
+                      final msg = WhatsAppHelper.generateEmiReminderMessage(
+                        emi,
+                        person!,
+                        currencySymbol: currencySymbol,
+                      );
+                      WhatsAppHelper.sendWhatsAppMessage(
+                        phoneNumber: person!.phone,
+                        message: msg,
+                        context: context,
+                      );
+                    },
+                    icon: const Icon(Icons.chat_bubble_outline_rounded, size: 18, color: Color(0xFF25D366)),
+                    label: Text(
+                      'Remind $personName on WhatsApp',
+                      style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: const Color(0xFF25D366)),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      side: const BorderSide(color: Color(0xFF25D366)),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                     ),
                   ),
