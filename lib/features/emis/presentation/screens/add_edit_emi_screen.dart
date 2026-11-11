@@ -2,11 +2,29 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:uuid/uuid.dart';
+import 'package:duemate/core/utils/currency_formatter.dart';
 import 'package:duemate/core/utils/date_formatter.dart';
 import 'package:duemate/core/widgets/avatar_widget.dart';
 import 'package:duemate/core/widgets/person_picker_sheet.dart';
 import 'package:duemate/data/providers/app_providers.dart';
 import 'package:duemate/domain/entities/credit_card_emi.dart';
+
+class _ItemSuggestion {
+  final String label;
+  final String fillValue;
+  final IconData icon;
+
+  const _ItemSuggestion(this.label, this.fillValue, this.icon);
+}
+
+class _CardSuggestion {
+  final String name;
+  final String fillValue;
+  final IconData icon;
+  final Color color;
+
+  const _CardSuggestion(this.name, this.fillValue, this.icon, this.color);
+}
 
 class AddEditEmiScreen extends ConsumerStatefulWidget {
   final String? initialPersonId;
@@ -38,7 +56,8 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
 
   late final TextEditingController _itemController;
   late final TextEditingController _cardController;
-  late final TextEditingController _totalAmountController;
+  late final TextEditingController _baseAmountController;
+  late final TextEditingController _chargesController;
   late final TextEditingController _monthlyInstallmentController;
   late final TextEditingController _notesController;
 
@@ -50,28 +69,58 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
   bool _isSaving = false;
   bool _manualMonthlyEdit = false;
 
-  final List<String> _bankSuggestions = [
-    'HDFC',
-    'ICICI',
-    'SBI',
-    'Axis',
-    'Amex',
-    'Kotak',
-    'OneCard',
+  final List<_ItemSuggestion> _itemSuggestions = const [
+    _ItemSuggestion('iPhone / Mobile', 'iPhone', Icons.phone_iphone_rounded),
+    _ItemSuggestion('MacBook / Laptop', 'MacBook Laptop', Icons.laptop_mac_rounded),
+    _ItemSuggestion('iPad / Tablet', 'iPad Tablet', Icons.tablet_mac_rounded),
+    _ItemSuggestion('Smartwatch', 'Smartwatch', Icons.watch_rounded),
+    _ItemSuggestion('Headphones', 'Headphones', Icons.headphones_rounded),
+    _ItemSuggestion('Smart TV', 'Smart TV', Icons.tv_rounded),
+    _ItemSuggestion('Air Conditioner', 'Air Conditioner', Icons.ac_unit_rounded),
+    _ItemSuggestion('Refrigerator', 'Refrigerator', Icons.kitchen_rounded),
+    _ItemSuggestion('Washing Machine', 'Washing Machine', Icons.local_laundry_service_rounded),
+    _ItemSuggestion('Flight Tickets', 'Flight Tickets', Icons.flight_takeoff_rounded),
+    _ItemSuggestion('Hotel / Stay', 'Hotel Booking', Icons.hotel_rounded),
+    _ItemSuggestion('Camera / Gadget', 'Camera', Icons.photo_camera_rounded),
+    _ItemSuggestion('Bike / Scooter', 'Two Wheeler', Icons.two_wheeler_rounded),
+    _ItemSuggestion('Furniture / Sofa', 'Furniture', Icons.chair_rounded),
+    _ItemSuggestion('Jewelry / Gold', 'Jewelry', Icons.diamond_rounded),
+    _ItemSuggestion('Medical / Dental', 'Medical Treatment', Icons.local_hospital_rounded),
+    _ItemSuggestion('Course / Study', 'Education Course', Icons.school_rounded),
+    _ItemSuggestion('Microwave / Oven', 'Microwave Oven', Icons.microwave_rounded),
+    _ItemSuggestion('Gaming / PS5', 'Gaming Console', Icons.sports_esports_rounded),
+    _ItemSuggestion('Shopping / Clothes', 'Shopping', Icons.shopping_bag_outlined),
   ];
 
-  final List<String> _itemSuggestions = [
-    'iPhone',
-    'MacBook',
-    'Flight Tickets',
-    'Smart Watch',
-    'TV',
-    'Furniture',
+  final List<_CardSuggestion> _cardSuggestions = const [
+    _CardSuggestion('HDFC Bank', 'HDFC Credit Card', Icons.account_balance_rounded, Color(0xFF004C8F)),
+    _CardSuggestion('ICICI Bank', 'ICICI Credit Card', Icons.credit_card_rounded, Color(0xFFB02A30)),
+    _CardSuggestion('SBI Card', 'SBI Credit Card', Icons.credit_score_rounded, Color(0xFF0A66C2)),
+    _CardSuggestion('Axis Bank', 'Axis Credit Card', Icons.account_balance_wallet_rounded, Color(0xFF97144D)),
+    _CardSuggestion('Kotak', 'Kotak Credit Card', Icons.account_balance_rounded, Color(0xFFED1C24)),
+    _CardSuggestion('Amex', 'Amex Credit Card', Icons.credit_card_rounded, Color(0xFF0077A6)),
+    _CardSuggestion('OneCard', 'OneCard', Icons.style_rounded, Color(0xFF1E293B)),
+    _CardSuggestion('IndusInd', 'IndusInd Credit Card', Icons.account_balance_rounded, Color(0xFF8B1D24)),
+    _CardSuggestion('RBL Bank', 'RBL Credit Card', Icons.credit_card_rounded, Color(0xFF0B3B60)),
+    _CardSuggestion('IDFC FIRST', 'IDFC FIRST Card', Icons.account_balance_rounded, Color(0xFF861F41)),
+    _CardSuggestion('Federal Bank', 'Federal Credit Card', Icons.account_balance_rounded, Color(0xFF002B49)),
+    _CardSuggestion('Standard Chartered', 'StanChart Card', Icons.credit_card_rounded, Color(0xFF009933)),
+    _CardSuggestion('Bank of Baroda', 'BOB Credit Card', Icons.account_balance_rounded, Color(0xFFE84E1B)),
+    _CardSuggestion('HSBC', 'HSBC Credit Card', Icons.account_balance_rounded, Color(0xFFDB0011)),
+    _CardSuggestion('AU Small Finance', 'AU Bank Card', Icons.credit_card_rounded, Color(0xFF6B21A8)),
+    _CardSuggestion('Yes Bank', 'Yes Bank Card', Icons.account_balance_rounded, Color(0xFF005A9C)),
+    _CardSuggestion('PNB', 'PNB Credit Card', Icons.account_balance_rounded, Color(0xFF9A1B2F)),
+    _CardSuggestion('Canara Bank', 'Canara Bank Card', Icons.account_balance_rounded, Color(0xFF00529B)),
+    _CardSuggestion('Union Bank', 'Union Bank Card', Icons.account_balance_rounded, Color(0xFF003366)),
   ];
 
-  final List<int> _tenureOptions = [3, 6, 9, 12, 18, 24];
+  final List<int> _tenureOptions = [3, 6, 9, 12, 18, 24, 36];
 
   bool get isEditing => widget.emiToEdit != null;
+
+  double get _baseAmount => double.tryParse(_baseAmountController.text.trim()) ?? 0.0;
+  double get _charges => double.tryParse(_chargesController.text.trim()) ?? 0.0;
+  double get _totalPayable => _baseAmount + _charges;
 
   @override
   void initState() {
@@ -80,9 +129,10 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
     _selectedPersonId = emi?.personId ?? widget.initialPersonId;
     _itemController = TextEditingController(text: emi?.itemName ?? '');
     _cardController = TextEditingController(text: emi?.cardName ?? '');
-    _totalAmountController = TextEditingController(
+    _baseAmountController = TextEditingController(
       text: emi != null ? emi.totalAmount.toStringAsFixed(0) : '',
     );
+    _chargesController = TextEditingController(text: '');
     _monthlyInstallmentController = TextEditingController(
       text: emi != null ? emi.monthlyInstallment.toStringAsFixed(0) : '',
     );
@@ -96,36 +146,56 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
       _manualMonthlyEdit = true;
     }
 
-    _totalAmountController.addListener(_onTotalAmountChanged);
+    _baseAmountController.addListener(_onAmountOrChargesChanged);
+    _chargesController.addListener(_onAmountOrChargesChanged);
   }
 
   @override
   void dispose() {
     _itemController.dispose();
     _cardController.dispose();
-    _totalAmountController.removeListener(_onTotalAmountChanged);
-    _totalAmountController.dispose();
+    _baseAmountController.removeListener(_onAmountOrChargesChanged);
+    _chargesController.removeListener(_onAmountOrChargesChanged);
+    _baseAmountController.dispose();
+    _chargesController.dispose();
     _monthlyInstallmentController.dispose();
     _notesController.dispose();
     super.dispose();
   }
 
-  void _onTotalAmountChanged() {
+  void _onAmountOrChargesChanged() {
+    setState(() {});
     if (_manualMonthlyEdit) return;
-    final total = double.tryParse(_totalAmountController.text.trim()) ?? 0.0;
-    if (total > 0 && _tenureMonths > 0) {
-      final monthly = (total / _tenureMonths).roundToDouble();
+
+    if (_totalPayable > 0 && _tenureMonths > 0) {
+      final monthly = (_totalPayable / _tenureMonths).roundToDouble();
       _monthlyInstallmentController.text = monthly.toStringAsFixed(0);
     }
   }
 
   void _recalcMonthly() {
-    final total = double.tryParse(_totalAmountController.text.trim()) ?? 0.0;
-    if (total > 0 && _tenureMonths > 0) {
-      final monthly = (total / _tenureMonths).roundToDouble();
+    if (_totalPayable > 0 && _tenureMonths > 0) {
+      final monthly = (_totalPayable / _tenureMonths).roundToDouble();
       _monthlyInstallmentController.text = monthly.toStringAsFixed(0);
       setState(() => _manualMonthlyEdit = false);
     }
+  }
+
+  void _applyQuickCharge(double add) {
+    final current = _charges;
+    final updated = current + add;
+    _chargesController.text = updated % 1 == 0 ? updated.toInt().toString() : updated.toStringAsFixed(2);
+    _manualMonthlyEdit = false;
+    _onAmountOrChargesChanged();
+  }
+
+  void _applyGstCharge(double percent) {
+    if (_baseAmount <= 0) return;
+    final gst = (_baseAmount * (percent / 100.0)).roundToDouble();
+    final updated = _charges + gst;
+    _chargesController.text = updated.toStringAsFixed(0);
+    _manualMonthlyEdit = false;
+    _onAmountOrChargesChanged();
   }
 
   Future<void> _pickPerson() async {
@@ -163,12 +233,12 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
       return;
     }
 
-    final totalAmount = double.tryParse(_totalAmountController.text.trim()) ?? 0.0;
+    final totalAmount = _totalPayable;
     final monthly = double.tryParse(_monthlyInstallmentController.text.trim()) ?? (totalAmount / _tenureMonths);
 
     if (totalAmount <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter a valid total amount')),
+        const SnackBar(content: Text('Please enter a valid amount')),
       );
       return;
     }
@@ -178,6 +248,12 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
     try {
       final emiRepo = ref.read(emiRepositoryProvider);
       final processor = ref.read(emiProcessorServiceProvider);
+
+      String? finalNotes = _notesController.text.trim().isEmpty ? null : _notesController.text.trim();
+      if (_charges > 0) {
+        final breakdown = 'Base: ₹${_baseAmount.toStringAsFixed(0)} + Charges: ₹${_charges.toStringAsFixed(0)}';
+        finalNotes = finalNotes != null ? '$finalNotes\n($breakdown)' : breakdown;
+      }
 
       if (isEditing) {
         final current = widget.emiToEdit!;
@@ -191,7 +267,7 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
           startDate: _startDate,
           dueDayOfMonth: _dueDayOfMonth,
           isPaidByMe: _isPaidByMe,
-          notes: _notesController.text.trim().isEmpty ? null : _notesController.text.trim(),
+          notes: finalNotes,
           updatedAt: DateTime.now(),
         );
         await emiRepo.updateEmi(updated);
@@ -209,7 +285,7 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
           dueDayOfMonth: _dueDayOfMonth,
           isPaidByMe: _isPaidByMe,
           status: 'active',
-          notes: _notesController.text.trim().isEmpty ? null : _notesController.text.trim(),
+          notes: finalNotes,
           createdAt: DateTime.now(),
           updatedAt: DateTime.now(),
         );
@@ -483,7 +559,7 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
 
             const SizedBox(height: 20),
 
-            // 3. Purchase Item Name & Suggestions
+            // 3. Purchase Item Name & Suggestion Chips with Icons
             TextFormField(
               controller: _itemController,
               decoration: InputDecoration(
@@ -495,16 +571,26 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
               validator: (v) => v == null || v.trim().isEmpty ? 'Please enter item name' : null,
             ),
             const SizedBox(height: 8),
+            Text(
+              'Quick Item Suggestions:',
+              style: GoogleFonts.inter(
+                fontSize: 11.5,
+                fontWeight: FontWeight.w500,
+                color: cs.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 6),
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: Row(
                 children: _itemSuggestions.map((item) {
                   return Padding(
-                    padding: const EdgeInsets.only(right: 6),
+                    padding: const EdgeInsets.only(right: 8),
                     child: ActionChip(
-                      label: Text(item, style: const TextStyle(fontSize: 12)),
+                      avatar: Icon(item.icon, size: 16, color: cs.primary),
+                      label: Text(item.label, style: const TextStyle(fontSize: 12)),
                       onPressed: () {
-                        _itemController.text = item;
+                        _itemController.text = item.fillValue;
                       },
                       visualDensity: VisualDensity.compact,
                     ),
@@ -513,9 +599,9 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
               ),
             ),
 
-            const SizedBox(height: 18),
+            const SizedBox(height: 20),
 
-            // 4. Credit Card Name & Bank Chips
+            // 4. Credit Card Name & Bank Chips with Signature Icons & Colors
             TextFormField(
               controller: _cardController,
               decoration: InputDecoration(
@@ -527,19 +613,36 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
               validator: (v) => v == null || v.trim().isEmpty ? 'Please enter credit card name' : null,
             ),
             const SizedBox(height: 8),
+            Text(
+              'Popular Banks & Cards:',
+              style: GoogleFonts.inter(
+                fontSize: 11.5,
+                fontWeight: FontWeight.w500,
+                color: cs.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 6),
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: Row(
-                children: _bankSuggestions.map((bank) {
+                children: _cardSuggestions.map((bank) {
                   return Padding(
-                    padding: const EdgeInsets.only(right: 6),
+                    padding: const EdgeInsets.only(right: 8),
                     child: ActionChip(
-                      label: Text(bank, style: const TextStyle(fontSize: 12)),
+                      avatar: CircleAvatar(
+                        radius: 8,
+                        backgroundColor: bank.color.withValues(alpha: 0.15),
+                        child: Icon(bank.icon, size: 12, color: bank.color),
+                      ),
+                      label: Text(
+                        bank.name,
+                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: bank.color),
+                      ),
                       onPressed: () {
                         if (_cardController.text.trim().isEmpty) {
-                          _cardController.text = '$bank Credit Card';
-                        } else if (!_cardController.text.contains(bank)) {
-                          _cardController.text = '$bank ${_cardController.text}'.trim();
+                          _cardController.text = bank.fillValue;
+                        } else if (!_cardController.text.contains(bank.name)) {
+                          _cardController.text = '${bank.name} ${_cardController.text}'.trim();
                         }
                       },
                       visualDensity: VisualDensity.compact,
@@ -549,15 +652,15 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
               ),
             ),
 
-            const SizedBox(height: 18),
+            const SizedBox(height: 22),
 
-            // 5. Total Amount
+            // 5. Purchase / Base Amount Field
             TextFormField(
-              controller: _totalAmountController,
+              controller: _baseAmountController,
               keyboardType: const TextInputType.numberWithOptions(decimal: true),
               style: GoogleFonts.dmSans(fontSize: 20, fontWeight: FontWeight.w700),
               decoration: InputDecoration(
-                labelText: 'Total Purchase Amount *',
+                labelText: 'Purchase / Base Amount *',
                 hintText: '0',
                 prefixIcon: Padding(
                   padding: const EdgeInsets.only(left: 14, right: 8),
@@ -576,16 +679,88 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
               ),
               validator: (v) {
-                if (v == null || v.trim().isEmpty) return 'Please enter total amount';
+                if (v == null || v.trim().isEmpty) return 'Please enter purchase amount';
                 final n = double.tryParse(v.trim());
                 if (n == null || n <= 0) return 'Please enter a valid amount';
                 return null;
               },
             ),
 
+            const SizedBox(height: 16),
+
+            // 6. Additional Charges / Bank Fees / Interest / GST
+            TextFormField(
+              controller: _chargesController,
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              decoration: InputDecoration(
+                labelText: 'Additional Charges / Bank Fees / Interest (Optional)',
+                hintText: '0',
+                prefixIcon: Padding(
+                  padding: const EdgeInsets.only(left: 14, right: 8),
+                  child: Center(
+                    widthFactor: 0.0,
+                    child: Text(
+                      '+ $currencySymbol',
+                      style: TextStyle(fontWeight: FontWeight.w700, color: cs.error),
+                    ),
+                  ),
+                ),
+                suffixIcon: _charges > 0
+                    ? IconButton(
+                        icon: const Icon(Icons.clear_rounded, size: 18),
+                        onPressed: () {
+                          _chargesController.clear();
+                          _manualMonthlyEdit = false;
+                          _onAmountOrChargesChanged();
+                        },
+                      )
+                    : null,
+                helperText: 'Processing fee, bank interest, or GST incurred for this EMI.',
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+              ),
+            ),
+
+            const SizedBox(height: 8),
+
+            // Quick fee addition chips
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  ActionChip(
+                    avatar: const Icon(Icons.add, size: 14),
+                    label: const Text('+₹199 Fee', style: TextStyle(fontSize: 11)),
+                    onPressed: () => _applyQuickCharge(199),
+                    visualDensity: VisualDensity.compact,
+                  ),
+                  const SizedBox(width: 6),
+                  ActionChip(
+                    avatar: const Icon(Icons.add, size: 14),
+                    label: const Text('+₹499 Fee', style: TextStyle(fontSize: 11)),
+                    onPressed: () => _applyQuickCharge(499),
+                    visualDensity: VisualDensity.compact,
+                  ),
+                  const SizedBox(width: 6),
+                  ActionChip(
+                    avatar: const Icon(Icons.add, size: 14),
+                    label: const Text('+₹999 Fee', style: TextStyle(fontSize: 11)),
+                    onPressed: () => _applyQuickCharge(999),
+                    visualDensity: VisualDensity.compact,
+                  ),
+                  const SizedBox(width: 6),
+                  ActionChip(
+                    avatar: const Icon(Icons.percent_rounded, size: 14),
+                    label: const Text('+18% GST', style: TextStyle(fontSize: 11)),
+                    onPressed: () => _applyGstCharge(18),
+                    visualDensity: VisualDensity.compact,
+                  ),
+                ],
+              ),
+            ),
+
             const SizedBox(height: 18),
 
-            // 6. Tenure Selection
+            // 7. Tenure Selection (Months)
             Text(
               'Tenure (Months)',
               style: GoogleFonts.inter(
@@ -617,7 +792,92 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
 
             const SizedBox(height: 18),
 
-            // 7. Monthly Installment (Auto-calculated, editable)
+            // Live EMI Split Breakdown Card
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: Colors.purple.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: Colors.purple.withValues(alpha: 0.25)),
+              ),
+              child: Column(
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Base Amount:',
+                        style: GoogleFonts.inter(fontSize: 12.5, color: cs.onSurfaceVariant),
+                      ),
+                      Text(
+                        CurrencyFormatter.format(_baseAmount, symbol: currencySymbol),
+                        style: GoogleFonts.dmSans(fontSize: 13, fontWeight: FontWeight.w600),
+                      ),
+                    ],
+                  ),
+                  if (_charges > 0) ...[
+                    const SizedBox(height: 4),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Additional Charges:',
+                          style: GoogleFonts.inter(fontSize: 12.5, color: cs.error),
+                        ),
+                        Text(
+                          '+ ${CurrencyFormatter.format(_charges, symbol: currencySymbol)}',
+                          style: GoogleFonts.dmSans(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            color: cs.error,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                  const Divider(height: 16),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Total Payable:',
+                        style: GoogleFonts.dmSans(fontSize: 14, fontWeight: FontWeight.w700),
+                      ),
+                      Text(
+                        CurrencyFormatter.format(_totalPayable, symbol: currencySymbol),
+                        style: GoogleFonts.dmSans(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w800,
+                          color: cs.primary,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Auto Monthly Split ($_tenureMonths months):',
+                        style: GoogleFonts.inter(fontSize: 12.5, color: cs.onSurfaceVariant),
+                      ),
+                      Text(
+                        '${CurrencyFormatter.format(_totalPayable > 0 ? (_totalPayable / _tenureMonths) : 0, symbol: currencySymbol)} / mo',
+                        style: GoogleFonts.dmSans(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w800,
+                          color: Colors.purple,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 18),
+
+            // 8. Monthly Installment (Auto-calculated, editable)
             TextFormField(
               controller: _monthlyInstallmentController,
               keyboardType: const TextInputType.numberWithOptions(decimal: true),
@@ -625,7 +885,7 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
                 _manualMonthlyEdit = true;
               },
               decoration: InputDecoration(
-                labelText: 'Monthly Installment *',
+                labelText: 'Monthly Installment (What gets recorded each month) *',
                 prefixIcon: Padding(
                   padding: const EdgeInsets.only(left: 14, right: 8),
                   child: Center(
@@ -637,11 +897,11 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
                   ),
                 ),
                 suffixIcon: IconButton(
-                  tooltip: 'Reset to standard calculation',
+                  tooltip: 'Reset to auto-calculated split',
                   icon: const Icon(Icons.refresh_rounded, size: 20),
                   onPressed: _recalcMonthly,
                 ),
-                helperText: 'Auto-calculated. Adjust if your bank charges interest or fees.',
+                helperText: 'Automatically computed as Total ÷ Months. Editable if bank charges differ.',
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
               ),
               validator: (v) {
@@ -654,7 +914,7 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
 
             const SizedBox(height: 18),
 
-            // 8. Start Date & Due Day of Month
+            // 9. Start Date & Due Day of Month
             Row(
               children: [
                 Expanded(
@@ -716,7 +976,7 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
-                      'Every month on the ${_dueDayOfMonth.toString().padLeft(2, '0')}th, DueMate will automatically add an installment entry to the ledger.',
+                      'Every month on the ${_dueDayOfMonth.toString().padLeft(2, '0')}th, DueMate will automatically add an installment of ${CurrencyFormatter.format(double.tryParse(_monthlyInstallmentController.text.trim()) ?? (_totalPayable / _tenureMonths), symbol: currencySymbol)} to the ledger.',
                       style: GoogleFonts.inter(
                         fontSize: 12,
                         color: cs.onSurfaceVariant,
@@ -730,7 +990,7 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
 
             const SizedBox(height: 18),
 
-            // 9. Notes
+            // 10. Notes
             TextFormField(
               controller: _notesController,
               maxLines: 2,
@@ -743,7 +1003,7 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
 
             const SizedBox(height: 28),
 
-            // 10. Save Button
+            // 11. Save Button
             FilledButton(
               onPressed: _isSaving ? null : _saveEmi,
               style: FilledButton.styleFrom(
