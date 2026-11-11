@@ -229,7 +229,7 @@ class _FloatingDockNavBar extends StatelessWidget {
 
     final labels = const [
       'Dashboard',
-      'Ledger',
+      'Directory',
       'Transactions',
     ];
 

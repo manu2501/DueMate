@@ -230,12 +230,12 @@ final topPeopleByBalanceProvider = Provider<List<PersonSummary>>((ref) {
 });
 
 // People Screen Filter & Sort Enums
-enum PeopleFilter { active, settled, archived, all }
+enum PeopleFilter { all, active, settled, archived }
 enum PeopleSort { highestOutstanding, recentlyActive, alphabetical, recentlyAdded }
 
 class PeopleFilterNotifier extends Notifier<PeopleFilter> {
   @override
-  PeopleFilter build() => PeopleFilter.active;
+  PeopleFilter build() => PeopleFilter.all;
 
   void setFilter(PeopleFilter filter) => state = filter;
 }
@@ -272,16 +272,16 @@ final filteredPersonSummariesProvider = Provider<List<PersonSummary>>((ref) {
       var filtered = list.where((item) {
         // Apply Archive / Status Filter
         switch (filter) {
+          case PeopleFilter.all:
+            return !item.person.isArchived;
           case PeopleFilter.active:
             if (item.person.isArchived) return false;
-            return !item.isSettled;
+            return item.balance.abs() > 0.0001;
           case PeopleFilter.settled:
             if (item.person.isArchived) return false;
-            return item.isSettled;
+            return item.balance.abs() <= 0.0001;
           case PeopleFilter.archived:
             return item.person.isArchived;
-          case PeopleFilter.all:
-            return true;
         }
       }).where((item) {
         // Apply Search Filter (name, phone, notes)

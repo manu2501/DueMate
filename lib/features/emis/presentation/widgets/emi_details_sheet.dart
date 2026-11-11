@@ -32,9 +32,9 @@ class EmiDetailsSheet extends ConsumerWidget {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Delete this EMI tracking?'),
+        title: const Text('Delete this EMI / Loan tracking?'),
         content: const Text(
-          'This will remove this EMI schedule. Any past installments already recorded in the ledger will remain intact.',
+          'This will remove this schedule. Any past installments already recorded in the ledger will remain intact.',
         ),
         actions: [
           TextButton(
@@ -52,7 +52,7 @@ class EmiDetailsSheet extends ConsumerWidget {
               await ref.read(emiRepositoryProvider).deleteEmi(emi.id);
               if (context.mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('EMI deleted')),
+                  const SnackBar(content: Text('Schedule deleted')),
                 );
               }
             },
@@ -72,6 +72,16 @@ class EmiDetailsSheet extends ConsumerWidget {
 
     final isCompleted = emi.isCompleted;
     final personName = person?.name ?? 'Friend';
+
+    final isLoan = emi.cardName.toLowerCase().contains('loan') ||
+        emi.itemName.toLowerCase().contains('loan') ||
+        emi.cardName.toLowerCase().contains('cash') ||
+        emi.cardName.toLowerCase().contains('transfer') ||
+        (emi.notes?.toLowerCase().contains('loan') ?? false);
+
+    final accentColor = isCompleted
+        ? cs.primary
+        : (isLoan ? const Color(0xFF0D9488) : Colors.purple);
 
     return Container(
       decoration: BoxDecoration(
@@ -107,10 +117,14 @@ class EmiDetailsSheet extends ConsumerWidget {
                       width: 48,
                       height: 48,
                       decoration: BoxDecoration(
-                        color: Colors.purple.withValues(alpha: 0.12),
+                        color: accentColor.withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(16),
                       ),
-                      child: const Icon(Icons.credit_card_rounded, color: Colors.purple, size: 24),
+                      child: Icon(
+                        isLoan ? Icons.account_balance_wallet_rounded : Icons.credit_card_rounded,
+                        color: accentColor,
+                        size: 24,
+                      ),
                     ),
                     const SizedBox(width: 14),
                     Expanded(
@@ -141,15 +155,15 @@ class EmiDetailsSheet extends ConsumerWidget {
                       decoration: BoxDecoration(
                         color: isCompleted
                             ? cs.primary.withValues(alpha: 0.12)
-                            : Colors.purple.withValues(alpha: 0.12),
+                            : accentColor.withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
-                        isCompleted ? 'COMPLETED' : 'ACTIVE',
+                        isCompleted ? 'COMPLETED' : (isLoan ? 'LOAN EMI' : 'CARD EMI'),
                         style: GoogleFonts.inter(
                           fontSize: 11,
                           fontWeight: FontWeight.w700,
-                          color: isCompleted ? cs.primary : Colors.purple,
+                          color: isCompleted ? cs.primary : accentColor,
                         ),
                       ),
                     ),
@@ -176,9 +190,13 @@ class EmiDetailsSheet extends ConsumerWidget {
                       const SizedBox(width: 10),
                       Expanded(
                         child: Text(
-                          emi.isPaidByMe
-                              ? 'Paid with your card ($personName owes you monthly)'
-                              : "Paid with $personName's card (You owe monthly)",
+                          isLoan
+                              ? (emi.isPaidByMe
+                                  ? 'You gave the loan ($personName repays you monthly)'
+                                  : 'You took the loan (You repay $personName monthly)')
+                              : (emi.isPaidByMe
+                                  ? 'Paid with your card ($personName owes you monthly)'
+                                  : "Paid with $personName's card (You owe monthly)"),
                           style: GoogleFonts.inter(
                             fontSize: 12.5,
                             fontWeight: FontWeight.w600,
@@ -221,9 +239,7 @@ class EmiDetailsSheet extends ConsumerWidget {
                     value: emi.progress,
                     minHeight: 8,
                     backgroundColor: cs.surfaceContainerHighest,
-                    valueColor: AlwaysStoppedAnimation(
-                      isCompleted ? cs.primary : Colors.purple,
-                    ),
+                    valueColor: AlwaysStoppedAnimation(accentColor),
                   ),
                 ),
 
@@ -244,7 +260,7 @@ class EmiDetailsSheet extends ConsumerWidget {
                         context,
                         'Monthly EMI',
                         CurrencyFormatter.format(emi.monthlyInstallment, symbol: currencySymbol),
-                        Colors.purple,
+                        accentColor,
                       ),
                       Container(width: 1, height: 36, color: cs.outlineVariant),
                       _buildStatColumn(
@@ -415,6 +431,8 @@ class EmiDetailsSheet extends ConsumerWidget {
                       style: GoogleFonts.dmSans(fontWeight: FontWeight.w700),
                     ),
                     style: FilledButton.styleFrom(
+                      backgroundColor: accentColor,
+                      foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                     ),

@@ -625,7 +625,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                             Row(
                               children: [
                                 Text(
-                                  'Active EMIs',
+                                  'Active EMIs & Loans',
                                   style: GoogleFonts.dmSans(
                                     fontSize: 20,
                                     fontWeight: FontWeight.w800,
@@ -654,7 +654,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                             TextButton.icon(
                               onPressed: () => AddEditEmiScreen.show(context),
                               icon: const Icon(Icons.add, size: 16),
-                              label: const Text('Add EMI'),
+                              label: const Text('Add EMI / Loan'),
                               style: TextButton.styleFrom(
                                 foregroundColor: cs.primary,
                                 visualDensity: VisualDensity.compact,
@@ -997,10 +997,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     color: Colors.purple.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: const Icon(Icons.credit_card_rounded, color: Colors.purple),
+                  child: const Icon(Icons.event_repeat_rounded, color: Colors.purple),
                 ),
-                title: const Text('Add Credit Card EMI'),
-                subtitle: const Text('Track monthly installments for shared card purchases'),
+                title: const Text('Add EMI or Monthly Loan'),
+                subtitle: const Text('Track monthly installments for cards & loans'),
                 onTap: () {
                   Navigator.of(ctx).pop();
                   AddEditEmiScreen.show(context);

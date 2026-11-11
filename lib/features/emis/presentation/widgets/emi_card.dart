@@ -29,6 +29,16 @@ class EmiCard extends StatelessWidget {
     final isCompleted = emi.isCompleted;
     final nextDate = emi.nextDueDate;
 
+    final isLoan = emi.cardName.toLowerCase().contains('loan') ||
+        emi.itemName.toLowerCase().contains('loan') ||
+        emi.cardName.toLowerCase().contains('cash') ||
+        emi.cardName.toLowerCase().contains('transfer') ||
+        (emi.notes?.toLowerCase().contains('loan') ?? false);
+
+    final accentColor = isCompleted
+        ? cs.primary
+        : (isLoan ? const Color(0xFF0D9488) : Colors.purple);
+
     return InkWell(
       onTap: onTap ?? () => EmiDetailsSheet.show(context, emi: emi, person: person),
       borderRadius: BorderRadius.circular(18),
@@ -40,7 +50,7 @@ class EmiCard extends StatelessWidget {
           border: Border.all(
             color: isCompleted
                 ? cs.outlineVariant
-                : Colors.purple.withValues(alpha: 0.3),
+                : accentColor.withValues(alpha: 0.3),
             width: 1,
           ),
           boxShadow: [
@@ -62,12 +72,12 @@ class EmiCard extends StatelessWidget {
                   width: 40,
                   height: 40,
                   decoration: BoxDecoration(
-                    color: (isCompleted ? cs.primary : Colors.purple).withValues(alpha: 0.12),
+                    color: accentColor.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Icon(
-                    Icons.credit_card_rounded,
-                    color: isCompleted ? cs.primary : Colors.purple,
+                    isLoan ? Icons.account_balance_wallet_rounded : Icons.credit_card_rounded,
+                    color: accentColor,
                     size: 20,
                   ),
                 ),
@@ -158,9 +168,7 @@ class EmiCard extends StatelessWidget {
                 value: emi.progress,
                 minHeight: 6,
                 backgroundColor: cs.surfaceContainerHighest,
-                valueColor: AlwaysStoppedAnimation(
-                  isCompleted ? cs.primary : Colors.purple,
-                ),
+                valueColor: AlwaysStoppedAnimation(accentColor),
               ),
             ),
 
@@ -179,7 +187,9 @@ class EmiCard extends StatelessWidget {
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(
-                        emi.isPaidByMe ? 'He owes you' : 'You owe',
+                        isLoan
+                            ? (emi.isPaidByMe ? 'He repays' : 'You repay')
+                            : (emi.isPaidByMe ? 'He owes' : 'You owe'),
                         style: GoogleFonts.inter(
                           fontSize: 10.5,
                           fontWeight: FontWeight.w700,
@@ -202,7 +212,7 @@ class EmiCard extends StatelessWidget {
                   isCompleted
                       ? 'Completed'
                       : nextDate != null
-                          ? 'Next due: ${DateFormatter.formatShortDate(nextDate)}'
+                          ? 'Next: ${DateFormatter.formatShortDate(nextDate)}'
                           : 'Due: ${emi.dueDayOfMonth}th',
                   style: GoogleFonts.inter(
                     fontSize: 11.5,

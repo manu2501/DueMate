@@ -9,6 +9,11 @@ import 'package:duemate/core/widgets/person_picker_sheet.dart';
 import 'package:duemate/data/providers/app_providers.dart';
 import 'package:duemate/domain/entities/credit_card_emi.dart';
 
+enum EmiType {
+  creditCard,
+  loan,
+}
+
 class _ItemSuggestion {
   final String label;
   final String fillValue;
@@ -61,6 +66,7 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
   late final TextEditingController _monthlyInstallmentController;
   late final TextEditingController _notesController;
 
+  EmiType _emiType = EmiType.creditCard;
   String? _selectedPersonId;
   bool _isPaidByMe = true;
   int _tenureMonths = 6;
@@ -92,6 +98,21 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
     _ItemSuggestion('Shopping / Clothes', 'Shopping', Icons.shopping_bag_outlined),
   ];
 
+  final List<_ItemSuggestion> _loanPurposeSuggestions = const [
+    _ItemSuggestion('Personal Loan', 'Personal Loan', Icons.person_outline_rounded),
+    _ItemSuggestion('Emergency Loan', 'Emergency Loan', Icons.health_and_safety_outlined),
+    _ItemSuggestion('Education Loan', 'Education Loan', Icons.school_rounded),
+    _ItemSuggestion('Vehicle / Bike', 'Vehicle Loan', Icons.two_wheeler_rounded),
+    _ItemSuggestion('Business Loan', 'Business Loan', Icons.storefront_rounded),
+    _ItemSuggestion('Home / Rent Loan', 'Home Rent Loan', Icons.home_outlined),
+    _ItemSuggestion('Cash Advance', 'Cash Advance', Icons.payments_outlined),
+    _ItemSuggestion('Medical Loan', 'Medical Loan', Icons.local_hospital_rounded),
+    _ItemSuggestion('Wedding Loan', 'Wedding Loan', Icons.celebration_rounded),
+    _ItemSuggestion('Travel Loan', 'Travel Loan', Icons.flight_takeoff_rounded),
+    _ItemSuggestion('Gadget Loan', 'Gadget Loan', Icons.devices_other_rounded),
+    _ItemSuggestion('Salary Advance', 'Salary Advance', Icons.work_outline_rounded),
+  ];
+
   final List<_CardSuggestion> _cardSuggestions = const [
     _CardSuggestion('HDFC Bank', 'HDFC Credit Card', Icons.account_balance_rounded, Color(0xFF004C8F)),
     _CardSuggestion('ICICI Bank', 'ICICI Credit Card', Icons.credit_card_rounded, Color(0xFFB02A30)),
@@ -112,6 +133,20 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
     _CardSuggestion('PNB', 'PNB Credit Card', Icons.account_balance_rounded, Color(0xFF9A1B2F)),
     _CardSuggestion('Canara Bank', 'Canara Bank Card', Icons.account_balance_rounded, Color(0xFF00529B)),
     _CardSuggestion('Union Bank', 'Union Bank Card', Icons.account_balance_rounded, Color(0xFF003366)),
+  ];
+
+  final List<_CardSuggestion> _loanSourceSuggestions = const [
+    _CardSuggestion('Cash Loan', 'Cash Loan', Icons.payments_rounded, Color(0xFF059669)),
+    _CardSuggestion('Bank Transfer', 'Bank Transfer Loan', Icons.account_balance_rounded, Color(0xFF0284C7)),
+    _CardSuggestion('UPI Transfer', 'UPI Loan', Icons.qr_code_rounded, Color(0xFF7C3AED)),
+    _CardSuggestion('SBI Loan', 'SBI Personal Loan', Icons.account_balance_rounded, Color(0xFF0A66C2)),
+    _CardSuggestion('HDFC Loan', 'HDFC Personal Loan', Icons.account_balance_rounded, Color(0xFF004C8F)),
+    _CardSuggestion('ICICI Loan', 'ICICI Personal Loan', Icons.account_balance_rounded, Color(0xFFB02A30)),
+    _CardSuggestion('Axis Bank', 'Axis Bank Loan', Icons.account_balance_wallet_rounded, Color(0xFF97144D)),
+    _CardSuggestion('Kotak Loan', 'Kotak Loan', Icons.account_balance_rounded, Color(0xFFED1C24)),
+    _CardSuggestion('NBFC / FinTech', 'FinTech Loan', Icons.domain_rounded, Color(0xFFD97706)),
+    _CardSuggestion('Cheque Loan', 'Cheque Loan', Icons.receipt_long_rounded, Color(0xFF475569)),
+    _CardSuggestion('Peer to Peer', 'P2P Loan', Icons.handshake_rounded, Color(0xFF0D9488)),
   ];
 
   final List<int> _tenureOptions = [3, 6, 9, 12, 18, 24, 36];
@@ -139,6 +174,13 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
     _notesController = TextEditingController(text: emi?.notes ?? '');
 
     if (emi != null) {
+      final isLoan = emi.cardName.toLowerCase().contains('loan') ||
+          emi.itemName.toLowerCase().contains('loan') ||
+          emi.cardName.toLowerCase().contains('cash') ||
+          emi.cardName.toLowerCase().contains('transfer') ||
+          (emi.notes?.toLowerCase().contains('loan') ?? false);
+      _emiType = isLoan ? EmiType.loan : EmiType.creditCard;
+
       _isPaidByMe = emi.isPaidByMe;
       _tenureMonths = emi.totalTenureMonths;
       _startDate = emi.startDate;
@@ -148,10 +190,14 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
 
     _baseAmountController.addListener(_onAmountOrChargesChanged);
     _chargesController.addListener(_onAmountOrChargesChanged);
+    _itemController.addListener(_onTextChanged);
+    _cardController.addListener(_onTextChanged);
   }
 
   @override
   void dispose() {
+    _itemController.removeListener(_onTextChanged);
+    _cardController.removeListener(_onTextChanged);
     _itemController.dispose();
     _cardController.dispose();
     _baseAmountController.removeListener(_onAmountOrChargesChanged);
@@ -161,6 +207,10 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
     _monthlyInstallmentController.dispose();
     _notesController.dispose();
     super.dispose();
+  }
+
+  void _onTextChanged() {
+    setState(() {});
   }
 
   void _onAmountOrChargesChanged() {
@@ -250,9 +300,16 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
       final processor = ref.read(emiProcessorServiceProvider);
 
       String? finalNotes = _notesController.text.trim().isEmpty ? null : _notesController.text.trim();
+      final List<String> notesParts = [];
+      if (_emiType == EmiType.loan) {
+        notesParts.add('[Loan EMI]');
+      }
       if (_charges > 0) {
-        final breakdown = 'Base: ₹${_baseAmount.toStringAsFixed(0)} + Charges: ₹${_charges.toStringAsFixed(0)}';
-        finalNotes = finalNotes != null ? '$finalNotes\n($breakdown)' : breakdown;
+        notesParts.add('Base: ₹${_baseAmount.toStringAsFixed(0)} + Charges: ₹${_charges.toStringAsFixed(0)}');
+      }
+      if (notesParts.isNotEmpty) {
+        final prefix = notesParts.join(' • ');
+        finalNotes = finalNotes != null ? '$prefix\n$finalNotes' : prefix;
       }
 
       if (isEditing) {
@@ -299,7 +356,9 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              isEditing ? 'EMI updated successfully' : 'Credit Card EMI added successfully',
+              isEditing
+                  ? (_emiType == EmiType.loan ? 'Loan EMI updated' : 'Card EMI updated')
+                  : (_emiType == EmiType.loan ? 'Loan EMI tracking started' : 'Credit Card EMI tracking started'),
             ),
           ),
         );
@@ -326,11 +385,14 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
     final personsMap = ref.watch(personsMapProvider);
 
     final selectedPerson = _selectedPersonId != null ? personsMap[_selectedPersonId] : null;
+    final isLoan = _emiType == EmiType.loan;
 
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          isEditing ? 'Edit Credit Card EMI' : 'Add Credit Card EMI',
+          isEditing
+              ? (isLoan ? 'Edit Loan EMI' : 'Edit Credit Card EMI')
+              : (isLoan ? 'Add Loan EMI' : 'Add Credit Card EMI'),
           style: GoogleFonts.dmSans(fontWeight: FontWeight.w700),
         ),
         actions: [
@@ -357,9 +419,100 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
         child: ListView(
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
           children: [
+            // Category Selector: Credit Card vs Loan
+            Container(
+              decoration: BoxDecoration(
+                color: cs.surfaceContainerLow,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: cs.outlineVariant),
+              ),
+              padding: const EdgeInsets.all(4),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: InkWell(
+                      onTap: () {
+                        setState(() {
+                          _emiType = EmiType.creditCard;
+                        });
+                      },
+                      borderRadius: BorderRadius.circular(12),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                        decoration: BoxDecoration(
+                          color: !isLoan ? cs.primary : Colors.transparent,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.credit_card_rounded,
+                              size: 18,
+                              color: !isLoan ? Colors.white : cs.onSurfaceVariant,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Credit Card EMI',
+                              style: GoogleFonts.dmSans(
+                                fontSize: 13.5,
+                                fontWeight: FontWeight.w700,
+                                color: !isLoan ? Colors.white : cs.onSurfaceVariant,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  Expanded(
+                    child: InkWell(
+                      onTap: () {
+                        setState(() {
+                          _emiType = EmiType.loan;
+                        });
+                      },
+                      borderRadius: BorderRadius.circular(12),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                        decoration: BoxDecoration(
+                          color: isLoan ? const Color(0xFF0D9488) : Colors.transparent,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.account_balance_wallet_rounded,
+                              size: 18,
+                              color: isLoan ? Colors.white : cs.onSurfaceVariant,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Loan / Cash EMI',
+                              style: GoogleFonts.dmSans(
+                                fontSize: 13.5,
+                                fontWeight: FontWeight.w700,
+                                color: isLoan ? Colors.white : cs.onSurfaceVariant,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 20),
+
             // 1. Person Selector Card
             Text(
-              'Shared With',
+              isLoan ? 'Loan Shared With' : 'Shared With',
               style: GoogleFonts.inter(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
@@ -416,15 +569,18 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
                         width: 40,
                         height: 40,
                         decoration: BoxDecoration(
-                          color: cs.primary.withValues(alpha: 0.1),
+                          color: (isLoan ? const Color(0xFF0D9488) : cs.primary).withValues(alpha: 0.1),
                           shape: BoxShape.circle,
                         ),
-                        child: Icon(Icons.person_add_outlined, color: cs.primary),
+                        child: Icon(
+                          Icons.person_add_outlined,
+                          color: isLoan ? const Color(0xFF0D9488) : cs.primary,
+                        ),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
                         child: Text(
-                          'Select person to share EMI with',
+                          isLoan ? 'Select borrower or lender' : 'Select person to share EMI with',
                           style: theme.textTheme.bodyMedium?.copyWith(
                             color: cs.onSurfaceVariant,
                           ),
@@ -439,9 +595,9 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
 
             const SizedBox(height: 20),
 
-            // 2. Direction Toggle (Who paid with whose card?)
+            // 2. Direction Toggle (Who paid with whose card / Who gave loan?)
             Text(
-              'Card Ownership & Repayment Flow',
+              isLoan ? 'Lending & Repayment Flow' : 'Card Ownership & Repayment Flow',
               style: GoogleFonts.inter(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
@@ -471,7 +627,7 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
                           Row(
                             children: [
                               Icon(
-                                Icons.credit_card_rounded,
+                                isLoan ? Icons.payments_outlined : Icons.credit_card_rounded,
                                 size: 18,
                                 color: _isPaidByMe ? cs.primary : cs.onSurfaceVariant,
                               ),
@@ -482,7 +638,7 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            'My Card',
+                            isLoan ? 'I Lent Money' : 'My Card',
                             style: GoogleFonts.dmSans(
                               fontSize: 14,
                               fontWeight: FontWeight.w700,
@@ -491,7 +647,7 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
                           ),
                           const SizedBox(height: 2),
                           Text(
-                            'Friend owes me monthly',
+                            isLoan ? 'Friend repays me monthly' : 'Friend owes me monthly',
                             style: GoogleFonts.inter(
                               fontSize: 11,
                               color: cs.onSurfaceVariant,
@@ -523,7 +679,7 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
                           Row(
                             children: [
                               Icon(
-                                Icons.payment_rounded,
+                                isLoan ? Icons.handshake_outlined : Icons.payment_rounded,
                                 size: 18,
                                 color: !_isPaidByMe ? cs.error : cs.onSurfaceVariant,
                               ),
@@ -534,7 +690,7 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            "Friend's Card",
+                            isLoan ? 'I Borrowed' : "Friend's Card",
                             style: GoogleFonts.dmSans(
                               fontSize: 14,
                               fontWeight: FontWeight.w700,
@@ -543,7 +699,7 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
                           ),
                           const SizedBox(height: 2),
                           Text(
-                            'I owe friend monthly',
+                            isLoan ? 'I repay friend monthly' : 'I owe friend monthly',
                             style: GoogleFonts.inter(
                               fontSize: 11,
                               color: cs.onSurfaceVariant,
@@ -559,108 +715,292 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
 
             const SizedBox(height: 20),
 
-            // 3. Purchase Item Name & Suggestion Chips with Icons
+            // 3. Purchase Item / Loan Purpose Name
             TextFormField(
               controller: _itemController,
               decoration: InputDecoration(
-                labelText: 'Item / Purchase Name *',
-                hintText: 'e.g. iPhone 16 Pro, Flight Tickets',
-                prefixIcon: const Icon(Icons.shopping_bag_outlined),
+                labelText: isLoan ? 'Loan Purpose / Title *' : 'Item / Purchase Name *',
+                hintText: isLoan ? 'e.g. Personal Loan, Bike Loan, Emergency' : 'e.g. iPhone 16 Pro, Flight Tickets',
+                prefixIcon: Icon(isLoan ? Icons.receipt_long_outlined : Icons.shopping_bag_outlined),
+                suffixIcon: _itemController.text.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.clear_rounded, size: 18),
+                        onPressed: () => _itemController.clear(),
+                      )
+                    : null,
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
               ),
-              validator: (v) => v == null || v.trim().isEmpty ? 'Please enter item name' : null,
+              validator: (v) => v == null || v.trim().isEmpty
+                  ? (isLoan ? 'Please enter loan title' : 'Please enter item name')
+                  : null,
             ),
-            const SizedBox(height: 8),
-            Text(
-              'Quick Item Suggestions:',
-              style: GoogleFonts.inter(
-                fontSize: 11.5,
-                fontWeight: FontWeight.w500,
-                color: cs.onSurfaceVariant,
-              ),
-            ),
-            const SizedBox(height: 6),
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: _itemSuggestions.map((item) {
-                  return Padding(
-                    padding: const EdgeInsets.only(right: 8),
-                    child: ActionChip(
-                      avatar: Icon(item.icon, size: 16, color: cs.primary),
-                      label: Text(item.label, style: const TextStyle(fontSize: 12)),
-                      onPressed: () {
-                        _itemController.text = item.fillValue;
-                      },
-                      visualDensity: VisualDensity.compact,
+            Builder(
+              builder: (context) {
+                final itemQuery = _itemController.text.trim().toLowerCase();
+                final itemSource = isLoan ? _loanPurposeSuggestions : _itemSuggestions;
+                final itemMatches = itemQuery.isEmpty
+                    ? <_ItemSuggestion>[]
+                    : itemSource.where((item) =>
+                        item.label.toLowerCase().contains(itemQuery) ||
+                        item.fillValue.toLowerCase().contains(itemQuery)).toList();
+
+                final isExact = itemMatches.any((m) => m.fillValue.toLowerCase() == itemQuery);
+
+                if (itemQuery.isNotEmpty && itemMatches.isNotEmpty && !isExact) {
+                  return Container(
+                    margin: const EdgeInsets.only(top: 8),
+                    decoration: BoxDecoration(
+                      color: cs.surfaceContainerHighest.withValues(alpha: 0.5),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.6)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
+                          child: Row(
+                            children: [
+                              Icon(Icons.auto_awesome, size: 14, color: isLoan ? const Color(0xFF0D9488) : cs.primary),
+                              const SizedBox(width: 6),
+                              Text(
+                                'Suggestions matching "$itemQuery":',
+                                style: GoogleFonts.inter(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                  color: cs.onSurfaceVariant,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const Divider(height: 1),
+                        ...itemMatches.take(5).map((match) => InkWell(
+                          onTap: () {
+                            _itemController.text = match.fillValue;
+                            _itemController.selection = TextSelection.fromPosition(
+                              TextPosition(offset: match.fillValue.length),
+                            );
+                          },
+                          borderRadius: BorderRadius.circular(10),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            child: Row(
+                              children: [
+                                Icon(match.icon, size: 18, color: isLoan ? const Color(0xFF0D9488) : cs.primary),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Text(
+                                    match.label,
+                                    style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600),
+                                  ),
+                                ),
+                                Icon(Icons.north_west_rounded, size: 14, color: cs.onSurfaceVariant),
+                              ],
+                            ),
+                          ),
+                        )),
+                      ],
                     ),
                   );
-                }).toList(),
-              ),
+                }
+
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(height: 8),
+                    Text(
+                      isLoan ? 'Quick Loan Suggestions:' : 'Quick Item Suggestions:',
+                      style: GoogleFonts.inter(
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w500,
+                        color: cs.onSurfaceVariant,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        children: itemSource.map((item) {
+                          return Padding(
+                            padding: const EdgeInsets.only(right: 8),
+                            child: ActionChip(
+                              avatar: Icon(
+                                item.icon,
+                                size: 16,
+                                color: isLoan ? const Color(0xFF0D9488) : cs.primary,
+                              ),
+                              label: Text(item.label, style: const TextStyle(fontSize: 12)),
+                              onPressed: () {
+                                _itemController.text = item.fillValue;
+                              },
+                              visualDensity: VisualDensity.compact,
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                    ),
+                  ],
+                );
+              },
             ),
 
             const SizedBox(height: 20),
 
-            // 4. Credit Card Name & Bank Chips with Signature Icons & Colors
+            // 4. Source / Bank / Lender Field
             TextFormField(
               controller: _cardController,
               decoration: InputDecoration(
-                labelText: 'Credit Card Name / Bank *',
-                hintText: 'e.g. HDFC Millennia, ICICI Amazon Pay',
-                prefixIcon: const Icon(Icons.credit_card_outlined),
+                labelText: isLoan ? 'Lender / Source / Payment Mode *' : 'Credit Card Name / Bank *',
+                hintText: isLoan ? 'e.g. Bank Transfer, Cash, SBI, HDFC' : 'e.g. HDFC Millennia, ICICI Amazon Pay',
+                prefixIcon: Icon(isLoan ? Icons.account_balance_outlined : Icons.credit_card_outlined),
+                suffixIcon: _cardController.text.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.clear_rounded, size: 18),
+                        onPressed: () => _cardController.clear(),
+                      )
+                    : null,
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
               ),
-              validator: (v) => v == null || v.trim().isEmpty ? 'Please enter credit card name' : null,
+              validator: (v) => v == null || v.trim().isEmpty
+                  ? (isLoan ? 'Please enter loan source or lender' : 'Please enter credit card name')
+                  : null,
             ),
-            const SizedBox(height: 8),
-            Text(
-              'Popular Banks & Cards:',
-              style: GoogleFonts.inter(
-                fontSize: 11.5,
-                fontWeight: FontWeight.w500,
-                color: cs.onSurfaceVariant,
-              ),
-            ),
-            const SizedBox(height: 6),
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: _cardSuggestions.map((bank) {
-                  return Padding(
-                    padding: const EdgeInsets.only(right: 8),
-                    child: ActionChip(
-                      avatar: CircleAvatar(
-                        radius: 8,
-                        backgroundColor: bank.color.withValues(alpha: 0.15),
-                        child: Icon(bank.icon, size: 12, color: bank.color),
-                      ),
-                      label: Text(
-                        bank.name,
-                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: bank.color),
-                      ),
-                      onPressed: () {
-                        if (_cardController.text.trim().isEmpty) {
-                          _cardController.text = bank.fillValue;
-                        } else if (!_cardController.text.contains(bank.name)) {
-                          _cardController.text = '${bank.name} ${_cardController.text}'.trim();
-                        }
-                      },
-                      visualDensity: VisualDensity.compact,
+            Builder(
+              builder: (context) {
+                final cardQuery = _cardController.text.trim().toLowerCase();
+                final cardSource = isLoan ? _loanSourceSuggestions : _cardSuggestions;
+                final cardMatches = cardQuery.isEmpty
+                    ? <_CardSuggestion>[]
+                    : cardSource.where((b) =>
+                        b.name.toLowerCase().contains(cardQuery) ||
+                        b.fillValue.toLowerCase().contains(cardQuery)).toList();
+
+                final isExact = cardMatches.any((m) => m.fillValue.toLowerCase() == cardQuery);
+
+                if (cardQuery.isNotEmpty && cardMatches.isNotEmpty && !isExact) {
+                  return Container(
+                    margin: const EdgeInsets.only(top: 8),
+                    decoration: BoxDecoration(
+                      color: cs.surfaceContainerHighest.withValues(alpha: 0.5),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.6)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
+                          child: Row(
+                            children: [
+                              Icon(Icons.auto_awesome, size: 14, color: isLoan ? const Color(0xFF0D9488) : cs.primary),
+                              const SizedBox(width: 6),
+                              Text(
+                                isLoan ? 'Matching loan sources:' : 'Matching banks & cards:',
+                                style: GoogleFonts.inter(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                  color: cs.onSurfaceVariant,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const Divider(height: 1),
+                        ...cardMatches.take(5).map((bank) => InkWell(
+                          onTap: () {
+                            _cardController.text = bank.fillValue;
+                            _cardController.selection = TextSelection.fromPosition(
+                              TextPosition(offset: bank.fillValue.length),
+                            );
+                          },
+                          borderRadius: BorderRadius.circular(10),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            child: Row(
+                              children: [
+                                CircleAvatar(
+                                  radius: 10,
+                                  backgroundColor: bank.color.withValues(alpha: 0.15),
+                                  child: Icon(bank.icon, size: 12, color: bank.color),
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Text(
+                                    bank.fillValue,
+                                    style: GoogleFonts.inter(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w600,
+                                      color: bank.color,
+                                    ),
+                                  ),
+                                ),
+                                Icon(Icons.north_west_rounded, size: 14, color: cs.onSurfaceVariant),
+                              ],
+                            ),
+                          ),
+                        )),
+                      ],
                     ),
                   );
-                }).toList(),
-              ),
+                }
+
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(height: 8),
+                    Text(
+                      isLoan ? 'Common Loan Sources & Banks:' : 'Popular Banks & Cards:',
+                      style: GoogleFonts.inter(
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w500,
+                        color: cs.onSurfaceVariant,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        children: cardSource.map((bank) {
+                          return Padding(
+                            padding: const EdgeInsets.only(right: 8),
+                            child: ActionChip(
+                              avatar: CircleAvatar(
+                                radius: 8,
+                                backgroundColor: bank.color.withValues(alpha: 0.15),
+                                child: Icon(bank.icon, size: 12, color: bank.color),
+                              ),
+                              label: Text(
+                                bank.name,
+                                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: bank.color),
+                              ),
+                              onPressed: () {
+                                if (_cardController.text.trim().isEmpty) {
+                                  _cardController.text = bank.fillValue;
+                                } else if (!_cardController.text.contains(bank.name)) {
+                                  _cardController.text = '${bank.name} ${_cardController.text}'.trim();
+                                }
+                              },
+                              visualDensity: VisualDensity.compact,
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                    ),
+                  ],
+                );
+              },
             ),
 
             const SizedBox(height: 22),
 
-            // 5. Purchase / Base Amount Field
+            // 5. Principal / Base Amount Field
             TextFormField(
               controller: _baseAmountController,
               keyboardType: const TextInputType.numberWithOptions(decimal: true),
               style: GoogleFonts.dmSans(fontSize: 20, fontWeight: FontWeight.w700),
               decoration: InputDecoration(
-                labelText: 'Purchase / Base Amount *',
+                labelText: isLoan ? 'Loan Principal Amount *' : 'Purchase / Base Amount *',
                 hintText: '0',
                 prefixIcon: Padding(
                   padding: const EdgeInsets.only(left: 14, right: 8),
@@ -679,7 +1019,9 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
               ),
               validator: (v) {
-                if (v == null || v.trim().isEmpty) return 'Please enter purchase amount';
+                if (v == null || v.trim().isEmpty) {
+                  return isLoan ? 'Please enter loan amount' : 'Please enter purchase amount';
+                }
                 final n = double.tryParse(v.trim());
                 if (n == null || n <= 0) return 'Please enter a valid amount';
                 return null;
@@ -688,12 +1030,12 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
 
             const SizedBox(height: 16),
 
-            // 6. Additional Charges / Bank Fees / Interest / GST
+            // 6. Additional Charges / Interest / Fees
             TextFormField(
               controller: _chargesController,
               keyboardType: const TextInputType.numberWithOptions(decimal: true),
               decoration: InputDecoration(
-                labelText: 'Additional Charges / Bank Fees / Interest (Optional)',
+                labelText: isLoan ? 'Interest / Processing Fee / Extra Charges' : 'Additional Charges / Bank Fees / Interest',
                 hintText: '0',
                 prefixIcon: Padding(
                   padding: const EdgeInsets.only(left: 14, right: 8),
@@ -715,7 +1057,9 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
                         },
                       )
                     : null,
-                helperText: 'Processing fee, bank interest, or GST incurred for this EMI.',
+                helperText: isLoan
+                    ? 'Total interest or processing fees incurred over the tenure.'
+                    : 'Processing fee, bank interest, or GST incurred for this EMI.',
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
               ),
             ),
@@ -796,9 +1140,11 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
             Container(
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                color: Colors.purple.withValues(alpha: 0.08),
+                color: (isLoan ? const Color(0xFF0D9488) : Colors.purple).withValues(alpha: 0.08),
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: Colors.purple.withValues(alpha: 0.25)),
+                border: Border.all(
+                  color: (isLoan ? const Color(0xFF0D9488) : Colors.purple).withValues(alpha: 0.25),
+                ),
               ),
               child: Column(
                 children: [
@@ -806,7 +1152,7 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        'Base Amount:',
+                        isLoan ? 'Principal Loan:' : 'Base Amount:',
                         style: GoogleFonts.inter(fontSize: 12.5, color: cs.onSurfaceVariant),
                       ),
                       Text(
@@ -821,7 +1167,7 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          'Additional Charges:',
+                          isLoan ? 'Interest / Extra Charges:' : 'Additional Charges:',
                           style: GoogleFonts.inter(fontSize: 12.5, color: cs.error),
                         ),
                         Text(
@@ -840,7 +1186,7 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        'Total Payable:',
+                        isLoan ? 'Total Repayable:' : 'Total Payable:',
                         style: GoogleFonts.dmSans(fontSize: 14, fontWeight: FontWeight.w700),
                       ),
                       Text(
@@ -858,7 +1204,7 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        'Auto Monthly Split ($_tenureMonths months):',
+                        'Monthly Installment ($_tenureMonths months):',
                         style: GoogleFonts.inter(fontSize: 12.5, color: cs.onSurfaceVariant),
                       ),
                       Text(
@@ -866,7 +1212,7 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
                         style: GoogleFonts.dmSans(
                           fontSize: 15,
                           fontWeight: FontWeight.w800,
-                          color: Colors.purple,
+                          color: isLoan ? const Color(0xFF0D9488) : Colors.purple,
                         ),
                       ),
                     ],
@@ -885,7 +1231,7 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
                 _manualMonthlyEdit = true;
               },
               decoration: InputDecoration(
-                labelText: 'Monthly Installment (What gets recorded each month) *',
+                labelText: 'Monthly Installment (Recorded each month) *',
                 prefixIcon: Padding(
                   padding: const EdgeInsets.only(left: 14, right: 8),
                   child: Center(
@@ -901,7 +1247,7 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
                   icon: const Icon(Icons.refresh_rounded, size: 20),
                   onPressed: _recalcMonthly,
                 ),
-                helperText: 'Automatically computed as Total ÷ Months. Editable if bank charges differ.',
+                helperText: 'Auto-computed as Total ÷ Months. Editable if your installment differs.',
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
               ),
               validator: (v) {
@@ -996,7 +1342,7 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
               maxLines: 2,
               decoration: InputDecoration(
                 labelText: 'Notes (Optional)',
-                hintText: 'Order ID, invoice details, bank reference...',
+                hintText: isLoan ? 'Loan terms, account number, agreement notes...' : 'Order ID, invoice details, bank reference...',
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
               ),
             ),
@@ -1007,6 +1353,8 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
             FilledButton(
               onPressed: _isSaving ? null : _saveEmi,
               style: FilledButton.styleFrom(
+                backgroundColor: isLoan ? const Color(0xFF0D9488) : cs.primary,
+                foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
               ),
@@ -1017,7 +1365,9 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
                       child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                     )
                   : Text(
-                      isEditing ? 'Save Changes' : 'Start Monthly EMI Tracking',
+                      isEditing
+                          ? (isLoan ? 'Save Loan Changes' : 'Save EMI Changes')
+                          : (isLoan ? 'Start Monthly Loan Tracking' : 'Start Monthly EMI Tracking'),
                       style: GoogleFonts.dmSans(
                         fontSize: 16,
                         fontWeight: FontWeight.w700,

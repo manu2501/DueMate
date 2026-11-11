@@ -162,7 +162,7 @@ class _PeopleScreenState extends ConsumerState<PeopleScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Ledger'),
+        title: const Text('Directory'),
         actions: [
           _isImporting
               ? const Padding(
@@ -242,13 +242,13 @@ class _PeopleScreenState extends ConsumerState<PeopleScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
             child: Row(
               children: [
+                _filterChip('All', PeopleFilter.all, currentFilter),
+                const SizedBox(width: 8),
                 _filterChip('Active', PeopleFilter.active, currentFilter),
                 const SizedBox(width: 8),
                 _filterChip('Settled', PeopleFilter.settled, currentFilter),
                 const SizedBox(width: 8),
                 _filterChip('Archived', PeopleFilter.archived, currentFilter),
-                const SizedBox(width: 8),
-                _filterChip('All', PeopleFilter.all, currentFilter),
               ],
             ),
           ),

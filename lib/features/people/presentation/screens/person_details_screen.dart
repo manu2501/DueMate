@@ -270,9 +270,9 @@ class PersonDetailsScreen extends ConsumerWidget {
                           value: 'add_emi',
                           child: Row(
                             children: [
-                              Icon(Icons.credit_card_rounded, size: 20, color: Colors.purple),
+                              Icon(Icons.event_repeat_rounded, size: 20, color: Colors.purple),
                               SizedBox(width: 12),
-                              Text('Add Credit Card EMI'),
+                              Text('Add EMI / Loan'),
                             ],
                           ),
                         ),
@@ -804,7 +804,7 @@ class PersonDetailsScreen extends ConsumerWidget {
                                     borderRadius: BorderRadius.circular(10),
                                   ),
                                   child: const Icon(
-                                    Icons.credit_card_rounded,
+                                    Icons.event_repeat_rounded,
                                     color: Colors.purple,
                                     size: 18,
                                   ),
@@ -815,7 +815,7 @@ class PersonDetailsScreen extends ConsumerWidget {
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
                                       Text(
-                                        'Split Credit Card EMI',
+                                        'Split EMI or Monthly Loan',
                                         style: GoogleFonts.dmSans(
                                           fontSize: 14,
                                           fontWeight: FontWeight.w700,
@@ -823,7 +823,7 @@ class PersonDetailsScreen extends ConsumerWidget {
                                         ),
                                       ),
                                       Text(
-                                        'Auto-post monthly installments to ledger',
+                                        'Auto-post monthly installments for cards & loans',
                                         style: GoogleFonts.inter(
                                           fontSize: 11.5,
                                           color: cs.onSurfaceVariant,
@@ -850,7 +850,7 @@ class PersonDetailsScreen extends ConsumerWidget {
                               Row(
                                 children: [
                                   Text(
-                                    'Credit Card EMIs',
+                                    'EMIs & Monthly Loans',
                                     style: GoogleFonts.dmSans(
                                       fontSize: 18,
                                       fontWeight: FontWeight.w700,
@@ -879,7 +879,7 @@ class PersonDetailsScreen extends ConsumerWidget {
                               TextButton.icon(
                                 onPressed: () => AddEditEmiScreen.show(context, personId: personId),
                                 icon: const Icon(Icons.add, size: 16),
-                                label: const Text('Add EMI'),
+                                label: const Text('Add EMI / Loan'),
                                 style: TextButton.styleFrom(
                                   foregroundColor: cs.primary,
                                   visualDensity: VisualDensity.compact,
