@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:uuid/uuid.dart';
@@ -64,6 +65,7 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
   late final TextEditingController _baseAmountController;
   late final TextEditingController _chargesController;
   late final TextEditingController _notesController;
+  late final TextEditingController _tenureController;
 
   EmiType _emiType = EmiType.creditCard;
   String? _selectedPersonId;
@@ -187,6 +189,9 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
       _dueDayOfMonth = emi.dueDayOfMonth;
     }
 
+    _tenureController = TextEditingController(text: _tenureMonths.toString());
+    _tenureController.addListener(_onTenureChanged);
+
     _baseAmountController.addListener(_onAmountOrChargesChanged);
     _chargesController.addListener(_onAmountOrChargesChanged);
     _itemController.addListener(_onTextChanged);
@@ -195,6 +200,8 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
 
   @override
   void dispose() {
+    _tenureController.removeListener(_onTenureChanged);
+    _tenureController.dispose();
     _itemController.removeListener(_onTextChanged);
     _cardController.removeListener(_onTextChanged);
     _itemController.dispose();
@@ -205,6 +212,15 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
     _chargesController.dispose();
     _notesController.dispose();
     super.dispose();
+  }
+
+  void _onTenureChanged() {
+    final parsed = int.tryParse(_tenureController.text.trim()) ?? 0;
+    if (_tenureMonths != parsed) {
+      setState(() {
+        _tenureMonths = parsed;
+      });
+    }
   }
 
   void _onTextChanged() {
@@ -267,6 +283,13 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
 
     final totalAmount = _totalPayable;
     final monthly = _monthlyInstallment;
+
+    if (_tenureMonths <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter a valid tenure in months')),
+      );
+      return;
+    }
 
     if (totalAmount <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -1086,15 +1109,72 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
             const SizedBox(height: 18),
 
             // 7. Tenure Selection (Months)
-            Text(
-              'Tenure (Months)',
-              style: GoogleFonts.inter(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: cs.onSurfaceVariant,
-              ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Tenure (Months)',
+                  style: GoogleFonts.inter(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: cs.onSurfaceVariant,
+                  ),
+                ),
+                if (_tenureMonths > 0)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: cs.primaryContainer,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      '$_tenureMonths ${_tenureMonths == 1 ? 'Month' : 'Months'}',
+                      style: GoogleFonts.inter(
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w600,
+                        color: cs.onPrimaryContainer,
+                      ),
+                    ),
+                  ),
+              ],
             ),
             const SizedBox(height: 8),
+
+            // Custom Tenure Number Field
+            TextFormField(
+              controller: _tenureController,
+              keyboardType: TextInputType.number,
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              decoration: InputDecoration(
+                prefixIcon: const Icon(Icons.timer_outlined),
+                labelText: 'Enter Tenure (Number of Months)',
+                hintText: 'e.g. 1, 4, 5, 10, 15, 60...',
+                suffixText: 'months',
+                filled: true,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              validator: (value) {
+                final val = int.tryParse(value?.trim() ?? '');
+                if (val == null || val <= 0) {
+                  return 'Please enter a valid tenure in months (at least 1)';
+                }
+                return null;
+              },
+            ),
+            const SizedBox(height: 10),
+
+            // Quick Preset Chips
+            Text(
+              'Quick Presets:',
+              style: GoogleFonts.inter(
+                fontSize: 11.5,
+                fontWeight: FontWeight.w500,
+                color: cs.onSurfaceVariant.withValues(alpha: 0.8),
+              ),
+            ),
+            const SizedBox(height: 6),
             Wrap(
               spacing: 8,
               runSpacing: 8,
@@ -1105,6 +1185,7 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
                   selected: isSelected,
                   onSelected: (selected) {
                     if (selected) {
+                      _tenureController.text = months.toString();
                       setState(() {
                         _tenureMonths = months;
                       });
