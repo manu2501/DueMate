@@ -2,13 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:duemate/core/constants/app_constants.dart';
+import 'package:duemate/core/services/emi_processor_service.dart';
+import 'package:duemate/domain/entities/credit_card_emi.dart';
 import 'package:duemate/domain/entities/ledger_summary.dart';
 import 'package:duemate/domain/entities/ledger_transaction.dart';
 import 'package:duemate/domain/entities/person.dart' as domain;
 import 'package:duemate/domain/entities/person_summary.dart';
+import 'package:duemate/domain/repositories/emi_repository.dart';
 import 'package:duemate/domain/repositories/person_repository.dart';
 import 'package:duemate/domain/repositories/transaction_repository.dart';
-import 'package:duemate/data/database/app_database.dart';
+import 'package:duemate/data/database/app_database.dart' hide CreditCardEmi;
+import 'package:duemate/data/repositories/emi_repository_impl.dart';
 import 'package:duemate/data/repositories/person_repository_impl.dart';
 import 'package:duemate/data/repositories/transaction_repository_impl.dart';
 
@@ -26,6 +30,18 @@ final personRepositoryProvider = Provider<PersonRepository>((ref) {
 
 final transactionRepositoryProvider = Provider<TransactionRepository>((ref) {
   return TransactionRepositoryImpl(ref.watch(databaseProvider));
+});
+
+final emiRepositoryProvider = Provider<EmiRepository>((ref) {
+  return EmiRepositoryImpl(ref.watch(databaseProvider));
+});
+
+final emiProcessorServiceProvider = Provider<EmiProcessorService>((ref) {
+  return EmiProcessorService(
+    emiRepository: ref.watch(emiRepositoryProvider),
+    transactionRepository: ref.watch(transactionRepositoryProvider),
+    database: ref.watch(databaseProvider),
+  );
 });
 
 // App Settings Notifiers with persistent SharedPreferences storage
@@ -300,4 +316,23 @@ final filteredPersonSummariesProvider = Provider<List<PersonSummary>>((ref) {
     },
     orElse: () => [],
   );
+});
+
+// EMI Stream Providers
+final activeEmisProvider = StreamProvider<List<CreditCardEmi>>((ref) {
+  return ref.watch(emiRepositoryProvider).watchAllEmis(status: 'active');
+});
+
+final allEmisProvider = StreamProvider<List<CreditCardEmi>>((ref) {
+  return ref.watch(emiRepositoryProvider).watchAllEmis();
+});
+
+final personEmisProvider = StreamProvider.family<List<CreditCardEmi>, String>((ref, personId) {
+  return ref.watch(emiRepositoryProvider).watchEmisForPerson(personId);
+});
+
+// Runs automatically on app start / provider read to post any pending monthly installments
+final emiAutoProcessorProvider = FutureProvider<EmiProcessorResult>((ref) async {
+  final processor = ref.read(emiProcessorServiceProvider);
+  return await processor.processDueInstallments();
 });

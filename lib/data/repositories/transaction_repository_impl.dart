@@ -22,6 +22,8 @@ class TransactionRepositoryImpl implements TransactionRepository {
       transactionDate: row.transactionDate,
       paymentMethod: row.paymentMethod,
       note: row.note,
+      emiId: row.emiId,
+      installmentNumber: row.installmentNumber,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
     );
@@ -82,6 +84,8 @@ class TransactionRepositoryImpl implements TransactionRepository {
               transactionDate: transaction.transactionDate,
               paymentMethod: transaction.paymentMethod,
               note: Value(transaction.note),
+              emiId: Value(transaction.emiId),
+              installmentNumber: Value(transaction.installmentNumber),
               createdAt: transaction.createdAt,
               updatedAt: transaction.updatedAt,
             ),
@@ -106,6 +110,8 @@ class TransactionRepositoryImpl implements TransactionRepository {
           transactionDate: Value(transaction.transactionDate),
           paymentMethod: Value(transaction.paymentMethod),
           note: Value(transaction.note),
+          emiId: Value(transaction.emiId),
+          installmentNumber: Value(transaction.installmentNumber),
           updatedAt: Value(DateTime.now()),
         ),
       );

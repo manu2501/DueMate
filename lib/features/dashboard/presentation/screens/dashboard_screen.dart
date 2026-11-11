@@ -13,6 +13,8 @@ import 'package:duemate/core/widgets/quick_receive_sheet.dart';
 import 'package:duemate/core/widgets/transaction_tile.dart';
 import 'package:duemate/data/providers/app_providers.dart';
 import 'package:duemate/domain/entities/person_summary.dart';
+import 'package:duemate/features/emis/presentation/screens/add_edit_emi_screen.dart';
+import 'package:duemate/features/emis/presentation/widgets/emi_card.dart';
 import 'package:duemate/features/people/presentation/screens/add_edit_person_screen.dart';
 import 'package:duemate/features/transactions/presentation/widgets/transaction_details_dialog.dart';
 
@@ -44,6 +46,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     final topPeople = ref.watch(topPeopleByBalanceProvider);
     final recentTxAsync = ref.watch(recentTransactionsProvider);
     final personsMap = ref.watch(personsMapProvider);
+    final activeEmisAsync = ref.watch(activeEmisProvider);
+
+    // Auto-process any pending EMI installments on app open/build
+    ref.watch(emiAutoProcessorProvider);
 
     // Repayment / recovery progress
     final double totalGiven = totals.totalGiven;
@@ -603,6 +609,84 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 ),
               ],
 
+              // Active Credit Card EMIs section (if any active)
+              activeEmisAsync.when(
+                data: (activeEmis) {
+                  if (activeEmis.isEmpty) return const SizedBox.shrink();
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const SizedBox(height: 24),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Row(
+                              children: [
+                                Text(
+                                  'Active EMIs',
+                                  style: GoogleFonts.dmSans(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.w800,
+                                    letterSpacing: -0.3,
+                                    color: isDark ? Colors.white : const Color(0xFF131438),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: Colors.purple.withValues(alpha: 0.12),
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: Text(
+                                    '${activeEmis.length}',
+                                    style: GoogleFonts.dmSans(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w700,
+                                      color: Colors.purple,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            TextButton.icon(
+                              onPressed: () => AddEditEmiScreen.show(context),
+                              icon: const Icon(Icons.add, size: 16),
+                              label: const Text('Add EMI'),
+                              style: TextButton.styleFrom(
+                                foregroundColor: cs.primary,
+                                visualDensity: VisualDensity.compact,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        child: Column(
+                          children: activeEmis.map((emi) {
+                            final person = personsMap[emi.personId];
+                            return Padding(
+                              padding: const EdgeInsets.only(bottom: 10),
+                              child: EmiCard(
+                                emi: emi,
+                                person: person,
+                                currencySymbol: currencySymbol,
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                      ),
+                    ],
+                  );
+                },
+                loading: () => const SizedBox.shrink(),
+                error: (_, _) => const SizedBox.shrink(),
+              ),
+
               const SizedBox(height: 24),
 
               // 4. Section: Recent Transactions
@@ -899,6 +983,27 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 onTap: () {
                   Navigator.of(ctx).pop();
                   QuickReceiveSheet.show(context);
+                },
+              ),
+              const SizedBox(height: 10),
+              ListTile(
+                contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                tileColor: cs.surfaceContainer,
+                leading: Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: Colors.purple.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(Icons.credit_card_rounded, color: Colors.purple),
+                ),
+                title: const Text('Add Credit Card EMI'),
+                subtitle: const Text('Track monthly installments for shared card purchases'),
+                onTap: () {
+                  Navigator.of(ctx).pop();
+                  AddEditEmiScreen.show(context);
                 },
               ),
               const SizedBox(height: 10),

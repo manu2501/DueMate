@@ -65,6 +65,31 @@ class TransactionTile extends StatelessWidget {
                   const SizedBox(height: 3),
                   Row(
                     children: [
+                      if (transaction.isEmi) ...[
+                        Container(
+                          margin: const EdgeInsets.only(right: 6),
+                          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                          decoration: BoxDecoration(
+                            color: Colors.purple.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.credit_card_rounded, size: 10, color: Colors.purple),
+                              const SizedBox(width: 3),
+                              Text(
+                                'EMI',
+                                style: theme.textTheme.labelSmall?.copyWith(
+                                  fontSize: 9.5,
+                                  fontWeight: FontWeight.w700,
+                                  color: Colors.purple,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                       Text(
                         transaction.paymentMethod.label,
                         style: theme.textTheme.bodySmall?.copyWith(

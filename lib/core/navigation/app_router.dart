@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:duemate/core/widgets/dock_nav_icon.dart';
 import 'package:duemate/features/dashboard/presentation/screens/dashboard_screen.dart';
+import 'package:duemate/features/emis/presentation/screens/add_edit_emi_screen.dart';
 import 'package:duemate/features/people/presentation/screens/add_edit_person_screen.dart';
 import 'package:duemate/features/people/presentation/screens/people_screen.dart';
 import 'package:duemate/features/people/presentation/screens/person_details_screen.dart';
@@ -141,6 +142,18 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           state: state,
           child: const AddEditPersonScreen(),
         ),
+      ),
+      GoRoute(
+        parentNavigatorKey: _rootNavigatorKey,
+        path: '/add-emi',
+        pageBuilder: (context, state) {
+          final personId = state.uri.queryParameters['personId'];
+          return _buildSlideTransition(
+            context: context,
+            state: state,
+            child: AddEditEmiScreen(initialPersonId: personId),
+          );
+        },
       ),
     ],
   );
