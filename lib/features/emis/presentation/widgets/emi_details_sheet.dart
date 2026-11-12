@@ -401,7 +401,7 @@ class EmiDetailsSheet extends ConsumerWidget {
                                 const SizedBox(height: 2),
                                 if (isPaid)
                                   Text(
-                                    'Recorded',
+                                    emi.isForSelf ? 'Paid to Bank' : 'Recorded in Ledger',
                                     style: GoogleFonts.inter(
                                       fontSize: 10.5,
                                       fontWeight: FontWeight.w600,
@@ -421,7 +421,7 @@ class EmiDetailsSheet extends ConsumerWidget {
                                             SnackBar(
                                               content: Text(
                                                 success
-                                                    ? 'Installment $installmentNum recorded in ledger!'
+                                                    ? 'Installment $installmentNum recorded!'
                                                     : 'Could not record installment',
                                               ),
                                             ),
@@ -429,7 +429,10 @@ class EmiDetailsSheet extends ConsumerWidget {
                                         }
                                       },
                                       icon: const Icon(Icons.bolt_rounded, size: 12),
-                                      label: const Text('Post Early', style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold)),
+                                      label: Text(
+                                        emi.isForSelf ? 'Post Early' : 'Mark Billed',
+                                        style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold),
+                                      ),
                                       style: FilledButton.styleFrom(
                                         backgroundColor: accentColor,
                                         foregroundColor: Colors.white,

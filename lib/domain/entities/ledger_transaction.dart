@@ -10,6 +10,7 @@ class LedgerTransaction {
   final String? note;
   final String? emiId;
   final int? installmentNumber;
+  final bool isSettled;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -23,6 +24,7 @@ class LedgerTransaction {
     this.note,
     this.emiId,
     this.installmentNumber,
+    this.isSettled = false,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -41,6 +43,7 @@ class LedgerTransaction {
     String? note,
     String? emiId,
     int? installmentNumber,
+    bool? isSettled,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -54,6 +57,7 @@ class LedgerTransaction {
       note: note ?? this.note,
       emiId: emiId ?? this.emiId,
       installmentNumber: installmentNumber ?? this.installmentNumber,
+      isSettled: isSettled ?? this.isSettled,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );

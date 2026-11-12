@@ -664,6 +664,21 @@ class $TransactionsTable extends Transactions
     type: DriftSqlType.int,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _isSettledMeta = const VerificationMeta(
+    'isSettled',
+  );
+  @override
+  late final GeneratedColumn<bool> isSettled = GeneratedColumn<bool>(
+    'is_settled',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_settled" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
   );
@@ -697,6 +712,7 @@ class $TransactionsTable extends Transactions
     note,
     emiId,
     installmentNumber,
+    isSettled,
     createdAt,
     updatedAt,
   ];
@@ -765,6 +781,12 @@ class $TransactionsTable extends Transactions
         ),
       );
     }
+    if (data.containsKey('is_settled')) {
+      context.handle(
+        _isSettledMeta,
+        isSettled.isAcceptableOrUnknown(data['is_settled']!, _isSettledMeta),
+      );
+    }
     if (data.containsKey('created_at')) {
       context.handle(
         _createdAtMeta,
@@ -830,6 +852,10 @@ class $TransactionsTable extends Transactions
         DriftSqlType.int,
         data['${effectivePrefix}installment_number'],
       ),
+      isSettled: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_settled'],
+      )!,
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
@@ -862,6 +888,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
   final String? note;
   final String? emiId;
   final int? installmentNumber;
+  final bool isSettled;
   final DateTime createdAt;
   final DateTime updatedAt;
   const Transaction({
@@ -874,6 +901,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
     this.note,
     this.emiId,
     this.installmentNumber,
+    required this.isSettled,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -903,6 +931,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
     if (!nullToAbsent || installmentNumber != null) {
       map['installment_number'] = Variable<int>(installmentNumber);
     }
+    map['is_settled'] = Variable<bool>(isSettled);
     map['created_at'] = Variable<DateTime>(createdAt);
     map['updated_at'] = Variable<DateTime>(updatedAt);
     return map;
@@ -923,6 +952,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
       installmentNumber: installmentNumber == null && nullToAbsent
           ? const Value.absent()
           : Value(installmentNumber),
+      isSettled: Value(isSettled),
       createdAt: Value(createdAt),
       updatedAt: Value(updatedAt),
     );
@@ -947,6 +977,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
       note: serializer.fromJson<String?>(json['note']),
       emiId: serializer.fromJson<String?>(json['emiId']),
       installmentNumber: serializer.fromJson<int?>(json['installmentNumber']),
+      isSettled: serializer.fromJson<bool>(json['isSettled']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
     );
@@ -968,6 +999,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
       'note': serializer.toJson<String?>(note),
       'emiId': serializer.toJson<String?>(emiId),
       'installmentNumber': serializer.toJson<int?>(installmentNumber),
+      'isSettled': serializer.toJson<bool>(isSettled),
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
     };
@@ -983,6 +1015,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
     Value<String?> note = const Value.absent(),
     Value<String?> emiId = const Value.absent(),
     Value<int?> installmentNumber = const Value.absent(),
+    bool? isSettled,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) => Transaction(
@@ -997,6 +1030,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
     installmentNumber: installmentNumber.present
         ? installmentNumber.value
         : this.installmentNumber,
+    isSettled: isSettled ?? this.isSettled,
     createdAt: createdAt ?? this.createdAt,
     updatedAt: updatedAt ?? this.updatedAt,
   );
@@ -1017,6 +1051,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
       installmentNumber: data.installmentNumber.present
           ? data.installmentNumber.value
           : this.installmentNumber,
+      isSettled: data.isSettled.present ? data.isSettled.value : this.isSettled,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
     );
@@ -1034,6 +1069,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
           ..write('note: $note, ')
           ..write('emiId: $emiId, ')
           ..write('installmentNumber: $installmentNumber, ')
+          ..write('isSettled: $isSettled, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt')
           ..write(')'))
@@ -1051,6 +1087,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
     note,
     emiId,
     installmentNumber,
+    isSettled,
     createdAt,
     updatedAt,
   );
@@ -1067,6 +1104,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
           other.note == this.note &&
           other.emiId == this.emiId &&
           other.installmentNumber == this.installmentNumber &&
+          other.isSettled == this.isSettled &&
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt);
 }
@@ -1081,6 +1119,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
   final Value<String?> note;
   final Value<String?> emiId;
   final Value<int?> installmentNumber;
+  final Value<bool> isSettled;
   final Value<DateTime> createdAt;
   final Value<DateTime> updatedAt;
   final Value<int> rowid;
@@ -1094,6 +1133,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     this.note = const Value.absent(),
     this.emiId = const Value.absent(),
     this.installmentNumber = const Value.absent(),
+    this.isSettled = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.rowid = const Value.absent(),
@@ -1108,6 +1148,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     this.note = const Value.absent(),
     this.emiId = const Value.absent(),
     this.installmentNumber = const Value.absent(),
+    this.isSettled = const Value.absent(),
     required DateTime createdAt,
     required DateTime updatedAt,
     this.rowid = const Value.absent(),
@@ -1129,6 +1170,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     Expression<String>? note,
     Expression<String>? emiId,
     Expression<int>? installmentNumber,
+    Expression<bool>? isSettled,
     Expression<DateTime>? createdAt,
     Expression<DateTime>? updatedAt,
     Expression<int>? rowid,
@@ -1143,6 +1185,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
       if (note != null) 'note': note,
       if (emiId != null) 'emi_id': emiId,
       if (installmentNumber != null) 'installment_number': installmentNumber,
+      if (isSettled != null) 'is_settled': isSettled,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
       if (rowid != null) 'rowid': rowid,
@@ -1159,6 +1202,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     Value<String?>? note,
     Value<String?>? emiId,
     Value<int?>? installmentNumber,
+    Value<bool>? isSettled,
     Value<DateTime>? createdAt,
     Value<DateTime>? updatedAt,
     Value<int>? rowid,
@@ -1173,6 +1217,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
       note: note ?? this.note,
       emiId: emiId ?? this.emiId,
       installmentNumber: installmentNumber ?? this.installmentNumber,
+      isSettled: isSettled ?? this.isSettled,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       rowid: rowid ?? this.rowid,
@@ -1213,6 +1258,9 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     if (installmentNumber.present) {
       map['installment_number'] = Variable<int>(installmentNumber.value);
     }
+    if (isSettled.present) {
+      map['is_settled'] = Variable<bool>(isSettled.value);
+    }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
@@ -1237,6 +1285,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
           ..write('note: $note, ')
           ..write('emiId: $emiId, ')
           ..write('installmentNumber: $installmentNumber, ')
+          ..write('isSettled: $isSettled, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('rowid: $rowid')
@@ -3285,6 +3334,7 @@ typedef $$TransactionsTableCreateCompanionBuilder =
       Value<String?> note,
       Value<String?> emiId,
       Value<int?> installmentNumber,
+      Value<bool> isSettled,
       required DateTime createdAt,
       required DateTime updatedAt,
       Value<int> rowid,
@@ -3300,6 +3350,7 @@ typedef $$TransactionsTableUpdateCompanionBuilder =
       Value<String?> note,
       Value<String?> emiId,
       Value<int?> installmentNumber,
+      Value<bool> isSettled,
       Value<DateTime> createdAt,
       Value<DateTime> updatedAt,
       Value<int> rowid,
@@ -3375,6 +3426,11 @@ class $$TransactionsTableFilterComposer
 
   ColumnFilters<int> get installmentNumber => $composableBuilder(
     column: $table.installmentNumber,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isSettled => $composableBuilder(
+    column: $table.isSettled,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -3461,6 +3517,11 @@ class $$TransactionsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<bool> get isSettled => $composableBuilder(
+    column: $table.isSettled,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get createdAt => $composableBuilder(
     column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
@@ -3535,6 +3596,9 @@ class $$TransactionsTableAnnotationComposer
     builder: (column) => column,
   );
 
+  GeneratedColumn<bool> get isSettled =>
+      $composableBuilder(column: $table.isSettled, builder: (column) => column);
+
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
 
@@ -3602,6 +3666,7 @@ class $$TransactionsTableTableManager
                 Value<String?> note = const Value.absent(),
                 Value<String?> emiId = const Value.absent(),
                 Value<int?> installmentNumber = const Value.absent(),
+                Value<bool> isSettled = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
@@ -3615,6 +3680,7 @@ class $$TransactionsTableTableManager
                 note: note,
                 emiId: emiId,
                 installmentNumber: installmentNumber,
+                isSettled: isSettled,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 rowid: rowid,
@@ -3630,6 +3696,7 @@ class $$TransactionsTableTableManager
                 Value<String?> note = const Value.absent(),
                 Value<String?> emiId = const Value.absent(),
                 Value<int?> installmentNumber = const Value.absent(),
+                Value<bool> isSettled = const Value.absent(),
                 required DateTime createdAt,
                 required DateTime updatedAt,
                 Value<int> rowid = const Value.absent(),
@@ -3643,6 +3710,7 @@ class $$TransactionsTableTableManager
                 note: note,
                 emiId: emiId,
                 installmentNumber: installmentNumber,
+                isSettled: isSettled,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 rowid: rowid,

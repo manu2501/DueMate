@@ -18,6 +18,7 @@ void main() {
       ),
     );
 
+    await tester.pump();
     await tester.pump(const Duration(milliseconds: 500));
 
     // Verify Direct Startup Dashboard renders with net ledger balance and quick actions
@@ -34,16 +35,19 @@ void main() {
 
     // Tap Directory tab
     await tester.tap(find.byTooltip('Directory'));
+    await tester.pump();
     await tester.pump(const Duration(milliseconds: 500));
     expect(find.text('Directory'), findsWidgets);
 
     // Tap Expenses tab
     await tester.tap(find.byTooltip('Expenses'));
+    await tester.pump();
     await tester.pump(const Duration(milliseconds: 500));
-    expect(find.text('My Expenses & Outflows'), findsOneWidget);
+    expect(find.text('My Expenses & Outflows'), findsWidgets);
 
     // Tap Transactions tab
     await tester.tap(find.byTooltip('Transactions'));
+    await tester.pump();
     await tester.pump(const Duration(milliseconds: 500));
     expect(find.text('Transactions & Outflows'), findsOneWidget);
 

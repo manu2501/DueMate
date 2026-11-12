@@ -50,6 +50,7 @@ class Transactions extends Table {
   TextColumn get note => text().nullable()();
   TextColumn get emiId => text().nullable()();
   IntColumn get installmentNumber => integer().nullable()();
+  BoolColumn get isSettled => boolean().withDefault(const Constant(false))();
   DateTimeColumn get createdAt => dateTime()();
   DateTimeColumn get updatedAt => dateTime()();
 
