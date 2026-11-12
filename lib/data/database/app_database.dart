@@ -10,7 +10,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? e]) : super(e ?? driftDatabase(name: 'duemate_db'));
 
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 5;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -28,6 +28,9 @@ class AppDatabase extends _$AppDatabase {
       }
       if (from < 4) {
         await m.addColumn(transactions, transactions.isSettled);
+      }
+      if (from < 5) {
+        await m.addColumn(creditCardEmis, creditCardEmis.customScheduleJson);
       }
     },
     beforeOpen: (details) async {

@@ -1445,6 +1445,17 @@ class $CreditCardEmisTable extends CreditCardEmis
     requiredDuringInsert: false,
     defaultValue: const Constant('active'),
   );
+  static const VerificationMeta _customScheduleJsonMeta =
+      const VerificationMeta('customScheduleJson');
+  @override
+  late final GeneratedColumn<String> customScheduleJson =
+      GeneratedColumn<String>(
+        'custom_schedule_json',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+      );
   static const VerificationMeta _notesMeta = const VerificationMeta('notes');
   @override
   late final GeneratedColumn<String> notes = GeneratedColumn<String>(
@@ -1502,6 +1513,7 @@ class $CreditCardEmisTable extends CreditCardEmis
     dueDayOfMonth,
     isPaidByMe,
     status,
+    customScheduleJson,
     notes,
     createdAt,
     updatedAt,
@@ -1624,6 +1636,15 @@ class $CreditCardEmisTable extends CreditCardEmis
         status.isAcceptableOrUnknown(data['status']!, _statusMeta),
       );
     }
+    if (data.containsKey('custom_schedule_json')) {
+      context.handle(
+        _customScheduleJsonMeta,
+        customScheduleJson.isAcceptableOrUnknown(
+          data['custom_schedule_json']!,
+          _customScheduleJsonMeta,
+        ),
+      );
+    }
     if (data.containsKey('notes')) {
       context.handle(
         _notesMeta,
@@ -1712,6 +1733,10 @@ class $CreditCardEmisTable extends CreditCardEmis
         DriftSqlType.string,
         data['${effectivePrefix}status'],
       )!,
+      customScheduleJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}custom_schedule_json'],
+      ),
       notes: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}notes'],
@@ -1750,6 +1775,7 @@ class CreditCardEmi extends DataClass implements Insertable<CreditCardEmi> {
   final int dueDayOfMonth;
   final bool isPaidByMe;
   final String status;
+  final String? customScheduleJson;
   final String? notes;
   final DateTime createdAt;
   final DateTime updatedAt;
@@ -1767,6 +1793,7 @@ class CreditCardEmi extends DataClass implements Insertable<CreditCardEmi> {
     required this.dueDayOfMonth,
     required this.isPaidByMe,
     required this.status,
+    this.customScheduleJson,
     this.notes,
     required this.createdAt,
     required this.updatedAt,
@@ -1787,6 +1814,9 @@ class CreditCardEmi extends DataClass implements Insertable<CreditCardEmi> {
     map['due_day_of_month'] = Variable<int>(dueDayOfMonth);
     map['is_paid_by_me'] = Variable<bool>(isPaidByMe);
     map['status'] = Variable<String>(status);
+    if (!nullToAbsent || customScheduleJson != null) {
+      map['custom_schedule_json'] = Variable<String>(customScheduleJson);
+    }
     if (!nullToAbsent || notes != null) {
       map['notes'] = Variable<String>(notes);
     }
@@ -1812,6 +1842,9 @@ class CreditCardEmi extends DataClass implements Insertable<CreditCardEmi> {
       dueDayOfMonth: Value(dueDayOfMonth),
       isPaidByMe: Value(isPaidByMe),
       status: Value(status),
+      customScheduleJson: customScheduleJson == null && nullToAbsent
+          ? const Value.absent()
+          : Value(customScheduleJson),
       notes: notes == null && nullToAbsent
           ? const Value.absent()
           : Value(notes),
@@ -1843,6 +1876,9 @@ class CreditCardEmi extends DataClass implements Insertable<CreditCardEmi> {
       dueDayOfMonth: serializer.fromJson<int>(json['dueDayOfMonth']),
       isPaidByMe: serializer.fromJson<bool>(json['isPaidByMe']),
       status: serializer.fromJson<String>(json['status']),
+      customScheduleJson: serializer.fromJson<String?>(
+        json['customScheduleJson'],
+      ),
       notes: serializer.fromJson<String?>(json['notes']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
@@ -1867,6 +1903,7 @@ class CreditCardEmi extends DataClass implements Insertable<CreditCardEmi> {
       'dueDayOfMonth': serializer.toJson<int>(dueDayOfMonth),
       'isPaidByMe': serializer.toJson<bool>(isPaidByMe),
       'status': serializer.toJson<String>(status),
+      'customScheduleJson': serializer.toJson<String?>(customScheduleJson),
       'notes': serializer.toJson<String?>(notes),
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
@@ -1887,6 +1924,7 @@ class CreditCardEmi extends DataClass implements Insertable<CreditCardEmi> {
     int? dueDayOfMonth,
     bool? isPaidByMe,
     String? status,
+    Value<String?> customScheduleJson = const Value.absent(),
     Value<String?> notes = const Value.absent(),
     DateTime? createdAt,
     DateTime? updatedAt,
@@ -1904,6 +1942,9 @@ class CreditCardEmi extends DataClass implements Insertable<CreditCardEmi> {
     dueDayOfMonth: dueDayOfMonth ?? this.dueDayOfMonth,
     isPaidByMe: isPaidByMe ?? this.isPaidByMe,
     status: status ?? this.status,
+    customScheduleJson: customScheduleJson.present
+        ? customScheduleJson.value
+        : this.customScheduleJson,
     notes: notes.present ? notes.value : this.notes,
     createdAt: createdAt ?? this.createdAt,
     updatedAt: updatedAt ?? this.updatedAt,
@@ -1937,6 +1978,9 @@ class CreditCardEmi extends DataClass implements Insertable<CreditCardEmi> {
           ? data.isPaidByMe.value
           : this.isPaidByMe,
       status: data.status.present ? data.status.value : this.status,
+      customScheduleJson: data.customScheduleJson.present
+          ? data.customScheduleJson.value
+          : this.customScheduleJson,
       notes: data.notes.present ? data.notes.value : this.notes,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
@@ -1961,6 +2005,7 @@ class CreditCardEmi extends DataClass implements Insertable<CreditCardEmi> {
           ..write('dueDayOfMonth: $dueDayOfMonth, ')
           ..write('isPaidByMe: $isPaidByMe, ')
           ..write('status: $status, ')
+          ..write('customScheduleJson: $customScheduleJson, ')
           ..write('notes: $notes, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
@@ -1983,6 +2028,7 @@ class CreditCardEmi extends DataClass implements Insertable<CreditCardEmi> {
     dueDayOfMonth,
     isPaidByMe,
     status,
+    customScheduleJson,
     notes,
     createdAt,
     updatedAt,
@@ -2004,6 +2050,7 @@ class CreditCardEmi extends DataClass implements Insertable<CreditCardEmi> {
           other.dueDayOfMonth == this.dueDayOfMonth &&
           other.isPaidByMe == this.isPaidByMe &&
           other.status == this.status &&
+          other.customScheduleJson == this.customScheduleJson &&
           other.notes == this.notes &&
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt &&
@@ -2023,6 +2070,7 @@ class CreditCardEmisCompanion extends UpdateCompanion<CreditCardEmi> {
   final Value<int> dueDayOfMonth;
   final Value<bool> isPaidByMe;
   final Value<String> status;
+  final Value<String?> customScheduleJson;
   final Value<String?> notes;
   final Value<DateTime> createdAt;
   final Value<DateTime> updatedAt;
@@ -2041,6 +2089,7 @@ class CreditCardEmisCompanion extends UpdateCompanion<CreditCardEmi> {
     this.dueDayOfMonth = const Value.absent(),
     this.isPaidByMe = const Value.absent(),
     this.status = const Value.absent(),
+    this.customScheduleJson = const Value.absent(),
     this.notes = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
@@ -2060,6 +2109,7 @@ class CreditCardEmisCompanion extends UpdateCompanion<CreditCardEmi> {
     required int dueDayOfMonth,
     this.isPaidByMe = const Value.absent(),
     this.status = const Value.absent(),
+    this.customScheduleJson = const Value.absent(),
     this.notes = const Value.absent(),
     required DateTime createdAt,
     required DateTime updatedAt,
@@ -2089,6 +2139,7 @@ class CreditCardEmisCompanion extends UpdateCompanion<CreditCardEmi> {
     Expression<int>? dueDayOfMonth,
     Expression<bool>? isPaidByMe,
     Expression<String>? status,
+    Expression<String>? customScheduleJson,
     Expression<String>? notes,
     Expression<DateTime>? createdAt,
     Expression<DateTime>? updatedAt,
@@ -2108,6 +2159,8 @@ class CreditCardEmisCompanion extends UpdateCompanion<CreditCardEmi> {
       if (dueDayOfMonth != null) 'due_day_of_month': dueDayOfMonth,
       if (isPaidByMe != null) 'is_paid_by_me': isPaidByMe,
       if (status != null) 'status': status,
+      if (customScheduleJson != null)
+        'custom_schedule_json': customScheduleJson,
       if (notes != null) 'notes': notes,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
@@ -2129,6 +2182,7 @@ class CreditCardEmisCompanion extends UpdateCompanion<CreditCardEmi> {
     Value<int>? dueDayOfMonth,
     Value<bool>? isPaidByMe,
     Value<String>? status,
+    Value<String?>? customScheduleJson,
     Value<String?>? notes,
     Value<DateTime>? createdAt,
     Value<DateTime>? updatedAt,
@@ -2148,6 +2202,7 @@ class CreditCardEmisCompanion extends UpdateCompanion<CreditCardEmi> {
       dueDayOfMonth: dueDayOfMonth ?? this.dueDayOfMonth,
       isPaidByMe: isPaidByMe ?? this.isPaidByMe,
       status: status ?? this.status,
+      customScheduleJson: customScheduleJson ?? this.customScheduleJson,
       notes: notes ?? this.notes,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
@@ -2195,6 +2250,9 @@ class CreditCardEmisCompanion extends UpdateCompanion<CreditCardEmi> {
     if (status.present) {
       map['status'] = Variable<String>(status.value);
     }
+    if (customScheduleJson.present) {
+      map['custom_schedule_json'] = Variable<String>(customScheduleJson.value);
+    }
     if (notes.present) {
       map['notes'] = Variable<String>(notes.value);
     }
@@ -2228,6 +2286,7 @@ class CreditCardEmisCompanion extends UpdateCompanion<CreditCardEmi> {
           ..write('dueDayOfMonth: $dueDayOfMonth, ')
           ..write('isPaidByMe: $isPaidByMe, ')
           ..write('status: $status, ')
+          ..write('customScheduleJson: $customScheduleJson, ')
           ..write('notes: $notes, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
@@ -3794,6 +3853,7 @@ typedef $$CreditCardEmisTableCreateCompanionBuilder =
       required int dueDayOfMonth,
       Value<bool> isPaidByMe,
       Value<String> status,
+      Value<String?> customScheduleJson,
       Value<String?> notes,
       required DateTime createdAt,
       required DateTime updatedAt,
@@ -3814,6 +3874,7 @@ typedef $$CreditCardEmisTableUpdateCompanionBuilder =
       Value<int> dueDayOfMonth,
       Value<bool> isPaidByMe,
       Value<String> status,
+      Value<String?> customScheduleJson,
       Value<String?> notes,
       Value<DateTime> createdAt,
       Value<DateTime> updatedAt,
@@ -3908,6 +3969,11 @@ class $$CreditCardEmisTableFilterComposer
 
   ColumnFilters<String> get status => $composableBuilder(
     column: $table.status,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get customScheduleJson => $composableBuilder(
+    column: $table.customScheduleJson,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -4019,6 +4085,11 @@ class $$CreditCardEmisTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get customScheduleJson => $composableBuilder(
+    column: $table.customScheduleJson,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get notes => $composableBuilder(
     column: $table.notes,
     builder: (column) => ColumnOrderings(column),
@@ -4117,6 +4188,11 @@ class $$CreditCardEmisTableAnnotationComposer
   GeneratedColumn<String> get status =>
       $composableBuilder(column: $table.status, builder: (column) => column);
 
+  GeneratedColumn<String> get customScheduleJson => $composableBuilder(
+    column: $table.customScheduleJson,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<String> get notes =>
       $composableBuilder(column: $table.notes, builder: (column) => column);
 
@@ -4197,6 +4273,7 @@ class $$CreditCardEmisTableTableManager
                 Value<int> dueDayOfMonth = const Value.absent(),
                 Value<bool> isPaidByMe = const Value.absent(),
                 Value<String> status = const Value.absent(),
+                Value<String?> customScheduleJson = const Value.absent(),
                 Value<String?> notes = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
@@ -4215,6 +4292,7 @@ class $$CreditCardEmisTableTableManager
                 dueDayOfMonth: dueDayOfMonth,
                 isPaidByMe: isPaidByMe,
                 status: status,
+                customScheduleJson: customScheduleJson,
                 notes: notes,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
@@ -4235,6 +4313,7 @@ class $$CreditCardEmisTableTableManager
                 required int dueDayOfMonth,
                 Value<bool> isPaidByMe = const Value.absent(),
                 Value<String> status = const Value.absent(),
+                Value<String?> customScheduleJson = const Value.absent(),
                 Value<String?> notes = const Value.absent(),
                 required DateTime createdAt,
                 required DateTime updatedAt,
@@ -4253,6 +4332,7 @@ class $$CreditCardEmisTableTableManager
                 dueDayOfMonth: dueDayOfMonth,
                 isPaidByMe: isPaidByMe,
                 status: status,
+                customScheduleJson: customScheduleJson,
                 notes: notes,
                 createdAt: createdAt,
                 updatedAt: updatedAt,

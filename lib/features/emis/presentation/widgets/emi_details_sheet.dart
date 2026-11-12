@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -29,6 +30,68 @@ class EmiDetailsSheet extends ConsumerWidget {
       useRootNavigator: true,
       backgroundColor: Colors.transparent,
       builder: (_) => EmiDetailsSheet(emi: emi, person: person),
+    );
+  }
+
+  void _editSingleInstallmentAmount(BuildContext context, WidgetRef ref, int installmentNum) {
+    final currentVal = emi.getMonthlyInstallmentFor(installmentNum);
+    final controller = TextEditingController(text: currentVal.toStringAsFixed(0));
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('Edit Month $installmentNum Amount'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Customize the specific installment amount for month $installmentNum of ${emi.itemName}.'),
+            const SizedBox(height: 14),
+            TextField(
+              controller: controller,
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              decoration: const InputDecoration(
+                labelText: 'Installment Amount',
+                prefixText: '₹ ',
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () async {
+              final newAmount = double.tryParse(controller.text.trim());
+              if (newAmount == null || newAmount <= 0) return;
+
+              final Map<String, dynamic> scheduleMap = emi.customScheduleJson != null && emi.customScheduleJson!.isNotEmpty
+                  ? jsonDecode(emi.customScheduleJson!)
+                  : {};
+              scheduleMap['$installmentNum'] = newAmount;
+
+              final updatedEmi = emi.copyWith(
+                customScheduleJson: jsonEncode(scheduleMap),
+                updatedAt: DateTime.now(),
+              );
+
+              await ref.read(emiRepositoryProvider).updateEmi(updatedEmi);
+
+              if (ctx.mounted) Navigator.of(ctx).pop();
+              if (context.mounted) Navigator.of(context).pop();
+
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Month $installmentNum installment updated to ₹${newAmount.toStringAsFixed(0)}')),
+                );
+              }
+            },
+            child: const Text('Save Amount'),
+          ),
+        ],
+      ),
     );
   }
 
@@ -338,9 +401,11 @@ class EmiDetailsSheet extends ConsumerWidget {
                       final isNextToPay = installmentNum == emi.installmentsPaid + 1;
                       final dueDate = emi.getDueDateForInstallment(installmentNum);
 
-                      return Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                        child: Row(
+                      return InkWell(
+                        onTap: () => _editSingleInstallmentAmount(context, ref, installmentNum),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                          child: Row(
                           children: [
                             Container(
                               width: 32,
@@ -391,7 +456,7 @@ class EmiDetailsSheet extends ConsumerWidget {
                               crossAxisAlignment: CrossAxisAlignment.end,
                               children: [
                                 Text(
-                                  CurrencyFormatter.format(emi.monthlyInstallment, symbol: currencySymbol),
+                                  CurrencyFormatter.format(emi.getMonthlyInstallmentFor(installmentNum), symbol: currencySymbol),
                                   style: GoogleFonts.dmSans(
                                     fontSize: 14,
                                     fontWeight: FontWeight.w700,
@@ -455,7 +520,8 @@ class EmiDetailsSheet extends ConsumerWidget {
                             ),
                           ],
                         ),
-                      );
+                      ),
+                    );
                     },
                   ),
                 ),

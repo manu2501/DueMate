@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:duemate/core/constants/app_constants.dart';
 
 class CreditCardEmi {
@@ -13,6 +14,7 @@ class CreditCardEmi {
   final int dueDayOfMonth;
   final bool isPaidByMe;
   final String status; // 'active', 'completed', 'cancelled'
+  final String? customScheduleJson;
   final String? notes;
   final DateTime createdAt;
   final DateTime updatedAt;
@@ -31,6 +33,7 @@ class CreditCardEmi {
     required this.dueDayOfMonth,
     this.isPaidByMe = true,
     this.status = 'active',
+    this.customScheduleJson,
     this.notes,
     required this.createdAt,
     required this.updatedAt,
@@ -46,6 +49,20 @@ class CreditCardEmi {
   double get paidAmount => (installmentsPaid * monthlyInstallment).clamp(0.0, totalAmount);
   double get remainingAmount => (remainingInstallments * monthlyInstallment).clamp(0.0, totalAmount);
   double get progress => totalTenureMonths > 0 ? (installmentsPaid / totalTenureMonths).clamp(0.0, 1.0) : 1.0;
+
+  /// Returns the specific customized installment figure for month [installmentNumber], or fallback to default
+  double getMonthlyInstallmentFor(int installmentNumber) {
+    if (customScheduleJson != null && customScheduleJson!.isNotEmpty) {
+      try {
+        final Map<String, dynamic> parsed = jsonDecode(customScheduleJson!);
+        final val = parsed['$installmentNumber'];
+        if (val != null) {
+          return (val as num).toDouble();
+        }
+      } catch (_) {}
+    }
+    return monthlyInstallment;
+  }
 
   /// Calculates the due date for a specific installment number (1-based index)
   DateTime getDueDateForInstallment(int installmentNumber) {
@@ -84,6 +101,7 @@ class CreditCardEmi {
     int? dueDayOfMonth,
     bool? isPaidByMe,
     String? status,
+    String? customScheduleJson,
     String? notes,
     DateTime? createdAt,
     DateTime? updatedAt,
@@ -102,6 +120,7 @@ class CreditCardEmi {
       dueDayOfMonth: dueDayOfMonth ?? this.dueDayOfMonth,
       isPaidByMe: isPaidByMe ?? this.isPaidByMe,
       status: status ?? this.status,
+      customScheduleJson: customScheduleJson ?? this.customScheduleJson,
       notes: notes ?? this.notes,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
@@ -117,4 +136,3 @@ class CreditCardEmi {
   @override
   int get hashCode => id.hashCode;
 }
-

@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -64,6 +65,7 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
   DateTime _startDate = DateTime.now();
   int _dueDayOfMonth = DateTime.now().day;
   bool _isSaving = false;
+  Map<int, double> _customScheduleMap = {};
 
   List<EmiItemSuggestion> get _itemSuggestions => EmiSuggestionsData.itemSuggestions;
   List<EmiItemSuggestion> get _loanPurposeSuggestions => EmiSuggestionsData.loanPurposeSuggestions;
@@ -90,6 +92,12 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
     if (emi != null) {
       _isForSelf = emi.isForSelf;
       _selectedPersonId = emi.personId;
+      if (emi.customScheduleJson != null && emi.customScheduleJson!.isNotEmpty) {
+        try {
+          final Map<String, dynamic> parsed = jsonDecode(emi.customScheduleJson!);
+          _customScheduleMap = parsed.map((k, v) => MapEntry(int.parse(k), (v as num).toDouble()));
+        } catch (_) {}
+      }
     } else if (widget.initialPersonId != null && widget.initialPersonId != AppConstants.selfPersonId) {
       _isForSelf = false;
       _selectedPersonId = widget.initialPersonId;
@@ -265,6 +273,10 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
         finalNotes = finalNotes != null ? '$prefix\n$finalNotes' : prefix;
       }
 
+      final customScheduleStr = _customScheduleMap.isNotEmpty
+          ? jsonEncode(_customScheduleMap.map((k, v) => MapEntry(k.toString(), v)))
+          : null;
+
       if (isEditing) {
         final current = widget.emiToEdit!;
         final updated = current.copyWith(
@@ -278,6 +290,7 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
           startDate: _startDate,
           dueDayOfMonth: _dueDayOfMonth,
           isPaidByMe: _isForSelf ? true : _isPaidByMe,
+          customScheduleJson: customScheduleStr,
           notes: finalNotes,
           updatedAt: DateTime.now(),
         );
@@ -296,6 +309,7 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
           dueDayOfMonth: _dueDayOfMonth,
           isPaidByMe: _isForSelf ? true : _isPaidByMe,
           status: 'active',
+          customScheduleJson: customScheduleStr,
           notes: finalNotes,
           createdAt: DateTime.now(),
           updatedAt: DateTime.now(),
@@ -329,6 +343,91 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
         setState(() => _isSaving = false);
       }
     }
+  }
+
+  void _showCustomizeMonthlyAmountsDialog(BuildContext context) {
+    final controllers = <int, TextEditingController>{};
+    for (int i = 1; i <= _tenureMonths; i++) {
+      final currentVal = _customScheduleMap[i] ?? _monthlyInstallment;
+      controllers[i] = TextEditingController(
+        text: currentVal % 1 == 0 ? currentVal.toInt().toString() : currentVal.toStringAsFixed(2),
+      );
+    }
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.12),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(Icons.edit_calendar_rounded, color: Theme.of(context).colorScheme.primary, size: 20),
+            ),
+            const SizedBox(width: 10),
+            const Text('Customize Monthly EMI Split'),
+          ],
+        ),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Edit individual installment amounts for specific months (e.g. Month 1 fee or custom payment split).',
+                  style: TextStyle(fontSize: 12),
+                ),
+                const SizedBox(height: 12),
+                ...List.generate(_tenureMonths, (idx) {
+                  final monthNum = idx + 1;
+                  final dueDate = DateTime(_startDate.year, _startDate.month + idx, _dueDayOfMonth);
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: TextField(
+                      controller: controllers[monthNum],
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      decoration: InputDecoration(
+                        labelText: 'Month $monthNum (${DateFormatter.formatShortDate(dueDate)})',
+                        prefixText: '₹ ',
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                    ),
+                  );
+                }),
+              ],
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () {
+              final newMap = <int, double>{};
+              for (int i = 1; i <= _tenureMonths; i++) {
+                final val = double.tryParse(controllers[i]?.text.trim() ?? '') ?? _monthlyInstallment;
+                newMap[i] = val;
+              }
+              setState(() {
+                _customScheduleMap = newMap;
+              });
+              Navigator.of(ctx).pop();
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Customized monthly installment schedule applied')),
+              );
+            },
+            child: const Text('Apply Monthly Amounts'),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _buildOwnershipSelector(BuildContext context) {
@@ -1095,6 +1194,24 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
                   _tenureMonths = months;
                 });
               },
+            ),
+
+            const SizedBox(height: 12),
+
+            // Per-Month Customization Action Button
+            OutlinedButton.icon(
+              onPressed: () => _showCustomizeMonthlyAmountsDialog(context),
+              icon: Icon(Icons.edit_calendar_rounded, size: 18, color: cs.primary),
+              label: Text(
+                _customScheduleMap.isNotEmpty
+                    ? 'Edit Custom Monthly Amounts (${_customScheduleMap.length} customized)'
+                    : 'Customize Per-Month Installment Amounts',
+                style: GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 13),
+              ),
+              style: OutlinedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
             ),
 
             const SizedBox(height: 18),
