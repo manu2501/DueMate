@@ -6,6 +6,7 @@ import 'package:duemate/core/widgets/dock_nav_icon.dart';
 import 'package:duemate/features/dashboard/presentation/screens/dashboard_screen.dart';
 import 'package:duemate/features/emis/presentation/screens/add_edit_emi_screen.dart';
 import 'package:duemate/features/expenses/presentation/screens/expense_charts_screen.dart';
+import 'package:duemate/features/people/presentation/screens/lending_trends_screen.dart';
 import 'package:duemate/features/expenses/presentation/screens/expenses_screen.dart';
 import 'package:duemate/features/people/presentation/screens/add_edit_person_screen.dart';
 import 'package:duemate/features/people/presentation/screens/people_screen.dart';
@@ -107,6 +108,15 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           context: context,
           state: state,
           child: const ExpenseChartsScreen(),
+        ),
+      ),
+      GoRoute(
+        parentNavigatorKey: _rootNavigatorKey,
+        path: '/lending-trends',
+        pageBuilder: (context, state) => _buildSlideTransition(
+          context: context,
+          state: state,
+          child: const LendingTrendsScreen(),
         ),
       ),
       GoRoute(

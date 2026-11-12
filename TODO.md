@@ -39,8 +39,8 @@ What's done, what's known to be missing, and what's next.
 
 ## ⚠️ Known gaps
 
-- [ ] **Scheduled EMI reminders aren't wired up.** `NotificationService.scheduleEmiDueReminder` exists but nothing calls it; Settings only manages the permission and sends a test notification. Schedule (and cancel/reschedule) reminders when EMIs are created, edited, deleted or posted.
-- [ ] **No restore from backup in the UI.** `BackupHelper.restoreBackup` exists but there is no way to pick a backup file (needs a file picker).
+- [x] **EMI reminders:** the day before each of the next three installments of every active EMI, re-planned automatically from the EMI table (`EmiReminderPlanner` + `emiReminderSyncProvider`).
+- [x] **Restore from backup:** Settings › Restore from a backup; validated before anything changes, replaces all data in one transaction.
 - [ ] **Shared loan direction needs a decision.** For loans you lend or borrow in installments, each installment is posted as money *given* (lent) or *received* (borrowed), so balances move the opposite way to a typical repayment loan, and the principal is never posted up front. Card EMIs paid on someone's behalf are correct. Decide the intended model, then change `EmiProcessorService` with a migration for existing loans.
 
 ---
@@ -50,13 +50,13 @@ What's done, what's known to be missing, and what's next.
 ### Money in and out
 - [ ] **Floating Rate & Repo Rate Adjustment:** Mark floating rate bank loans linked to repo rate (RLLR / EBLR). When repo rate increases or decreases, auto-recalculate new monthly EMI or adjust remaining tenure across all linked loans seamlessly.
 - [x] **UPI QR and deep links:** UPI QR on the Receive sheet (shareable as an image), "Pay with UPI app" on Give for people with a saved UPI ID (schema v8), your UPI ID in reminders.
-- [ ] **UPI payment confirmation:** UPI apps don't report back to an app opened via a link, so a Give is still recorded by hand. Consider asking "Did it go through?" when DueMate comes back to the front after "Pay with UPI app".
+- [x] **UPI payment confirmation:** after "Pay with UPI app", DueMate asks "Did the payment go through?" when you come back (after App Lock, if it's up); Yes records the Give as UPI.
 - [ ] **Receipt attachments:** attach payment screenshots or receipts to entries, expenses and EMIs (`image_picker`), with a full-screen viewer.
 - [ ] **Credit card bills:** statement date, total and minimum due, with reminders before the due date.
 - [ ] **Loan prepayment:** remaining principal vs interest, and a close-early calculator.
 
 ### Insight
-- [ ] **Lending cashflow chart:** money lent vs collected month by month (spending trends already exist).
+- [x] **Lending cashflow chart:** Lending trends (People › chart icon), lent vs collected per month.
 - [ ] **Repayment reliability:** an on-time percentage per person.
 
 ### Privacy and convenience

@@ -97,10 +97,24 @@ class _UpiProfileDialogState extends State<_UpiProfileDialog> {
   }
 }
 
-/// Opens a UPI app to pay [payeeId], pre-filled with [amount]. The payment
-/// itself happens in that app; nothing is recorded here.
-Future<void> payWithUpiApp(
-  BuildContext context, {
+/// Hands a `upi://pay` link to a UPI app; true if one opened. Overridden in
+/// tests (there's no UPI app there).
+final upiLauncherProvider = Provider<Future<bool> Function(Uri)>(
+  (ref) => (uri) async {
+    try {
+      return await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } catch (_) {
+      return false;
+    }
+  },
+);
+
+/// Opens a UPI app to pay [payeeId], pre-filled with [amount]. Returns true
+/// if one opened. The payment itself happens in that app; UPI apps don't
+/// report back, so the caller asks the user afterwards.
+Future<bool> payWithUpiApp(
+  BuildContext context,
+  WidgetRef ref, {
   required String payeeId,
   required String payeeName,
   required double amount,
@@ -108,17 +122,11 @@ Future<void> payWithUpiApp(
 }) async {
   final messenger = ScaffoldMessenger.maybeOf(context);
   final uri = Upi.payUri(payeeId: payeeId, payeeName: payeeName, amount: amount, note: note);
-  var opened = false;
-  try {
-    opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
-  } catch (_) {
-    opened = false;
+  final opened = await ref.read(upiLauncherProvider)(uri);
+  if (!opened) {
+    messenger?.showSnackBar(const SnackBar(content: Text('No UPI app found on this phone.')));
   }
-  messenger?.showSnackBar(SnackBar(
-    content: Text(opened
-        ? 'Once the payment goes through, tap Give to record it.'
-        : 'No UPI app found on this phone.'),
-  ));
+  return opened;
 }
 
 /// Shows a UPI QR for you to be paid [amount] (optional). Asks for your UPI

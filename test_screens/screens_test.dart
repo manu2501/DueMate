@@ -22,6 +22,7 @@ import 'package:duemate/data/database/app_database.dart' hide Person, CreditCard
 import 'package:duemate/data/database/tables.dart';
 import 'package:duemate/data/providers/app_providers.dart';
 import 'package:duemate/core/services/app_lock_service.dart';
+import 'package:duemate/core/widgets/upi_widgets.dart';
 import 'package:duemate/data/repositories/emi_repository_impl.dart';
 import 'package:duemate/data/repositories/expense_repository_impl.dart';
 import 'package:duemate/data/repositories/person_repository_impl.dart';
@@ -184,6 +185,8 @@ void main() {
           databaseProvider.overrideWithValue(db),
           // No biometric prompt in tests: every unlock attempt is "cancelled".
           appLockServiceProvider.overrideWithValue(FakeAppLockService()..next = AppLockAuthResult.cancelled),
+          // No UPI app in tests: pretend one opened.
+          upiLauncherProvider.overrideWithValue((_) async => true),
         ],
         child: const DueMateApp(),
       ));
@@ -242,6 +245,8 @@ void main() {
 
       await go('/expense-charts');
       await shot('11_charts');
+      await go('/lending-trends');
+      await shot('20_lending_trends');
 
       await go('/add-person');
       await shot('12_add_person');
@@ -269,6 +274,24 @@ void main() {
       await settle();
       await tester.enterText(find.byType(TextField).first, '2000');
       await shot('17_give_upi');
+      // Paid in the UPI app and came back: DueMate asks whether it went through.
+      final pay = find.textContaining('with UPI app');
+      await tester.ensureVisible(pay);
+      await tester.tap(pay);
+      await tester.pump();
+      for (final s in [
+        AppLifecycleState.inactive,
+        AppLifecycleState.hidden,
+        AppLifecycleState.paused,
+        AppLifecycleState.hidden,
+        AppLifecycleState.inactive,
+        AppLifecycleState.resumed,
+      ]) {
+        tester.binding.handleAppLifecycleStateChanged(s);
+      }
+      await shot('19_upi_paid');
+      await tester.tap(find.text('Not yet'));
+      await settle();
       await home();
       await go('/people/rahul');
       await tester.tap(find.text('Receive').first);

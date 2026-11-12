@@ -8,3 +8,4 @@ export 'dashboard_providers.dart';
 export 'people_providers.dart';
 export 'emi_providers.dart';
 export 'app_lock_provider.dart';
+export 'reminder_providers.dart';

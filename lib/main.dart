@@ -38,6 +38,8 @@ class _DueMateAppState extends ConsumerState<DueMateApp> with WidgetsBindingObse
     // Registered before the router's back-button dispatcher, so
     // [didPopRoute] gets the back press first.
     WidgetsBinding.instance.addObserver(this);
+    // Keeps EMI due reminders scheduled for as long as the app runs.
+    ref.listenManual(emiReminderSyncProvider, (_, _) {});
   }
 
   @override

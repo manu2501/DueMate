@@ -211,6 +211,11 @@ class _PeopleScreenState extends ConsumerState<PeopleScreen> {
               : const Icon(Icons.contacts_outlined),
         ),
         IconButton(tooltip: 'Sort', onPressed: _showSortSheet, icon: const Icon(Icons.sort_rounded)),
+        IconButton(
+          tooltip: 'Lending trends',
+          onPressed: () => context.push('/lending-trends'),
+          icon: const Icon(Icons.insights_outlined),
+        ),
       ],
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => AddEditPersonScreen.show(context),
@@ -297,6 +302,7 @@ class _PeopleScreenState extends ConsumerState<PeopleScreen> {
                     summary: s,
                     symbol: symbol,
                     onLongPress: () => _showQuickActions(s, symbol),
+                    showRepayment: true,
                   ),
               ],
             ),

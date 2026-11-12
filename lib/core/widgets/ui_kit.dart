@@ -182,12 +182,60 @@ class MoneyText extends ConsumerWidget {
   return (label: 'settled', tone: MoneyTone.muted);
 }
 
+/// How much has been paid back, as a thin bar and "Paid ₹X of ₹Y · N%".
+/// The paid part is green when it's money coming back to you and neutral
+/// ink when you're the one repaying (lending is never red). Amounts follow
+/// "Hide amounts"; the percentage stays visible.
+class RepaymentBar extends ConsumerWidget {
+  final Repayment repayment;
+  final double thickness;
+
+  const RepaymentBar(this.repayment, {super.key, this.thickness = 4});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final ledger = LedgerColors.of(context);
+    final money = ref.watch(displayMoneyProvider);
+    final r = repayment;
+    final caption =
+        '${r.byYou ? 'You paid back' : 'Paid'} ${money(r.paid)} of ${money(r.of)} · ${r.percent}%';
+
+    return Semantics(
+      label: caption,
+      excludeSemantics: true,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          LinearProgressIndicator(
+            value: r.fraction,
+            minHeight: thickness,
+            borderRadius: BorderRadius.circular(thickness),
+            color: r.byYou ? ledger.cashOut : ledger.cashIn,
+            backgroundColor: theme.colorScheme.surfaceContainerHighest,
+          ),
+          const SizedBox(height: AppSpace.xs),
+          Text(
+            caption,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 /// One person in a list: who, when you last dealt with them, and the balance.
+/// With [showRepayment], also how much has been paid back.
 class PersonRow extends StatelessWidget {
   final PersonSummary summary;
   final String symbol;
   final VoidCallback? onTap;
   final VoidCallback? onLongPress;
+  final bool showRepayment;
 
   const PersonRow({
     super.key,
@@ -195,6 +243,7 @@ class PersonRow extends StatelessWidget {
     required this.symbol,
     this.onTap,
     this.onLongPress,
+    this.showRepayment = false,
   });
 
   @override
@@ -208,10 +257,12 @@ class PersonRow extends StatelessWidget {
         : (p.phone?.isNotEmpty ?? false)
             ? p.phone!
             : 'No entries yet';
+    final repayment = showRepayment ? summary.repayment : null;
+    final open = onTap ?? () => context.push('/people/${p.id}');
 
-    return ListTile(
-      onTap: onTap ?? () => context.push('/people/${p.id}'),
-      onLongPress: onLongPress,
+    final tile = ListTile(
+      onTap: repayment == null ? open : null,
+      onLongPress: repayment == null ? onLongPress : null,
       leading: AvatarWidget(name: p.name, radius: 20, heroTag: 'avatar-${p.id}'),
       title: Text(p.name, maxLines: 1, overflow: TextOverflow.ellipsis),
       subtitle: Text(subtitle, maxLines: 1, overflow: TextOverflow.ellipsis),
@@ -224,6 +275,26 @@ class PersonRow extends StatelessWidget {
           Text(
             wording.label,
             style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+          ),
+        ],
+      ),
+    );
+    if (repayment == null) return tile;
+
+    // The bar spans the row under the name and balance, so every row's bar
+    // has the same width whatever the balance column needs. One tap target.
+    return InkWell(
+      onTap: open,
+      onLongPress: onLongPress,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          tile,
+          Padding(
+            // Lines up with the name and the balance: tile padding, then the
+            // 40dp avatar and ListTile's 16dp gap.
+            padding: const EdgeInsets.fromLTRB(AppSpace.screenGutter + 40 + 16, 0, AppSpace.screenGutter, AppSpace.md),
+            child: RepaymentBar(repayment),
           ),
         ],
       ),
@@ -289,6 +360,34 @@ class IconBadge extends StatelessWidget {
         borderRadius: BorderRadius.circular(AppRadius.md),
       ),
       child: Icon(icon, size: size * 0.5, color: color ?? cs.onSurfaceVariant),
+    );
+  }
+}
+
+/// App-bar menu for picking a year, e.g. on trend screens.
+class YearMenuButton extends StatelessWidget {
+  final int year;
+  final List<int> years;
+  final ValueChanged<int> onSelected;
+
+  const YearMenuButton({super.key, required this.year, required this.years, required this.onSelected});
+
+  @override
+  Widget build(BuildContext context) {
+    return PopupMenuButton<int>(
+      tooltip: 'Choose year',
+      initialValue: year,
+      onSelected: onSelected,
+      itemBuilder: (_) => [for (final y in years.reversed) PopupMenuItem(value: y, child: Text('$y'))],
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: AppSpace.lg),
+        child: Row(
+          children: [
+            Text('$year', style: Theme.of(context).textTheme.titleMedium),
+            const Icon(Icons.arrow_drop_down_rounded),
+          ],
+        ),
+      ),
     );
   }
 }

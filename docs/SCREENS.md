@@ -50,9 +50,11 @@ asks for your fingerprint, face or screen lock, so someone you hand the phone to
   <img src="screenshots/02_people_dark.png" width="260" alt="People, dark" />
 </p>
 
-Everyone you deal with, one row each: last activity and the balance in words (*owes you*,
-*you owe*, *settled*). Search by name, phone or notes; filter by open balance, settled or
-archived; sort from the top bar; add from contacts.
+Everyone you deal with, one row each: last activity, the balance in words (*owes you*,
+*you owe*, *settled*), and a **repayment bar**: how much has been paid back so far, e.g. *Paid ₹2,500
+of ₹15,000 · 16%* (green when it's money coming back to you; *You paid back …* in neutral ink when
+you owe them). The percentage rounds down, so 100% means fully paid. Search by name, phone or notes; filter by open balance, settled or
+archived; sort from the top bar; add from contacts; the chart icon opens **Lending trends**.
 
 - **Tap** a person to open their ledger.
 - **Long-press** for shortcuts: give, receive, WhatsApp reminder.
@@ -99,7 +101,7 @@ exports the filtered entries as PDF or CSV.
   <img src="screenshots/03_person_dark.png" width="260" alt="Person ledger, dark" />
 </p>
 
-Who owes whom and how much, what you gave and received, then **Give** / **Receive** for this
+Who owes whom and how much, a larger repayment bar (*Paid ₹2,500 of ₹15,000 · 16%*), then **Give** / **Receive** for this
 person. Their EMIs follow, then history by month. The top bar has a WhatsApp reminder (when they
 owe you and have a number) and a menu: share statement, share balance as text, contact details,
 edit, add EMI or loan, archive, delete.
@@ -115,6 +117,18 @@ Monthly totals for a year (pick the year top right; tap a month). For the chosen
 total, daily average and share of budget, **where it went** by category, and every expense that
 month, each editable.
 
+### Lending trends
+
+<p>
+  <img src="screenshots/20_lending_trends.png" width="260" alt="Lending trends, light" />
+  <img src="screenshots/20_lending_trends_dark.png" width="260" alt="Lending trends, dark" />
+</p>
+
+From the chart icon on **People**: money you lent and collected each month of a year, side by side
+(lent in neutral ink, collected in green, with a legend). Tap a month for its numbers; it leads with
+the net (+ when more came back), then lent, collected and net for the month and the whole year.
+Your own EMIs are spending, not lending, so they're left out.
+
 ### Settings
 
 <p>
@@ -123,8 +137,18 @@ month, each editable.
 </p>
 
 Theme, hide amounts and currency; monthly budget and your UPI ID (₹ only); App Lock and how soon it locks after you leave
-the app; notifications (permission and a test notification); backup, CSV export, and erase all data
-(asks first). About at the bottom.
+the app; notifications (EMI reminders and a test notification); backup, **restore from a backup**,
+CSV export, and erase all data (asks first).
+
+**EMI reminders.** With notifications on, DueMate reminds you at 9:00 the day before each EMI
+installment is due (on the day, if that's already passed), for the next three installments of every
+active EMI. They stay in step automatically when EMIs are added, edited, deleted or posted, and
+after a restore. While amounts are hidden or App Lock is on, reminders leave the amount out, and
+their content is hidden on the lock screen.
+
+**Restore from a backup.** Pick a backup file; DueMate shows what's in it (people, entries, EMIs,
+expenses, and when it was made) and asks before replacing everything on the phone. A file that
+isn't a backup, or is damaged, is refused without changing anything. About at the bottom.
 
 ### App Lock
 
@@ -155,13 +179,16 @@ Choose a person (their balance shows, with a one-tap *settle full balance* / *pa
 it applies), the amount with quick adds, payment method, date and note.
 
 **UPI** (only when the currency is ₹). Giving to someone whose UPI ID is saved shows **Pay with
-UPI app**: it opens your UPI app with their ID and the amount filled in; once the payment goes
-through, tap **Give** to record it. Receiving shows **Show UPI QR**: a QR with your UPI ID and the
+UPI app**: it opens your UPI app with their ID and the amount filled in. UPI apps don't tell
+DueMate whether you paid, so when you come back (after unlocking, if App Lock is on) it asks **Did
+the payment go through?** — **Yes, record it** saves the Give as a UPI payment; **Not yet** leaves
+the sheet as it was. Receiving shows **Show UPI QR**: a QR with your UPI ID and the
 amount that any UPI app can scan, which you can also **Share** as an image. The first time, it asks
 for your UPI ID (also in Settings › Money). WhatsApp reminders include your UPI ID when it's set.
 
 <p>
   <img src="screenshots/17_give_upi.png" width="260" alt="Give with Pay with UPI app, light" />
+  <img src="screenshots/19_upi_paid.png" width="260" alt="Did the payment go through?, light" />
   <img src="screenshots/18_upi_qr.png" width="260" alt="UPI QR, light" />
   <img src="screenshots/18_upi_qr_dark.png" width="260" alt="UPI QR, dark" />
 </p>

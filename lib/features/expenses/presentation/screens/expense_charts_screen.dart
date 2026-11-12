@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:duemate/core/constants/app_constants.dart';
 import 'package:duemate/core/constants/expense_category_x.dart';
 import 'package:duemate/core/theme/app_theme.dart';
+import 'package:duemate/core/utils/date_formatter.dart';
 import 'package:duemate/core/utils/display_money.dart';
 import 'package:duemate/core/widgets/empty_state_widget.dart';
 import 'package:duemate/core/widgets/ui_kit.dart';
@@ -24,11 +25,8 @@ class _ExpenseChartsScreenState extends ConsumerState<ExpenseChartsScreen> {
   int _year = DateTime.now().year;
   int _month = DateTime.now().month; // 1..12
 
-  static const _short = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-  static const _long = [
-    'January', 'February', 'March', 'April', 'May', 'June',
-    'July', 'August', 'September', 'October', 'November', 'December',
-  ];
+  static const _short = monthNamesShort;
+  static const _long = monthNamesLong;
 
   @override
   Widget build(BuildContext context) {
@@ -61,23 +59,7 @@ class _ExpenseChartsScreenState extends ConsumerState<ExpenseChartsScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Spending trends'),
-        actions: [
-          PopupMenuButton<int>(
-            tooltip: 'Choose year',
-            initialValue: _year,
-            onSelected: (y) => setState(() => _year = y),
-            itemBuilder: (_) => [for (final y in years.reversed) PopupMenuItem(value: y, child: Text('$y'))],
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: AppSpace.lg),
-              child: Row(
-                children: [
-                  Text('$_year', style: theme.textTheme.titleMedium),
-                  const Icon(Icons.arrow_drop_down_rounded),
-                ],
-              ),
-            ),
-          ),
-        ],
+        actions: [YearMenuButton(year: _year, years: years, onSelected: (y) => setState(() => _year = y))],
       ),
       body: ListView(
         padding: const EdgeInsets.only(bottom: AppSpace.xxl),

@@ -39,8 +39,8 @@ Everything stays on the phone. There is no account, no server and no analytics.
 
 **People and balances**
 - Record money you **give** and money you **receive**, per person, with date, payment method (UPI, cash, card, bank transfer, other) and a note.
-- **UPI**: show a QR with your UPI ID and the amount when you're being paid (or share it as an image), and open your UPI app pre-filled to pay someone whose UPI ID you've saved. Reminders include your UPI ID. Rupees only.
-- Each person's ledger shows who owes whom, what you gave and received, their EMIs, and history grouped by month.
+- **UPI**: show a QR with your UPI ID and the amount when you're being paid (or share it as an image), and open your UPI app pre-filled to pay someone whose UPI ID you've saved (when you come back, one tap records it). Reminders include your UPI ID. Rupees only.
+- Each person's ledger shows who owes whom, how much has been paid back (a progress bar, also on every row in People, e.g. "Paid ₹2,500 of ₹15,000 · 16%"), their EMIs, and history grouped by month.
 - Add people by hand or from phone contacts. Duplicates are caught by phone number (last 10 digits), so two different people with the same name can both be added.
 - Remind someone on WhatsApp, or share their statement as PDF or CSV.
 - Archive people you're done with; delete asks first and says exactly what goes.
@@ -62,10 +62,12 @@ Everything stays on the phone. There is no account, no server and no analytics.
 **Everything else**
 - **Home**: where you stand overall, Give / Receive / Expense buttons, an *EMIs & cards* shortcut (active count, monthly outgo, next due installments), this month's spending against budget, largest balances and recent activity.
 - **Activity**: one timeline of ledger entries and expenses, grouped by day, with search and filters for type, period and payment method; export as PDF or CSV.
-- **Notifications**: permission and a test notification in Settings. Scheduled EMI due-date reminders are not wired up yet (see [TODO](TODO.md)).
+- **EMI reminders**: a notification the day before each installment is due, kept in step with your EMIs automatically. Amounts are left out while they're hidden or App Lock is on.
+- **Backup and restore**: back up everything to one file, and restore it later (DueMate shows what's in the file and asks before replacing your data).
+- **Lending trends**: money lent vs collected, month by month (chart icon on People).
 - **Hide amounts**: the eye icon on Home (or the switch in Settings) replaces every balance and total with dots, e.g. when using the app in public. Amounts you're typing, exports and shared messages are never hidden. The choice is remembered, and showing amounts again asks for fingerprint, face or screen lock.
 - **App Lock**: ask for fingerprint, face or the phone's screen lock to open DueMate, on launch and after you've been away for a chosen time. Balances are hidden from the recent-apps view while it's on.
-- **Settings**: theme (system / light / dark), hide amounts, App Lock, currency (₹, $, €, £, AED, S$, A$, C$), monthly budget, notifications, backup, CSV export, erase all data.
+- **Settings**: theme (system / light / dark), hide amounts, App Lock, currency (₹, $, €, £, AED, S$, A$, C$), monthly budget, notifications, backup and restore, CSV export, erase all data.
 
 ## Design
 

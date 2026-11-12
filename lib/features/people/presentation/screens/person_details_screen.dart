@@ -141,7 +141,6 @@ class _PersonLedger extends ConsumerWidget {
     final emis = ref.watch(personEmisProvider(person.id)).value ?? const [];
     final hasPhone = person.phone?.trim().isNotEmpty ?? false;
     final canRemind = summary.owesMoney && hasPhone;
-    final money = ref.watch(displayMoneyProvider);
 
     final firstName = person.name.split(' ').first;
     final String headline;
@@ -272,12 +271,9 @@ class _PersonLedger extends ConsumerWidget {
                   Text(headline, style: theme.textTheme.labelLarge?.copyWith(color: cs.onSurfaceVariant)),
                   const SizedBox(height: AppSpace.xs),
                   MoneyText(summary.balance, symbol: symbol, tone: tone, style: theme.textTheme.displaySmall),
-                  if (!summary.hasNoTransactions) ...[
-                    const SizedBox(height: AppSpace.xs),
-                    Text(
-                      'You gave ${money(summary.totalGiven)} · received ${money(summary.totalReceived)}',
-                      style: theme.textTheme.bodyMedium?.copyWith(color: cs.onSurfaceVariant),
-                    ),
+                  if (summary.repayment case final repayment?) ...[
+                    const SizedBox(height: AppSpace.md),
+                    RepaymentBar(repayment, thickness: 8),
                   ],
                 ],
               ),

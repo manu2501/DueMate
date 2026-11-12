@@ -8,6 +8,7 @@ import 'package:duemate/core/utils/date_formatter.dart';
 import 'package:duemate/core/utils/display_money.dart';
 import 'package:duemate/core/widgets/amount_field.dart';
 import 'package:duemate/core/widgets/avatar_widget.dart';
+import 'package:duemate/core/widgets/confirm_dialog.dart';
 import 'package:duemate/core/widgets/person_picker_sheet.dart';
 import 'package:duemate/core/widgets/upi_widgets.dart';
 import 'package:duemate/data/database/tables.dart';
@@ -46,7 +47,7 @@ class LedgerEntrySheet extends ConsumerStatefulWidget {
   ConsumerState<LedgerEntrySheet> createState() => _LedgerEntrySheetState();
 }
 
-class _LedgerEntrySheetState extends ConsumerState<LedgerEntrySheet> {
+class _LedgerEntrySheetState extends ConsumerState<LedgerEntrySheet> with WidgetsBindingObserver {
   static const _presets = [100.0, 500.0, 1000.0, 2000.0, 5000.0];
 
   final _amountController = TextEditingController();
@@ -58,11 +59,15 @@ class _LedgerEntrySheetState extends ConsumerState<LedgerEntrySheet> {
   DateTime _date = DateTime.now();
   bool _isSaving = false;
 
+  /// Who "Pay with UPI app" was opened for; cleared once we've asked.
+  String? _upiPayee;
+
   bool get _isGive => widget.type == TransactionType.moneyGiven;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _selectedPersonId = widget.initialPersonId;
     if (widget.initialPersonId != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) => _focusNode.requestFocus());
@@ -71,6 +76,7 @@ class _LedgerEntrySheetState extends ConsumerState<LedgerEntrySheet> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _amountController.dispose();
     _noteController.dispose();
     _focusNode.dispose();
@@ -128,7 +134,35 @@ class _LedgerEntrySheetState extends ConsumerState<LedgerEntrySheet> {
     }
     _focusNode.unfocus();
     setState(() => _paymentMethod = PaymentMethod.upi);
-    await payWithUpiApp(context, payeeId: upiId, payeeName: name, amount: _amount, note: _note);
+    // Set before launching: the app may be paused before the launch returns.
+    _upiPayee = name;
+    final opened = await payWithUpiApp(context, ref, payeeId: upiId, payeeName: name, amount: _amount, note: _note);
+    if (!opened) _upiPayee = null;
+  }
+
+  /// UPI apps don't report back, so once the user is back in DueMate (and
+  /// past App Lock, if it kicked in) ask whether the payment went through.
+  /// Yes records the Give exactly as filled in.
+  Future<void> _askAboutUpiPayment() async {
+    final payee = _upiPayee;
+    if (payee == null || !mounted) return;
+    if (WidgetsBinding.instance.lifecycleState != AppLifecycleState.resumed) return;
+    if (ref.read(appLockControllerProvider).locked) return; // asked again on unlock
+    _upiPayee = null;
+    final money = CurrencyFormatter.format(_amount, symbol: ref.read(currencySymbolProvider));
+    final paid = await showConfirmDialog(
+      context,
+      title: 'Did the payment go through?',
+      message: 'If your UPI app shows $money sent to $payee, record it now.',
+      confirmLabel: 'Yes, record it',
+      cancelLabel: 'Not yet',
+    );
+    if (paid && mounted) await _save();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) _askAboutUpiPayment();
   }
 
   /// UPI shortcut (rupees only): your QR when receiving; a UPI app when
@@ -205,6 +239,11 @@ class _LedgerEntrySheetState extends ConsumerState<LedgerEntrySheet> {
 
   @override
   Widget build(BuildContext context) {
+    // Back from the UPI app but App Lock was up: ask once it's unlocked.
+    ref.listen(appLockControllerProvider.select((s) => s.locked), (_, locked) {
+      if (!locked) _askAboutUpiPayment();
+    });
+
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
     final ledger = LedgerColors.of(context);

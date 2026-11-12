@@ -14,6 +14,7 @@ import 'package:duemate/core/widgets/upi_widgets.dart';
 import 'package:duemate/core/widgets/ui_kit.dart';
 import 'package:duemate/data/providers/app_providers.dart';
 import 'package:duemate/features/expenses/presentation/widgets/budget_dialog.dart';
+import 'package:duemate/features/settings/presentation/widgets/restore_backup.dart';
 
 /// Settings, grouped by what you're trying to do. Each row says what it
 /// changes; anything destructive is last and asks first.
@@ -247,7 +248,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               SwitchListTile(
                 contentPadding: const EdgeInsets.symmetric(horizontal: AppSpace.screenGutter),
                 title: const Text('Notifications'),
-                subtitle: const Text('Allow DueMate to send you notifications'),
+                subtitle: const Text('EMI reminders the day before each installment is due'),
                 value: _remindersOn ?? false,
                 onChanged: _remindersOn == null ? null : _setReminders,
               ),
@@ -274,6 +275,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 title: const Text('Back up everything'),
                 subtitle: const Text('Saves one file you can keep in Drive or send to yourself'),
                 onTap: () => BackupHelper.exportBackup(ref.read(databaseProvider)),
+              ),
+              ListTile(
+                title: const Text('Restore from a backup'),
+                subtitle: const Text('Replaces everything on this phone with a backup file'),
+                onTap: () => restoreFromBackup(context, ref),
               ),
               ListTile(
                 title: const Text('Export transactions'),
