@@ -1,6 +1,6 @@
 # DueMate — Feature Roadmap & TODO List
 
-DueMate is a personal ledger, lending, and credit card EMI tracking application.
+DueMate is a personal ledger, lending, expense, and credit card EMI tracking application.
 
 ---
 
@@ -33,47 +33,49 @@ DueMate is a personal ledger, lending, and credit card EMI tracking application.
 
 ---
 
-## 📋 Planned Features Roadmap
+## 📋 Immediate Next Phase: Personal Expenses, Bank Loans, EMIs & UPI Hub
 
-### 🚀 Phase 1: Security & Quick Payments
+### 🚀 Phase 1: Personal Expense & Loan Management Suite (Immediate Execution)
 
-#### 1. ⚡ Dynamic UPI QR Code & One-Tap Launch
-- [ ] **On-Screen UPI QR Code:** Display a dynamic `qr_flutter` QR code on the *Receive Payment* sheet for instant scanning via PhonePe, Google Pay, or Paytm.
+#### 1. 💸 Personal Expenses & Budgeting
+- [ ] **Daily Personal Expense Logging:** Record personal outflows (_Groceries, Utilities, Rent, Fuel, Food, Shopping_) with amount, category, date, and payment mode (UPI, Cash, Card, Bank).
+- [ ] **Preset Category Chips & Icons:** Quick category selector tags (`🛒 Groceries`, `⚡ Utilities`, `⛽ Fuel`, `🍔 Food`, `🛍️ Shopping`, `🎬 Entertainment`, `🏥 Health`).
+- [ ] **Monthly Expense Budget Limit & Alert:** Set a monthly personal expense budget limit (e.g. ₹25,000) with a live visual progress indicator on Dashboard and warning alerts at 80% / 100%.
+
+#### 2. 🧮 Personal Bank Loans & Credit Card Bill Hub
+- [ ] **Bank & Personal Loans Tracker:** Track loans taken from banks, financial apps, or family (_Home Loan, Car Loan, Personal Bank Loan_) with interest rate (% p.a.), EMI due date, and tenure.
+- [ ] **Credit Card Bill & Due Date Alerts:** Record credit card statement billing dates, total due, and minimum due with automated reminder notifications before penalty dates.
+- [ ] **Loan Amortization & Early Prepayment:** Live breakdown of remaining principal vs. interest paid, with one-tap "Prepay / Early Settlement" calculator.
+
+#### 3. ⚡ Dynamic UPI QR Code & Direct App Launch
+- [ ] **On-Screen Dynamic UPI QR Code:** Display a real-time `qr_flutter` QR code on the *Receive Payment* sheet for instant scanning via PhonePe, Google Pay, Paytm, or CRED.
 - [ ] **Direct UPI Deep-Linking:** One-tap button to launch installed UPI apps with pre-filled VPA, recipient name, amount, and note (`upi://pay?pa=...&am=...`).
 
-#### 2. 🔒 Biometric Security & Stealth Mode
+#### 4. 🧾 Receipt & Payment Proof Attachments
+- [ ] **Image Attachments:** Attach UPI payment screenshots, bank SMS alerts, or physical paper receipts to transactions, expenses, or EMIs using `image_picker`.
+- [ ] **Full-Screen Proof Viewer:** Tap any transaction or expense details card to view attached receipt photos in full screen.
+
+---
+
+### 📊 Phase 2: Security, Analytics & Widgets
+
+#### 5. 🔒 Biometric Security & Stealth Mode
 - [ ] **Fingerprint / Face ID Lock:** Local biometric authentication (`local_auth`) on app launch and resume.
 - [ ] **Stealth Mode (Blur Balances):** Header toggle on Dashboard to blur monetary values when using the app in public.
 
-#### 3. 🧾 Receipt & Proof Attachments
-- [ ] **Image Attachments:** Attach UPI payment screenshots, bank SMS, or physical bill receipts to transactions or EMIs using `image_picker`.
-- [ ] **Receipt Viewer & Gallery:** Tap transaction details to view attached proof images full-screen.
-
----
-
-### 📊 Phase 2: Analytics, Widgets & Categories
-
-#### 4. 📊 Borrower Reliability Score & Analytics
+#### 6. 📊 Borrower Reliability Score & Monthly Charts
 - [ ] **On-Time Repayment Score:** Calculate a reliability percentage (e.g. *95% On-Time*) for each person based on promptness.
-- [ ] **Monthly Cashflow Charts:** Visual bar/line charts comparing total money lent vs. collected month-over-month.
+- [ ] **Monthly Cashflow Charts:** Visual bar/line charts comparing total money lent, collected, and spent month-over-month.
 
-#### 5. 📱 Home Screen Widgets
+#### 7. 📱 Home Screen Widgets
 - [ ] **Android & iOS Home Screen Widgets:** Interactive home screen widget (`home_widget`) displaying total pending balance (*You'll Get* vs. *You Owe*) and next 3 upcoming EMIs due this week.
 
-#### 6. 🏷️ Category Tagging & Custom Filters
-- [ ] **Custom Category Tags:** Tag transactions and EMIs (e.g. `#Electronics`, `#Rent`, `#Medical`, `#Travel`, `#Business`).
-- [ ] **Tag Filtering:** Filter dashboard, reports, and CSV exports by category tags.
-
 ---
 
-### ☁️ Phase 3: Cloud Backup & Advanced Utilities
+### ☁️ Phase 3: Cloud Backup & Advanced Sync
 
-#### 7. ☁️ Automated Cloud Sync
+#### 8. ☁️ Automated Cloud Sync
 - [ ] **Google Drive / iCloud Auto-Backup:** Daily/weekly background sync of encrypted database backup files to the user's personal Google Drive or iCloud account.
-
-#### 8. 🧮 Interest-Bearing Loans & Amortization
-- [ ] **Simple & Compound Interest:** Support interest rates (% per annum/month) for personal loans given/taken.
-- [ ] **Amortization Schedule:** Display a monthly principal vs. interest breakdown schedule.
 
 ---
 
