@@ -177,6 +177,25 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             ],
           ),
 
+          const SectionHeader('Security'),
+          GroupCard(
+            dividerIndent: AppSpace.screenGutter,
+            children: [
+              SwitchListTile(
+                contentPadding: const EdgeInsets.symmetric(horizontal: AppSpace.screenGutter),
+                title: const Text('App Lock'),
+                subtitle: const Text('Require Fingerprint, Face ID or PIN to open DueMate'),
+                value: ref.watch(appLockEnabledProvider),
+                onChanged: (v) async {
+                  final success = await ref.read(appLockEnabledProvider.notifier).toggleAppLock(v);
+                  if (!success && mounted && v) {
+                    _snack('Authentication failed. App Lock remained unchanged.');
+                  }
+                },
+              ),
+            ],
+          ),
+
           const SectionHeader('Reminders'),
           GroupCard(
             dividerIndent: AppSpace.screenGutter,
