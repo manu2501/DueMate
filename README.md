@@ -15,6 +15,7 @@
   <img src="https://img.shields.io/badge/Database-Drift%20(SQLite)-003B57?logo=sqlite" alt="Drift (SQLite)" />
   <img src="https://img.shields.io/badge/State-Riverpod%203-388E3C" alt="Riverpod" />
   <img src="https://img.shields.io/badge/Platform-Android-3DDC84?logo=android" alt="Android" />
+  <img src="https://img.shields.io/badge/License-MIT-blue" alt="MIT license" />
 </p>
 
 ---
@@ -61,7 +62,8 @@ Everything stays on the phone. There is no account, no server and no analytics.
 - **Home**: where you stand overall, Give / Receive / Expense buttons, an *EMIs & cards* shortcut (active count, monthly outgo, next due installments), this month's spending against budget, largest balances and recent activity.
 - **Activity**: one timeline of ledger entries and expenses, grouped by day, with search and filters for type, period and payment method; export as PDF or CSV.
 - **Notifications**: permission and a test notification in Settings. Scheduled EMI due-date reminders are not wired up yet (see [TODO](TODO.md)).
-- **Settings**: theme (system / light / dark), currency (₹, $, €, £, AED, S$, A$, C$), monthly budget, notifications, backup, CSV export, erase all data.
+- **Hide amounts**: the eye icon on Home (or the switch in Settings) replaces every balance and total with dots, e.g. when using the app in public. Amounts you're typing, exports and shared messages are never hidden. The choice is remembered.
+- **Settings**: theme (system / light / dark), hide amounts, currency (₹, $, €, £, AED, S$, A$, C$), monthly budget, notifications, backup, CSV export, erase all data.
 
 ## Design
 
@@ -155,4 +157,4 @@ flutter test test_screens/logo_export_test.dart --update-goldens
 
 ## License
 
-No license has been chosen yet.
+[MIT](LICENSE) © 2026 Manoj Kumar Kothuru

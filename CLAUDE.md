@@ -44,6 +44,7 @@ Clean-architecture layering under `lib/`:
 
 - **Theme** (`core/theme/app_theme.dart`): Roboto, tabular figures on numbers, tokens `AppSpace` / `AppRadius`. Never hardcode colours in widgets.
 - **Money colours** (`LedgerColors`): green only for money coming to you, red only for money you owe; spending and lending are neutral ink with a +/− sign. Use `MoneyText` + `MoneyTone` instead of colouring amounts by hand.
+- **Hide amounts** (`hideBalancesProvider`): any balance or total shown on screen must go through `MoneyText` or `ref.watch(displayMoneyProvider)` (`DisplayMoney`), which mask it while hidden. Use `CurrencyFormatter` directly only for amounts being typed, confirmations of what was just typed, exports/PDFs and shared messages; those always show the real number.
 - **Layout**: tabs use `TabScaffold` (collapsing title); related rows go in one `GroupCard` of `ListTile`s, not a card per item. Lead each screen with its one important number. Destructive actions live in detail sheets behind `showConfirmDialog`, never as row icons.
 - **Motion** (`core/theme/app_motion.dart`): fade-through between tabs, shared-axis slide for pushed pages, nothing decorative (no count-ups, staggered list entrances or press-scaling). Everything respects the system reduce-motion setting via `AppMotion.reduced`.
 - **Charts**: category colours come only from `ExpenseCategoryX.chartColor` (validated categorical palette in fixed order; "Other" is grey). Labels and amounts stay in text colours, and every coloured mark has a text label.

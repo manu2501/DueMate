@@ -33,6 +33,15 @@ most: **Give**, **Receive**, **Expense**.
 - **Balances**: the largest open balances; **Recent**: the last five entries.
 - With no data yet, Home shows a short welcome with *Add a person* and *Add an expense*.
 
+**Hide amounts.** The eye icon in the top bar (also a switch in Settings) masks every balance and
+total across the app, for using it in public. Labels, counts and dates stay readable; amounts you
+type, exports and shared messages are never masked. The choice is remembered.
+
+<p>
+  <img src="screenshots/15_home_hidden.png" width="260" alt="Home with amounts hidden, light" />
+  <img src="screenshots/15_home_hidden_dark.png" width="260" alt="Home with amounts hidden, dark" />
+</p>
+
 ### People
 
 <p>
@@ -112,7 +121,7 @@ month, each editable.
   <img src="screenshots/06_settings_dark.png" width="260" alt="Settings, dark" />
 </p>
 
-Theme and currency; monthly budget; notifications (permission and a test notification);
+Theme, hide amounts and currency; monthly budget; notifications (permission and a test notification);
 backup, CSV export, and erase all data (asks first). About at the bottom.
 
 ---

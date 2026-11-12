@@ -30,6 +30,9 @@ What's done, what's known to be missing, and what's next.
 - [x] Activity timeline grouped by day with search, type / period / method filters, PDF / CSV export.
 - [x] Settings: theme, currency, monthly budget, notifications permission, backup, CSV export, erase all data (now also removes expenses and EMIs).
 - [x] Android back button closes forms and sheets opened over a tab instead of jumping Home.
+- [x] Hide amounts: eye toggle on Home and a Settings switch mask every on-screen balance and total (remembered; typing, exports and shared messages unaffected).
+- [x] EMIs & cards shortcut on Home.
+- [x] MIT license; screen-by-screen docs with generated screenshots (`docs/SCREENS.md`).
 - [x] Tests: unit, repository, widget and navigation tests (30 s timeout, no hangs); screenshot harness in `test_screens/`.
 
 ---
@@ -39,7 +42,6 @@ What's done, what's known to be missing, and what's next.
 - [ ] **Scheduled EMI reminders aren't wired up.** `NotificationService.scheduleEmiDueReminder` exists but nothing calls it; Settings only manages the permission and sends a test notification. Schedule (and cancel/reschedule) reminders when EMIs are created, edited, deleted or posted.
 - [ ] **No restore from backup in the UI.** `BackupHelper.restoreBackup` exists but there is no way to pick a backup file (needs a file picker).
 - [ ] **Shared loan direction needs a decision.** For loans you lend or borrow in installments, each installment is posted as money *given* (lent) or *received* (borrowed), so balances move the opposite way to a typical repayment loan, and the principal is never posted up front. Card EMIs paid on someone's behalf are correct. Decide the intended model, then change `EmiProcessorService` with a migration for existing loans.
-- [ ] **No license file.** Choose a license before publishing.
 
 ---
 
@@ -57,7 +59,6 @@ What's done, what's known to be missing, and what's next.
 
 ### Privacy and convenience
 - [ ] **App lock:** fingerprint / face unlock on launch and resume (`local_auth`).
-- [ ] **Hide balances:** a quick toggle to blur amounts in public.
 - [ ] **Home-screen widget:** net position and the next EMIs due (`home_widget`).
 - [ ] **Automatic backups:** scheduled encrypted backups to the user's own Google Drive.
 
