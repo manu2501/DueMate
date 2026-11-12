@@ -16,6 +16,10 @@ class CreditCardEmi {
   final String status; // 'active', 'completed', 'cancelled'
   final double interestRate; // % per annum
   final String interestType; // 'reducing', 'flat'
+  final String kind; // 'card' | 'loan'
+  final String planMode; // 'split' | 'emi'
+  final double principal; // 0 = unknown
+  final double charges; // one-time fees, GST, etc.
   final String? customScheduleJson;
   final String? notes;
   final DateTime createdAt;
@@ -37,6 +41,10 @@ class CreditCardEmi {
     this.status = 'active',
     this.interestRate = 0.0,
     this.interestType = 'reducing',
+    this.kind = 'card',
+    this.planMode = 'emi',
+    this.principal = 0.0,
+    this.charges = 0.0,
     this.customScheduleJson,
     this.notes,
     required this.createdAt,
@@ -48,6 +56,19 @@ class CreditCardEmi {
   bool get isCompleted => status == 'completed' || installmentsPaid >= totalTenureMonths;
   bool get isCancelled => status == 'cancelled';
   bool get isForSelf => personId == AppConstants.selfPersonId;
+  bool get isLoan => kind == 'loan';
+  bool get isSplitPlan => planMode == 'split';
+
+  /// Best guess for data that predates the stored [kind] column (old backups).
+  static String inferKind({required String cardName, required String itemName, String? notes}) {
+    final card = cardName.toLowerCase();
+    final looksLikeLoan = card.contains('loan') ||
+        itemName.toLowerCase().contains('loan') ||
+        card.contains('cash') ||
+        card.contains('transfer') ||
+        (notes?.toLowerCase().contains('loan') ?? false);
+    return looksLikeLoan ? 'loan' : 'card';
+  }
 
   int get remainingInstallments => (totalTenureMonths - installmentsPaid).clamp(0, totalTenureMonths);
   double get paidAmount {
@@ -120,6 +141,10 @@ class CreditCardEmi {
     String? status,
     double? interestRate,
     String? interestType,
+    String? kind,
+    String? planMode,
+    double? principal,
+    double? charges,
     String? customScheduleJson,
     bool clearCustomSchedule = false,
     String? notes,
@@ -142,6 +167,10 @@ class CreditCardEmi {
       status: status ?? this.status,
       interestRate: interestRate ?? this.interestRate,
       interestType: interestType ?? this.interestType,
+      kind: kind ?? this.kind,
+      planMode: planMode ?? this.planMode,
+      principal: principal ?? this.principal,
+      charges: charges ?? this.charges,
       customScheduleJson: clearCustomSchedule ? null : (customScheduleJson ?? this.customScheduleJson),
       notes: notes ?? this.notes,
       createdAt: createdAt ?? this.createdAt,

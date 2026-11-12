@@ -5,6 +5,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:duemate/data/database/app_database.dart';
 import 'package:duemate/data/database/tables.dart';
+import 'package:duemate/domain/entities/credit_card_emi.dart' as domain;
 
 class BackupHelper {
   static Future<void> exportBackup(AppDatabase db) async {
@@ -62,6 +63,10 @@ class BackupHelper {
                 'status': e.status,
                 'interestRate': e.interestRate,
                 'interestType': e.interestType,
+                'kind': e.kind,
+                'planMode': e.planMode,
+                'principal': e.principal,
+                'charges': e.charges,
                 'customScheduleJson': e.customScheduleJson,
                 'notes': e.notes,
                 'createdAt': e.createdAt.toIso8601String(),
@@ -179,6 +184,15 @@ class BackupHelper {
                 status: Value((e['status'] as String?) ?? 'active'),
                 interestRate: Value(((e['interestRate'] as num?) ?? 0).toDouble()),
                 interestType: Value((e['interestType'] as String?) ?? 'reducing'),
+                kind: Value((e['kind'] as String?) ??
+                    domain.CreditCardEmi.inferKind(
+                      cardName: (e['cardName'] as String?) ?? '',
+                      itemName: (e['itemName'] as String?) ?? '',
+                      notes: e['notes'] as String?,
+                    )),
+                planMode: Value((e['planMode'] as String?) ?? 'emi'),
+                principal: Value(((e['principal'] as num?) ?? 0).toDouble()),
+                charges: Value(((e['charges'] as num?) ?? 0).toDouble()),
                 customScheduleJson: Value(e['customScheduleJson'] as String?),
                 notes: Value(e['notes'] as String?),
                 createdAt: Value(DateTime.parse(e['createdAt'] as String)),

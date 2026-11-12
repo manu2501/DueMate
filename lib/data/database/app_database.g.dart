@@ -1469,6 +1469,52 @@ class $CreditCardEmisTable extends CreditCardEmis
     requiredDuringInsert: false,
     defaultValue: const Constant('reducing'),
   );
+  static const VerificationMeta _kindMeta = const VerificationMeta('kind');
+  @override
+  late final GeneratedColumn<String> kind = GeneratedColumn<String>(
+    'kind',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('card'),
+  );
+  static const VerificationMeta _planModeMeta = const VerificationMeta(
+    'planMode',
+  );
+  @override
+  late final GeneratedColumn<String> planMode = GeneratedColumn<String>(
+    'plan_mode',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('emi'),
+  );
+  static const VerificationMeta _principalMeta = const VerificationMeta(
+    'principal',
+  );
+  @override
+  late final GeneratedColumn<double> principal = GeneratedColumn<double>(
+    'principal',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0.0),
+  );
+  static const VerificationMeta _chargesMeta = const VerificationMeta(
+    'charges',
+  );
+  @override
+  late final GeneratedColumn<double> charges = GeneratedColumn<double>(
+    'charges',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0.0),
+  );
   static const VerificationMeta _customScheduleJsonMeta =
       const VerificationMeta('customScheduleJson');
   @override
@@ -1539,6 +1585,10 @@ class $CreditCardEmisTable extends CreditCardEmis
     status,
     interestRate,
     interestType,
+    kind,
+    planMode,
+    principal,
+    charges,
     customScheduleJson,
     notes,
     createdAt,
@@ -1680,6 +1730,30 @@ class $CreditCardEmisTable extends CreditCardEmis
         ),
       );
     }
+    if (data.containsKey('kind')) {
+      context.handle(
+        _kindMeta,
+        kind.isAcceptableOrUnknown(data['kind']!, _kindMeta),
+      );
+    }
+    if (data.containsKey('plan_mode')) {
+      context.handle(
+        _planModeMeta,
+        planMode.isAcceptableOrUnknown(data['plan_mode']!, _planModeMeta),
+      );
+    }
+    if (data.containsKey('principal')) {
+      context.handle(
+        _principalMeta,
+        principal.isAcceptableOrUnknown(data['principal']!, _principalMeta),
+      );
+    }
+    if (data.containsKey('charges')) {
+      context.handle(
+        _chargesMeta,
+        charges.isAcceptableOrUnknown(data['charges']!, _chargesMeta),
+      );
+    }
     if (data.containsKey('custom_schedule_json')) {
       context.handle(
         _customScheduleJsonMeta,
@@ -1785,6 +1859,22 @@ class $CreditCardEmisTable extends CreditCardEmis
         DriftSqlType.string,
         data['${effectivePrefix}interest_type'],
       )!,
+      kind: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}kind'],
+      )!,
+      planMode: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}plan_mode'],
+      )!,
+      principal: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}principal'],
+      )!,
+      charges: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}charges'],
+      )!,
       customScheduleJson: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}custom_schedule_json'],
@@ -1829,6 +1919,19 @@ class CreditCardEmi extends DataClass implements Insertable<CreditCardEmi> {
   final String status;
   final double interestRate;
   final String interestType;
+
+  /// 'card' | 'loan'. Drives labels and colours; no longer guessed from names.
+  final String kind;
+
+  /// How the plan was entered: 'split' (a total divided over months) or
+  /// 'emi' (the monthly EMI typed in directly).
+  final String planMode;
+
+  /// Original amount before interest and charges. 0 = not known.
+  final double principal;
+
+  /// One-time charges (processing fee, GST, ...).
+  final double charges;
   final String? customScheduleJson;
   final String? notes;
   final DateTime createdAt;
@@ -1849,6 +1952,10 @@ class CreditCardEmi extends DataClass implements Insertable<CreditCardEmi> {
     required this.status,
     required this.interestRate,
     required this.interestType,
+    required this.kind,
+    required this.planMode,
+    required this.principal,
+    required this.charges,
     this.customScheduleJson,
     this.notes,
     required this.createdAt,
@@ -1872,6 +1979,10 @@ class CreditCardEmi extends DataClass implements Insertable<CreditCardEmi> {
     map['status'] = Variable<String>(status);
     map['interest_rate'] = Variable<double>(interestRate);
     map['interest_type'] = Variable<String>(interestType);
+    map['kind'] = Variable<String>(kind);
+    map['plan_mode'] = Variable<String>(planMode);
+    map['principal'] = Variable<double>(principal);
+    map['charges'] = Variable<double>(charges);
     if (!nullToAbsent || customScheduleJson != null) {
       map['custom_schedule_json'] = Variable<String>(customScheduleJson);
     }
@@ -1902,6 +2013,10 @@ class CreditCardEmi extends DataClass implements Insertable<CreditCardEmi> {
       status: Value(status),
       interestRate: Value(interestRate),
       interestType: Value(interestType),
+      kind: Value(kind),
+      planMode: Value(planMode),
+      principal: Value(principal),
+      charges: Value(charges),
       customScheduleJson: customScheduleJson == null && nullToAbsent
           ? const Value.absent()
           : Value(customScheduleJson),
@@ -1938,6 +2053,10 @@ class CreditCardEmi extends DataClass implements Insertable<CreditCardEmi> {
       status: serializer.fromJson<String>(json['status']),
       interestRate: serializer.fromJson<double>(json['interestRate']),
       interestType: serializer.fromJson<String>(json['interestType']),
+      kind: serializer.fromJson<String>(json['kind']),
+      planMode: serializer.fromJson<String>(json['planMode']),
+      principal: serializer.fromJson<double>(json['principal']),
+      charges: serializer.fromJson<double>(json['charges']),
       customScheduleJson: serializer.fromJson<String?>(
         json['customScheduleJson'],
       ),
@@ -1967,6 +2086,10 @@ class CreditCardEmi extends DataClass implements Insertable<CreditCardEmi> {
       'status': serializer.toJson<String>(status),
       'interestRate': serializer.toJson<double>(interestRate),
       'interestType': serializer.toJson<String>(interestType),
+      'kind': serializer.toJson<String>(kind),
+      'planMode': serializer.toJson<String>(planMode),
+      'principal': serializer.toJson<double>(principal),
+      'charges': serializer.toJson<double>(charges),
       'customScheduleJson': serializer.toJson<String?>(customScheduleJson),
       'notes': serializer.toJson<String?>(notes),
       'createdAt': serializer.toJson<DateTime>(createdAt),
@@ -1990,6 +2113,10 @@ class CreditCardEmi extends DataClass implements Insertable<CreditCardEmi> {
     String? status,
     double? interestRate,
     String? interestType,
+    String? kind,
+    String? planMode,
+    double? principal,
+    double? charges,
     Value<String?> customScheduleJson = const Value.absent(),
     Value<String?> notes = const Value.absent(),
     DateTime? createdAt,
@@ -2010,6 +2137,10 @@ class CreditCardEmi extends DataClass implements Insertable<CreditCardEmi> {
     status: status ?? this.status,
     interestRate: interestRate ?? this.interestRate,
     interestType: interestType ?? this.interestType,
+    kind: kind ?? this.kind,
+    planMode: planMode ?? this.planMode,
+    principal: principal ?? this.principal,
+    charges: charges ?? this.charges,
     customScheduleJson: customScheduleJson.present
         ? customScheduleJson.value
         : this.customScheduleJson,
@@ -2052,6 +2183,10 @@ class CreditCardEmi extends DataClass implements Insertable<CreditCardEmi> {
       interestType: data.interestType.present
           ? data.interestType.value
           : this.interestType,
+      kind: data.kind.present ? data.kind.value : this.kind,
+      planMode: data.planMode.present ? data.planMode.value : this.planMode,
+      principal: data.principal.present ? data.principal.value : this.principal,
+      charges: data.charges.present ? data.charges.value : this.charges,
       customScheduleJson: data.customScheduleJson.present
           ? data.customScheduleJson.value
           : this.customScheduleJson,
@@ -2081,6 +2216,10 @@ class CreditCardEmi extends DataClass implements Insertable<CreditCardEmi> {
           ..write('status: $status, ')
           ..write('interestRate: $interestRate, ')
           ..write('interestType: $interestType, ')
+          ..write('kind: $kind, ')
+          ..write('planMode: $planMode, ')
+          ..write('principal: $principal, ')
+          ..write('charges: $charges, ')
           ..write('customScheduleJson: $customScheduleJson, ')
           ..write('notes: $notes, ')
           ..write('createdAt: $createdAt, ')
@@ -2091,7 +2230,7 @@ class CreditCardEmi extends DataClass implements Insertable<CreditCardEmi> {
   }
 
   @override
-  int get hashCode => Object.hash(
+  int get hashCode => Object.hashAll([
     id,
     personId,
     itemName,
@@ -2106,12 +2245,16 @@ class CreditCardEmi extends DataClass implements Insertable<CreditCardEmi> {
     status,
     interestRate,
     interestType,
+    kind,
+    planMode,
+    principal,
+    charges,
     customScheduleJson,
     notes,
     createdAt,
     updatedAt,
     lastProcessedDate,
-  );
+  ]);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -2130,6 +2273,10 @@ class CreditCardEmi extends DataClass implements Insertable<CreditCardEmi> {
           other.status == this.status &&
           other.interestRate == this.interestRate &&
           other.interestType == this.interestType &&
+          other.kind == this.kind &&
+          other.planMode == this.planMode &&
+          other.principal == this.principal &&
+          other.charges == this.charges &&
           other.customScheduleJson == this.customScheduleJson &&
           other.notes == this.notes &&
           other.createdAt == this.createdAt &&
@@ -2152,6 +2299,10 @@ class CreditCardEmisCompanion extends UpdateCompanion<CreditCardEmi> {
   final Value<String> status;
   final Value<double> interestRate;
   final Value<String> interestType;
+  final Value<String> kind;
+  final Value<String> planMode;
+  final Value<double> principal;
+  final Value<double> charges;
   final Value<String?> customScheduleJson;
   final Value<String?> notes;
   final Value<DateTime> createdAt;
@@ -2173,6 +2324,10 @@ class CreditCardEmisCompanion extends UpdateCompanion<CreditCardEmi> {
     this.status = const Value.absent(),
     this.interestRate = const Value.absent(),
     this.interestType = const Value.absent(),
+    this.kind = const Value.absent(),
+    this.planMode = const Value.absent(),
+    this.principal = const Value.absent(),
+    this.charges = const Value.absent(),
     this.customScheduleJson = const Value.absent(),
     this.notes = const Value.absent(),
     this.createdAt = const Value.absent(),
@@ -2195,6 +2350,10 @@ class CreditCardEmisCompanion extends UpdateCompanion<CreditCardEmi> {
     this.status = const Value.absent(),
     this.interestRate = const Value.absent(),
     this.interestType = const Value.absent(),
+    this.kind = const Value.absent(),
+    this.planMode = const Value.absent(),
+    this.principal = const Value.absent(),
+    this.charges = const Value.absent(),
     this.customScheduleJson = const Value.absent(),
     this.notes = const Value.absent(),
     required DateTime createdAt,
@@ -2227,6 +2386,10 @@ class CreditCardEmisCompanion extends UpdateCompanion<CreditCardEmi> {
     Expression<String>? status,
     Expression<double>? interestRate,
     Expression<String>? interestType,
+    Expression<String>? kind,
+    Expression<String>? planMode,
+    Expression<double>? principal,
+    Expression<double>? charges,
     Expression<String>? customScheduleJson,
     Expression<String>? notes,
     Expression<DateTime>? createdAt,
@@ -2249,6 +2412,10 @@ class CreditCardEmisCompanion extends UpdateCompanion<CreditCardEmi> {
       if (status != null) 'status': status,
       if (interestRate != null) 'interest_rate': interestRate,
       if (interestType != null) 'interest_type': interestType,
+      if (kind != null) 'kind': kind,
+      if (planMode != null) 'plan_mode': planMode,
+      if (principal != null) 'principal': principal,
+      if (charges != null) 'charges': charges,
       if (customScheduleJson != null)
         'custom_schedule_json': customScheduleJson,
       if (notes != null) 'notes': notes,
@@ -2274,6 +2441,10 @@ class CreditCardEmisCompanion extends UpdateCompanion<CreditCardEmi> {
     Value<String>? status,
     Value<double>? interestRate,
     Value<String>? interestType,
+    Value<String>? kind,
+    Value<String>? planMode,
+    Value<double>? principal,
+    Value<double>? charges,
     Value<String?>? customScheduleJson,
     Value<String?>? notes,
     Value<DateTime>? createdAt,
@@ -2296,6 +2467,10 @@ class CreditCardEmisCompanion extends UpdateCompanion<CreditCardEmi> {
       status: status ?? this.status,
       interestRate: interestRate ?? this.interestRate,
       interestType: interestType ?? this.interestType,
+      kind: kind ?? this.kind,
+      planMode: planMode ?? this.planMode,
+      principal: principal ?? this.principal,
+      charges: charges ?? this.charges,
       customScheduleJson: customScheduleJson ?? this.customScheduleJson,
       notes: notes ?? this.notes,
       createdAt: createdAt ?? this.createdAt,
@@ -2350,6 +2525,18 @@ class CreditCardEmisCompanion extends UpdateCompanion<CreditCardEmi> {
     if (interestType.present) {
       map['interest_type'] = Variable<String>(interestType.value);
     }
+    if (kind.present) {
+      map['kind'] = Variable<String>(kind.value);
+    }
+    if (planMode.present) {
+      map['plan_mode'] = Variable<String>(planMode.value);
+    }
+    if (principal.present) {
+      map['principal'] = Variable<double>(principal.value);
+    }
+    if (charges.present) {
+      map['charges'] = Variable<double>(charges.value);
+    }
     if (customScheduleJson.present) {
       map['custom_schedule_json'] = Variable<String>(customScheduleJson.value);
     }
@@ -2388,6 +2575,10 @@ class CreditCardEmisCompanion extends UpdateCompanion<CreditCardEmi> {
           ..write('status: $status, ')
           ..write('interestRate: $interestRate, ')
           ..write('interestType: $interestType, ')
+          ..write('kind: $kind, ')
+          ..write('planMode: $planMode, ')
+          ..write('principal: $principal, ')
+          ..write('charges: $charges, ')
           ..write('customScheduleJson: $customScheduleJson, ')
           ..write('notes: $notes, ')
           ..write('createdAt: $createdAt, ')
@@ -3957,6 +4148,10 @@ typedef $$CreditCardEmisTableCreateCompanionBuilder =
       Value<String> status,
       Value<double> interestRate,
       Value<String> interestType,
+      Value<String> kind,
+      Value<String> planMode,
+      Value<double> principal,
+      Value<double> charges,
       Value<String?> customScheduleJson,
       Value<String?> notes,
       required DateTime createdAt,
@@ -3980,6 +4175,10 @@ typedef $$CreditCardEmisTableUpdateCompanionBuilder =
       Value<String> status,
       Value<double> interestRate,
       Value<String> interestType,
+      Value<String> kind,
+      Value<String> planMode,
+      Value<double> principal,
+      Value<double> charges,
       Value<String?> customScheduleJson,
       Value<String?> notes,
       Value<DateTime> createdAt,
@@ -4085,6 +4284,26 @@ class $$CreditCardEmisTableFilterComposer
 
   ColumnFilters<String> get interestType => $composableBuilder(
     column: $table.interestType,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get kind => $composableBuilder(
+    column: $table.kind,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get planMode => $composableBuilder(
+    column: $table.planMode,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get principal => $composableBuilder(
+    column: $table.principal,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get charges => $composableBuilder(
+    column: $table.charges,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -4211,6 +4430,26 @@ class $$CreditCardEmisTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get kind => $composableBuilder(
+    column: $table.kind,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get planMode => $composableBuilder(
+    column: $table.planMode,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get principal => $composableBuilder(
+    column: $table.principal,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get charges => $composableBuilder(
+    column: $table.charges,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get customScheduleJson => $composableBuilder(
     column: $table.customScheduleJson,
     builder: (column) => ColumnOrderings(column),
@@ -4324,6 +4563,18 @@ class $$CreditCardEmisTableAnnotationComposer
     builder: (column) => column,
   );
 
+  GeneratedColumn<String> get kind =>
+      $composableBuilder(column: $table.kind, builder: (column) => column);
+
+  GeneratedColumn<String> get planMode =>
+      $composableBuilder(column: $table.planMode, builder: (column) => column);
+
+  GeneratedColumn<double> get principal =>
+      $composableBuilder(column: $table.principal, builder: (column) => column);
+
+  GeneratedColumn<double> get charges =>
+      $composableBuilder(column: $table.charges, builder: (column) => column);
+
   GeneratedColumn<String> get customScheduleJson => $composableBuilder(
     column: $table.customScheduleJson,
     builder: (column) => column,
@@ -4411,6 +4662,10 @@ class $$CreditCardEmisTableTableManager
                 Value<String> status = const Value.absent(),
                 Value<double> interestRate = const Value.absent(),
                 Value<String> interestType = const Value.absent(),
+                Value<String> kind = const Value.absent(),
+                Value<String> planMode = const Value.absent(),
+                Value<double> principal = const Value.absent(),
+                Value<double> charges = const Value.absent(),
                 Value<String?> customScheduleJson = const Value.absent(),
                 Value<String?> notes = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
@@ -4432,6 +4687,10 @@ class $$CreditCardEmisTableTableManager
                 status: status,
                 interestRate: interestRate,
                 interestType: interestType,
+                kind: kind,
+                planMode: planMode,
+                principal: principal,
+                charges: charges,
                 customScheduleJson: customScheduleJson,
                 notes: notes,
                 createdAt: createdAt,
@@ -4455,6 +4714,10 @@ class $$CreditCardEmisTableTableManager
                 Value<String> status = const Value.absent(),
                 Value<double> interestRate = const Value.absent(),
                 Value<String> interestType = const Value.absent(),
+                Value<String> kind = const Value.absent(),
+                Value<String> planMode = const Value.absent(),
+                Value<double> principal = const Value.absent(),
+                Value<double> charges = const Value.absent(),
                 Value<String?> customScheduleJson = const Value.absent(),
                 Value<String?> notes = const Value.absent(),
                 required DateTime createdAt,
@@ -4476,6 +4739,10 @@ class $$CreditCardEmisTableTableManager
                 status: status,
                 interestRate: interestRate,
                 interestType: interestType,
+                kind: kind,
+                planMode: planMode,
+                principal: principal,
+                charges: charges,
                 customScheduleJson: customScheduleJson,
                 notes: notes,
                 createdAt: createdAt,

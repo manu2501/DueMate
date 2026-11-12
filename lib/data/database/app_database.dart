@@ -10,7 +10,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? e]) : super(e ?? driftDatabase(name: 'duemate_db'));
 
   @override
-  int get schemaVersion => 6;
+  int get schemaVersion => 7;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -35,6 +35,19 @@ class AppDatabase extends _$AppDatabase {
       if (from < 6) {
         await m.addColumn(creditCardEmis, creditCardEmis.interestRate);
         await m.addColumn(creditCardEmis, creditCardEmis.interestType);
+      }
+      if (from < 7) {
+        await m.addColumn(creditCardEmis, creditCardEmis.kind);
+        await m.addColumn(creditCardEmis, creditCardEmis.planMode);
+        await m.addColumn(creditCardEmis, creditCardEmis.principal);
+        await m.addColumn(creditCardEmis, creditCardEmis.charges);
+        // Existing rows: carry over what the UI used to guess from the names.
+        await customStatement(
+          "UPDATE credit_card_emis SET kind = 'loan' WHERE "
+          "lower(card_name) LIKE '%loan%' OR lower(item_name) LIKE '%loan%' OR "
+          "lower(card_name) LIKE '%cash%' OR lower(card_name) LIKE '%transfer%' OR "
+          "lower(coalesce(notes, '')) LIKE '%loan%'",
+        );
       }
     },
     beforeOpen: (details) async {

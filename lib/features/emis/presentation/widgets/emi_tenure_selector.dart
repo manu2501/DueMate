@@ -27,7 +27,7 @@ class EmiTenureSelector extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
-              'Tenure (Months)',
+              'Number of months',
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
@@ -61,8 +61,8 @@ class EmiTenureSelector extends StatelessWidget {
           inputFormatters: [FilteringTextInputFormatter.digitsOnly],
           decoration: InputDecoration(
             prefixIcon: const Icon(Icons.timer_outlined),
-            labelText: 'Enter Tenure (Number of Months)',
-            hintText: 'e.g. 1, 4, 5, 10, 15, 60...',
+            labelText: 'Or type the number of months',
+            hintText: 'e.g. 18',
             suffixText: 'months',
             filled: true,
             border: OutlineInputBorder(

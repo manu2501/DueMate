@@ -73,6 +73,15 @@ class CreditCardEmis extends Table {
   TextColumn get status => text().withDefault(const Constant('active'))();
   RealColumn get interestRate => real().withDefault(const Constant(0.0))();
   TextColumn get interestType => text().withDefault(const Constant('reducing'))();
+  /// 'card' | 'loan'. Drives labels and colours; no longer guessed from names.
+  TextColumn get kind => text().withDefault(const Constant('card'))();
+  /// How the plan was entered: 'split' (a total divided over months) or
+  /// 'emi' (the monthly EMI typed in directly).
+  TextColumn get planMode => text().withDefault(const Constant('emi'))();
+  /// Original amount before interest and charges. 0 = not known.
+  RealColumn get principal => real().withDefault(const Constant(0.0))();
+  /// One-time charges (processing fee, GST, ...).
+  RealColumn get charges => real().withDefault(const Constant(0.0))();
   TextColumn get customScheduleJson => text().nullable()();
   TextColumn get notes => text().nullable()();
   DateTimeColumn get createdAt => dateTime()();

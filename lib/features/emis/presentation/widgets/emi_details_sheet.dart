@@ -138,11 +138,7 @@ class EmiDetailsSheet extends ConsumerWidget {
     final isCompleted = emi.isCompleted;
     final personName = person?.name ?? 'Friend';
 
-    final isLoan = emi.cardName.toLowerCase().contains('loan') ||
-        emi.itemName.toLowerCase().contains('loan') ||
-        emi.cardName.toLowerCase().contains('cash') ||
-        emi.cardName.toLowerCase().contains('transfer') ||
-        (emi.notes?.toLowerCase().contains('loan') ?? false);
+    final isLoan = emi.isLoan;
 
     final accentColor = isCompleted
         ? cs.primary
