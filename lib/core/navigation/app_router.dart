@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:duemate/core/widgets/dock_nav_icon.dart';
 import 'package:duemate/features/dashboard/presentation/screens/dashboard_screen.dart';
 import 'package:duemate/features/emis/presentation/screens/add_edit_emi_screen.dart';
+import 'package:duemate/features/expenses/presentation/screens/expenses_screen.dart';
 import 'package:duemate/features/people/presentation/screens/add_edit_person_screen.dart';
 import 'package:duemate/features/people/presentation/screens/people_screen.dart';
 import 'package:duemate/features/people/presentation/screens/person_details_screen.dart';
@@ -96,6 +97,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             ),
           ),
           GoRoute(
+            path: '/expenses',
+            pageBuilder: (context, state) => _buildTabTransition(
+              context: context,
+              state: state,
+              child: const ExpensesScreen(),
+            ),
+          ),
+          GoRoute(
             path: '/reports',
             pageBuilder: (context, state) => _buildTabTransition(
               context: context,
@@ -160,7 +169,8 @@ class AppShell extends StatelessWidget {
     final location = GoRouterState.of(context).uri.path;
     if (location == '/') return 0;
     if (location.startsWith('/people')) return 1;
-    if (location.startsWith('/reports')) return 2;
+    if (location.startsWith('/expenses')) return 2;
+    if (location.startsWith('/reports')) return 3;
     return 0;
   }
 
@@ -173,6 +183,9 @@ class AppShell extends StatelessWidget {
         context.go('/people');
         break;
       case 2:
+        context.go('/expenses');
+        break;
+      case 3:
         context.go('/reports');
         break;
     }
@@ -222,6 +235,7 @@ class _FloatingDockNavBar extends StatelessWidget {
     final labels = const [
       'Dashboard',
       'Directory',
+      'Expenses',
       'Transactions',
     ];
 
