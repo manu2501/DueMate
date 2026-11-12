@@ -15,15 +15,39 @@ class MonthlyBudgetCard extends ConsumerWidget {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Set Monthly Budget Cap'),
-        content: TextField(
-          controller: controller,
-          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          decoration: const InputDecoration(
-            labelText: 'Monthly Budget Limit',
-            hintText: 'e.g. 25000',
-            prefixText: '₹ ',
-          ),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.12),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(Icons.tune_rounded, color: Theme.of(context).colorScheme.primary, size: 20),
+            ),
+            const SizedBox(width: 10),
+            const Text('Set Monthly Budget Cap'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Set your maximum personal spending target for the month. You will get visual warnings when approaching this cap.',
+              style: TextStyle(fontSize: 12.5),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: controller,
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              decoration: const InputDecoration(
+                labelText: 'Monthly Budget Limit',
+                hintText: 'e.g. 25000',
+                prefixText: '₹ ',
+              ),
+            ),
+          ],
         ),
         actions: [
           TextButton(
@@ -60,6 +84,7 @@ class MonthlyBudgetCard extends ConsumerWidget {
 
     final double progress = budgetLimit > 0 ? (totalSpent / budgetLimit).clamp(0.0, 1.0) : 1.0;
     final int percentUsed = (progress * 100).round();
+    final double remaining = (budgetLimit - totalSpent).clamp(0.0, budgetLimit);
 
     Color statusColor;
     String statusMessage;
@@ -130,11 +155,17 @@ class MonthlyBudgetCard extends ConsumerWidget {
                     ),
                   ],
                 ),
-                IconButton.filledTonal(
+
+                // Prominent Set Cap Action Button
+                FilledButton.tonalIcon(
                   onPressed: () => _showEditBudgetDialog(context, ref, budgetLimit),
-                  icon: const Icon(Icons.tune_rounded, size: 16),
-                  tooltip: 'Set Monthly Budget',
-                  visualDensity: VisualDensity.compact,
+                  icon: const Icon(Icons.tune_rounded, size: 14),
+                  label: const Text('Set Cap', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                  style: FilledButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    visualDensity: VisualDensity.compact,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
                 ),
               ],
             ),
@@ -142,8 +173,7 @@ class MonthlyBudgetCard extends ConsumerWidget {
 
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              crossAxisAlignment: CrossAxisAlignment.baseline,
-              textBaseline: TextBaseline.alphabetic,
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 Row(
                   children: [
@@ -166,12 +196,33 @@ class MonthlyBudgetCard extends ConsumerWidget {
                     ),
                   ],
                 ),
-                Text(
-                  'Cap: ${CurrencyFormatter.formatCompact(budgetLimit, symbol: currencySymbol)}',
-                  style: GoogleFonts.inter(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: cs.onSurfaceVariant,
+
+                // Interactive Budget Cap Pill Tag
+                InkWell(
+                  onTap: () => _showEditBudgetDialog(context, ref, budgetLimit),
+                  borderRadius: BorderRadius.circular(8),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: cs.primary.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: cs.primary.withValues(alpha: 0.3)),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          'Cap: ${CurrencyFormatter.formatCompact(budgetLimit, symbol: currencySymbol)}',
+                          style: GoogleFonts.inter(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: cs.primary,
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        Icon(Icons.edit_rounded, size: 12, color: cs.primary),
+                      ],
+                    ),
                   ),
                 ),
               ],
@@ -193,10 +244,10 @@ class MonthlyBudgetCard extends ConsumerWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  '$percentUsed% of monthly limit used',
+                  '${CurrencyFormatter.formatCompact(remaining, symbol: currencySymbol)} remaining ($percentUsed% used)',
                   style: GoogleFonts.inter(
                     fontSize: 11.5,
-                    fontWeight: FontWeight.w500,
+                    fontWeight: FontWeight.w600,
                     color: cs.onSurfaceVariant,
                   ),
                 ),

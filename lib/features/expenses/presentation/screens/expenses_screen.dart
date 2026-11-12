@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:duemate/core/utils/currency_formatter.dart';
 import 'package:duemate/core/utils/date_formatter.dart';
@@ -24,6 +25,7 @@ class ExpensesScreen extends ConsumerStatefulWidget {
 class _ExpensesScreenState extends ConsumerState<ExpensesScreen> with SingleTickerProviderStateMixin {
   late TabController _tabController;
   int _emiOwnershipFilter = 0; // 0: For Myself, 1: For Others, 2: All
+  ExpenseCategory? _selectedCategoryFilter;
 
   @override
   void initState() {
@@ -130,6 +132,9 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> with SingleTick
     final personsMap = ref.watch(personsMapProvider);
 
     final monthlyExpenses = monthlyExpensesAsync.value ?? [];
+    final filteredExpenses = _selectedCategoryFilter == null
+        ? monthlyExpenses
+        : monthlyExpenses.where((e) => e.category == _selectedCategoryFilter).toList();
 
     return Scaffold(
       appBar: PreferredSize(
@@ -166,6 +171,11 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> with SingleTick
                         ],
                       ),
                     ),
+                    IconButton.filledTonal(
+                      tooltip: 'View Expense Charts',
+                      icon: const Icon(Icons.bar_chart_rounded, size: 18),
+                      onPressed: () => context.push('/expense-charts'),
+                    ),
                   ],
                 ),
               ),
@@ -201,7 +211,7 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> with SingleTick
             child: TabBarView(
               controller: _tabController,
               children: [
-                // Tab 1: Personal Outflows List
+                // Tab 1: Personal Outflows List & Usage Charts
                 monthlyExpenses.isEmpty
                     ? EmptyStateWidget(
                         icon: Icons.receipt_long_outlined,
@@ -210,73 +220,132 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> with SingleTick
                         actionLabel: 'Log Expense',
                         onActionPressed: () => AddEditExpenseSheet.show(context),
                       )
-                    : Container(
-                        margin: const EdgeInsets.fromLTRB(20, 4, 20, 160),
-                        decoration: BoxDecoration(
-                          color: cs.surfaceContainerLow,
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: cs.outlineVariant),
-                        ),
-                        child: ListView.separated(
-                          padding: const EdgeInsets.symmetric(vertical: 6),
-                          itemCount: monthlyExpenses.length,
-                          separatorBuilder: (_, _) => Divider(
-                            height: 1,
-                            indent: 68,
-                            endIndent: 16,
-                            color: cs.outlineVariant.withValues(alpha: 0.6),
-                          ),
-                          itemBuilder: (ctx, index) {
-                            final expense = monthlyExpenses[index];
-                            return FadeSlideTransition(
-                              index: index,
-                              child: ListTile(
-                                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                                leading: Container(
-                                  padding: const EdgeInsets.all(10),
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFFF59E0B).withValues(alpha: 0.12),
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: Text(
-                                    _getCategoryName(expense.category).split(' ').first,
-                                    style: const TextStyle(fontSize: 16),
-                                  ),
+                    : ListView(
+                        padding: const EdgeInsets.only(bottom: 160),
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 20),
+                            child: InkWell(
+                              onTap: () => context.push('/expense-charts'),
+                              borderRadius: BorderRadius.circular(20),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                                decoration: BoxDecoration(
+                                  color: cs.primary.withValues(alpha: 0.08),
+                                  borderRadius: BorderRadius.circular(20),
+                                  border: Border.all(color: cs.primary.withValues(alpha: 0.2)),
                                 ),
-                                title: Text(
-                                  expense.title,
-                                  style: GoogleFonts.inter(
-                                    fontSize: 14.5,
-                                    fontWeight: FontWeight.w700,
-                                    color: isDark ? Colors.white : const Color(0xFF131438),
-                                  ),
-                                ),
-                                subtitle: Text(
-                                  '${_getPaymentMethodName(expense.paymentMethod)} • ${DateFormatter.formatShortDate(expense.expenseDate)}',
-                                  style: theme.textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
-                                ),
-                                trailing: Row(
-                                  mainAxisSize: MainAxisSize.min,
+                                child: Row(
                                   children: [
-                                    Text(
-                                      CurrencyFormatter.format(expense.amount, symbol: currencySymbol),
-                                      style: GoogleFonts.dmSans(
-                                        fontSize: 15,
-                                        fontWeight: FontWeight.w800,
-                                        color: cs.error,
+                                    Container(
+                                      padding: const EdgeInsets.all(10),
+                                      decoration: BoxDecoration(
+                                        color: cs.primary,
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      child: const Icon(Icons.bar_chart_rounded, color: Colors.white, size: 20),
+                                    ),
+                                    const SizedBox(width: 14),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            'View Expense Analytics & Charts',
+                                            style: GoogleFonts.inter(
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.w700,
+                                              color: cs.primary,
+                                            ),
+                                          ),
+                                          Text(
+                                            'Month-over-month trends & category usage',
+                                            style: GoogleFonts.inter(
+                                              fontSize: 11.5,
+                                              color: cs.onSurfaceVariant,
+                                            ),
+                                          ),
+                                        ],
                                       ),
                                     ),
-                                    IconButton(
-                                      icon: Icon(Icons.delete_outline_rounded, size: 18, color: cs.error),
-                                      onPressed: () => _confirmDelete(context, ref, expense),
-                                    ),
+                                    Icon(Icons.chevron_right_rounded, color: cs.primary),
                                   ],
                                 ),
-                                onTap: () => AddEditExpenseSheet.show(context, expenseToEdit: expense),
                               ),
-                            );
-                          },
-                        ),
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          Container(
+                            margin: const EdgeInsets.symmetric(horizontal: 20),
+                            decoration: BoxDecoration(
+                              color: cs.surfaceContainerLow,
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(color: cs.outlineVariant),
+                            ),
+                            child: ListView.separated(
+                              shrinkWrap: true,
+                              physics: const NeverScrollableScrollPhysics(),
+                              padding: const EdgeInsets.symmetric(vertical: 6),
+                              itemCount: filteredExpenses.length,
+                              separatorBuilder: (_, _) => Divider(
+                                height: 1,
+                                indent: 68,
+                                endIndent: 16,
+                                color: cs.outlineVariant.withValues(alpha: 0.6),
+                              ),
+                              itemBuilder: (ctx, index) {
+                                final expense = filteredExpenses[index];
+                                return FadeSlideTransition(
+                                  index: index,
+                                  child: ListTile(
+                                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                                    leading: Container(
+                                      padding: const EdgeInsets.all(10),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFF59E0B).withValues(alpha: 0.12),
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: Text(
+                                        _getCategoryName(expense.category).split(' ').first,
+                                        style: const TextStyle(fontSize: 16),
+                                      ),
+                                    ),
+                                    title: Text(
+                                      expense.title,
+                                      style: GoogleFonts.inter(
+                                        fontSize: 14.5,
+                                        fontWeight: FontWeight.w700,
+                                        color: isDark ? Colors.white : const Color(0xFF131438),
+                                      ),
+                                    ),
+                                    subtitle: Text(
+                                      '${_getPaymentMethodName(expense.paymentMethod)} • ${DateFormatter.formatShortDate(expense.expenseDate)}',
+                                      style: theme.textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+                                    ),
+                                    trailing: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Text(
+                                          CurrencyFormatter.format(expense.amount, symbol: currencySymbol),
+                                          style: GoogleFonts.dmSans(
+                                            fontSize: 15,
+                                            fontWeight: FontWeight.w800,
+                                            color: cs.error,
+                                          ),
+                                        ),
+                                        IconButton(
+                                          icon: Icon(Icons.delete_outline_rounded, size: 18, color: cs.error),
+                                          onPressed: () => _confirmDelete(context, ref, expense),
+                                        ),
+                                      ],
+                                    ),
+                                    onTap: () => AddEditExpenseSheet.show(context, expenseToEdit: expense),
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                        ],
                       ),
 
                 // Tab 2: EMIs & Bank Loans
