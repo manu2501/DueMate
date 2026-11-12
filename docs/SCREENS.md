@@ -35,7 +35,8 @@ most: **Give**, **Receive**, **Expense**.
 
 **Hide amounts.** The eye icon in the top bar (also a switch in Settings) masks every balance and
 total across the app, for using it in public. Labels, counts and dates stay readable; amounts you
-type, exports and shared messages are never masked. The choice is remembered.
+type, exports and shared messages are never masked. The choice is remembered. Showing amounts again
+asks for your fingerprint, face or screen lock, so someone you hand the phone to can't un-hide them.
 
 <p>
   <img src="screenshots/15_home_hidden.png" width="260" alt="Home with amounts hidden, light" />
@@ -121,8 +122,23 @@ month, each editable.
   <img src="screenshots/06_settings_dark.png" width="260" alt="Settings, dark" />
 </p>
 
-Theme, hide amounts and currency; monthly budget; notifications (permission and a test notification);
-backup, CSV export, and erase all data (asks first). About at the bottom.
+Theme, hide amounts and currency; monthly budget; App Lock and how soon it locks after you leave
+the app; notifications (permission and a test notification); backup, CSV export, and erase all data
+(asks first). About at the bottom.
+
+### App Lock
+
+<p>
+  <img src="screenshots/16_app_lock.png" width="260" alt="App Lock, light" />
+  <img src="screenshots/16_app_lock_dark.png" width="260" alt="App Lock, dark" />
+</p>
+
+With **App Lock** on (Settings › Security), DueMate opens locked and asks for your fingerprint, face
+or the phone's screen lock straight away; **Unlock** asks again if you dismissed it. It locks again
+when you come back after being away for the chosen time (immediately, 30 seconds, 1 or 5 minutes).
+Turning it on or off asks you to verify first. While locked, back leaves the app instead of
+closing pages behind the lock, and balances are kept out of the recent-apps thumbnail. If the
+phone's screen lock is removed, App Lock turns itself off rather than locking you out.
 
 ---
 

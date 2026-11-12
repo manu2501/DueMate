@@ -6,6 +6,7 @@ import 'package:duemate/core/theme/app_theme.dart';
 import 'package:duemate/core/utils/date_formatter.dart';
 import 'package:duemate/core/utils/permission_manager.dart';
 import 'package:duemate/core/widgets/app_logo.dart';
+import 'package:duemate/core/widgets/hide_amounts_toggle.dart';
 import 'package:duemate/core/widgets/quick_give_sheet.dart';
 import 'package:duemate/core/widgets/quick_receive_sheet.dart';
 import 'package:duemate/core/widgets/transaction_tile.dart';
@@ -411,7 +412,7 @@ class _HideAmountsButton extends ConsumerWidget {
       isSelected: hidden,
       icon: const Icon(Icons.visibility_outlined),
       selectedIcon: const Icon(Icons.visibility_off_outlined),
-      onPressed: () => ref.read(hideBalancesProvider.notifier).toggle(),
+      onPressed: () => setAmountsHidden(context, ref, !hidden),
     );
   }
 }

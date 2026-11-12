@@ -62,8 +62,9 @@ Everything stays on the phone. There is no account, no server and no analytics.
 - **Home**: where you stand overall, Give / Receive / Expense buttons, an *EMIs & cards* shortcut (active count, monthly outgo, next due installments), this month's spending against budget, largest balances and recent activity.
 - **Activity**: one timeline of ledger entries and expenses, grouped by day, with search and filters for type, period and payment method; export as PDF or CSV.
 - **Notifications**: permission and a test notification in Settings. Scheduled EMI due-date reminders are not wired up yet (see [TODO](TODO.md)).
-- **Hide amounts**: the eye icon on Home (or the switch in Settings) replaces every balance and total with dots, e.g. when using the app in public. Amounts you're typing, exports and shared messages are never hidden. The choice is remembered.
-- **Settings**: theme (system / light / dark), hide amounts, currency (₹, $, €, £, AED, S$, A$, C$), monthly budget, notifications, backup, CSV export, erase all data.
+- **Hide amounts**: the eye icon on Home (or the switch in Settings) replaces every balance and total with dots, e.g. when using the app in public. Amounts you're typing, exports and shared messages are never hidden. The choice is remembered, and showing amounts again asks for fingerprint, face or screen lock.
+- **App Lock**: ask for fingerprint, face or the phone's screen lock to open DueMate, on launch and after you've been away for a chosen time. Balances are hidden from the recent-apps view while it's on.
+- **Settings**: theme (system / light / dark), hide amounts, App Lock, currency (₹, $, €, £, AED, S$, A$, C$), monthly budget, notifications, backup, CSV export, erase all data.
 
 ## Design
 

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'core/navigation/app_router.dart';
 import 'core/services/notification_service.dart';
 import 'core/theme/app_theme.dart';
@@ -9,9 +11,12 @@ import 'features/settings/presentation/screens/app_lock_screen.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await NotificationService().initialize();
+  // Loaded up front so App Lock is in force on the very first frame.
+  final prefs = await SharedPreferences.getInstance();
   runApp(
-    const ProviderScope(
-      child: DueMateApp(),
+    ProviderScope(
+      overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
+      child: const DueMateApp(),
     ),
   );
 }
@@ -27,12 +32,9 @@ class _DueMateAppState extends ConsumerState<DueMateApp> with WidgetsBindingObse
   @override
   void initState() {
     super.initState();
+    // Registered before the router's back-button dispatcher, so
+    // [didPopRoute] gets the back press first.
     WidgetsBinding.instance.addObserver(this);
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (ref.read(appLockEnabledProvider)) {
-        ref.read(appIsLockedProvider.notifier).lock();
-      }
-    });
   }
 
   @override
@@ -43,18 +45,28 @@ class _DueMateAppState extends ConsumerState<DueMateApp> with WidgetsBindingObse
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.paused || state == AppLifecycleState.hidden) {
-      if (ref.read(appLockEnabledProvider)) {
-        ref.read(appIsLockedProvider.notifier).lock();
-      }
-    }
+    ref.read(appLockControllerProvider.notifier).onLifecycleChanged(state);
+  }
+
+  /// While locked, back must not pop the (hidden) pages behind the lock
+  /// screen; it sends the app to the background instead.
+  @override
+  Future<bool> didPopRoute() async {
+    if (!ref.read(appLockControllerProvider).locked) return false;
+    SystemNavigator.pop().catchError((_) {});
+    return true;
   }
 
   @override
   Widget build(BuildContext context) {
     final router = ref.watch(appRouterProvider);
     final themeMode = ref.watch(themeModeProvider);
-    final isLocked = ref.watch(appIsLockedProvider);
+    final lock = ref.watch(appLockControllerProvider);
+
+    ref.listen(appLockControllerProvider.select((s) => s.locked), (_, locked) {
+      // Don't leave the keyboard up over the lock screen.
+      if (locked) FocusManager.instance.primaryFocus?.unfocus();
+    });
 
     return MaterialApp.router(
       title: 'DueMate',
@@ -63,17 +75,22 @@ class _DueMateAppState extends ConsumerState<DueMateApp> with WidgetsBindingObse
       darkTheme: AppTheme.dark(),
       themeMode: themeMode,
       routerConfig: router,
-      builder: (context, child) {
-        if (isLocked) {
-          return Stack(
-            children: [
-              ?child,
-              const AppLockScreen(),
-            ],
-          );
-        }
-        return child ?? const SizedBox.shrink();
-      },
+      // The tree shape stays the same whether or not the app is covered, so
+      // locking never rebuilds the router and open pages keep their state.
+      builder: (context, child) => Stack(
+        fit: StackFit.expand,
+        children: [
+          // Hidden content mustn't be read out by TalkBack or keep animating.
+          ExcludeSemantics(
+            excluding: lock.covered,
+            child: TickerMode(enabled: !lock.covered, child: child ?? const SizedBox.shrink()),
+          ),
+          if (lock.locked)
+            const AppLockScreen()
+          else if (lock.obscured)
+            const AppPrivacyCover(),
+        ],
+      ),
     );
   }
 }

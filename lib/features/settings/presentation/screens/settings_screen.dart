@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:duemate/core/constants/app_constants.dart';
+import 'package:duemate/core/services/app_lock_service.dart';
 import 'package:duemate/core/services/notification_service.dart';
 import 'package:duemate/core/theme/app_theme.dart';
 import 'package:duemate/core/utils/backup_helper.dart';
@@ -8,6 +9,7 @@ import 'package:duemate/core/utils/csv_exporter.dart';
 import 'package:duemate/core/utils/permission_manager.dart';
 import 'package:duemate/core/widgets/app_logo.dart';
 import 'package:duemate/core/widgets/confirm_dialog.dart';
+import 'package:duemate/core/widgets/hide_amounts_toggle.dart';
 import 'package:duemate/core/widgets/ui_kit.dart';
 import 'package:duemate/data/providers/app_providers.dart';
 import 'package:duemate/features/expenses/presentation/widgets/budget_dialog.dart';
@@ -87,6 +89,40 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     );
   }
 
+  Future<void> _setAppLock(bool on) async {
+    final result = await ref.read(appLockControllerProvider.notifier).setEnabled(on);
+    final message = appLockMessage(result);
+    if (message != null && mounted) _snack(message);
+  }
+
+  void _pickLockDelay(AppLockDelay current) {
+    showModalBottomSheet<void>(
+      context: context,
+      useRootNavigator: true,
+      builder: (ctx) => SafeArea(
+        child: RadioGroup<AppLockDelay>(
+          groupValue: current,
+          onChanged: (delay) {
+            if (delay != null) ref.read(appLockSettingsProvider.notifier).setDelay(delay);
+            Navigator.of(ctx).pop();
+          },
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(AppSpace.screenGutter, 0, AppSpace.screenGutter, AppSpace.sm),
+                child: Text('Lock after leaving the app', style: Theme.of(ctx).textTheme.titleMedium),
+              ),
+              for (final d in AppLockDelay.values)
+                RadioListTile<AppLockDelay>(value: d, title: Text(d.label)),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Future<void> _exportCsv() async {
     final txs = await ref.read(allTransactionsProvider.future);
     await CsvExporter.exportAndShareAllTransactions(
@@ -117,6 +153,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final themeMode = ref.watch(themeModeProvider);
     final symbol = ref.watch(currencySymbolProvider);
     final budget = ref.watch(monthlyBudgetLimitProvider);
+    final lockSettings = ref.watch(appLockSettingsProvider);
     final currency = AppConstants.supportedCurrencies.where((c) => c.symbol == symbol).firstOrNull;
 
     return Scaffold(
@@ -153,7 +190,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 title: const Text('Hide amounts'),
                 subtitle: const Text('Show dots instead of balances and totals, e.g. in public. Also on Home.'),
                 value: ref.watch(hideBalancesProvider),
-                onChanged: (v) => ref.read(hideBalancesProvider.notifier).set(v),
+                onChanged: (v) => setAmountsHidden(context, ref, v),
               ),
               ListTile(
                 title: const Text('Currency'),
@@ -184,14 +221,15 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               SwitchListTile(
                 contentPadding: const EdgeInsets.symmetric(horizontal: AppSpace.screenGutter),
                 title: const Text('App Lock'),
-                subtitle: const Text('Require Fingerprint, Face ID or PIN to open DueMate'),
-                value: ref.watch(appLockEnabledProvider),
-                onChanged: (v) async {
-                  final success = await ref.read(appLockEnabledProvider.notifier).toggleAppLock(v);
-                  if (!success && mounted && v) {
-                    _snack('Authentication failed. App Lock remained unchanged.');
-                  }
-                },
+                subtitle: const Text('Ask for your fingerprint, face or screen lock to open DueMate'),
+                value: lockSettings.enabled,
+                onChanged: _setAppLock,
+              ),
+              ListTile(
+                enabled: lockSettings.enabled,
+                title: const Text('Lock after leaving the app'),
+                subtitle: Text(lockSettings.delay.label),
+                onTap: () => _pickLockDelay(lockSettings.delay),
               ),
             ],
           ),

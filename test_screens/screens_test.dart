@@ -21,6 +21,7 @@ import 'package:duemate/core/navigation/app_router.dart';
 import 'package:duemate/data/database/app_database.dart' hide Person, CreditCardEmi, Transaction;
 import 'package:duemate/data/database/tables.dart';
 import 'package:duemate/data/providers/app_providers.dart';
+import 'package:duemate/core/services/app_lock_service.dart';
 import 'package:duemate/data/repositories/emi_repository_impl.dart';
 import 'package:duemate/data/repositories/expense_repository_impl.dart';
 import 'package:duemate/data/repositories/person_repository_impl.dart';
@@ -28,6 +29,8 @@ import 'package:duemate/data/repositories/transaction_repository_impl.dart';
 import 'package:duemate/domain/entities/credit_card_emi.dart';
 import 'package:duemate/domain/entities/ledger_transaction.dart';
 import 'package:duemate/domain/entities/person.dart';
+
+import '../test/helpers/fake_app_lock_service.dart';
 import 'package:duemate/domain/entities/personal_expense.dart';
 import 'package:duemate/main.dart';
 
@@ -168,7 +171,11 @@ void main() {
       await tester.runAsync(() => _seed(db));
 
       await tester.pumpWidget(ProviderScope(
-        overrides: [databaseProvider.overrideWithValue(db)],
+        overrides: [
+          databaseProvider.overrideWithValue(db),
+          // No biometric prompt in tests: every unlock attempt is "cancelled".
+          appLockServiceProvider.overrideWithValue(FakeAppLockService()..next = AppLockAuthResult.cancelled),
+        ],
         child: const DueMateApp(),
       ));
 
@@ -242,8 +249,15 @@ void main() {
       await home();
       await tester.tap(find.byTooltip('Hide amounts'));
       await shot('15_home_hidden');
-      await tester.tap(find.byTooltip('Show amounts'));
+      // Showing amounts asks for verification; set it directly here.
+      final container = ProviderScope.containerOf(tester.element(find.byType(DueMateApp)));
+      await tester.runAsync(() => container.read(hideBalancesProvider.notifier).set(false));
       await settle();
+
+      // App Lock: turned on directly (the switch would prompt), then locked.
+      await tester.runAsync(() => container.read(appLockSettingsProvider.notifier).setEnabled(true));
+      container.read(appLockControllerProvider.notifier).lockNow();
+      await shot('16_app_lock');
 
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pump(const Duration(seconds: 1));

@@ -59,7 +59,7 @@ What's done, what's known to be missing, and what's next.
 - [ ] **Repayment reliability:** an on-time percentage per person.
 
 ### Privacy and convenience
-- [ ] **App lock:** fingerprint / face unlock on launch and resume (`local_auth`).
+- [x] **App lock:** fingerprint / face / screen-lock unlock on launch and resume (`local_auth`), with a lock delay.
 - [ ] **Home-screen widget:** net position and the next EMIs due (`home_widget`).
 - [ ] **Automatic backups:** scheduled encrypted backups to the user's own Google Drive.
 
