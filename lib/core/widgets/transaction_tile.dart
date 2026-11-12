@@ -20,6 +20,16 @@ class TransactionTile extends StatelessWidget {
     this.onTap,
   });
 
+  String _getTileTitle() {
+    if (person != null && person!.id != AppConstants.selfPersonId) {
+      return person!.name;
+    }
+    if (transaction.isEmi) {
+      return 'Self EMI Installment';
+    }
+    return transaction.type.label;
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -57,7 +67,7 @@ class TransactionTile extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    person?.name ?? transaction.type.label,
+                    _getTileTitle(),
                     style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:duemate/core/constants/app_constants.dart';
 import 'package:duemate/core/utils/currency_formatter.dart';
 import 'package:duemate/core/utils/date_formatter.dart';
 import 'package:duemate/domain/entities/credit_card_emi.dart';
@@ -110,7 +111,7 @@ class EmiCard extends StatelessWidget {
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
-                          if (person != null) ...[
+                          if (person != null && !emi.isForSelf && person!.id != AppConstants.selfPersonId) ...[
                             Padding(
                               padding: const EdgeInsets.symmetric(horizontal: 4),
                               child: Text('•', style: TextStyle(color: cs.outline, fontSize: 12)),
@@ -191,10 +192,14 @@ class EmiCard extends StatelessWidget {
                       ),
                       child: Text(
                         emi.isForSelf
-                            ? 'For Myself'
+                            ? (isLoan ? 'Personal Loan' : 'Self EMI')
                             : (isLoan
-                                ? (emi.isPaidByMe ? 'He repays' : 'You repay')
-                                : (emi.isPaidByMe ? 'He owes' : 'You owe')),
+                                ? (emi.isPaidByMe
+                                    ? '${person?.name ?? 'Contact'} repays'
+                                    : 'You repay ${person?.name ?? 'Contact'}')
+                                : (emi.isPaidByMe
+                                    ? '${person?.name ?? 'Contact'} owes'
+                                    : 'You owe ${person?.name ?? 'Contact'}')),
                         style: GoogleFonts.inter(
                           fontSize: 10.5,
                           fontWeight: FontWeight.w700,

@@ -6,7 +6,7 @@ import 'package:duemate/data/providers/app_providers.dart';
 import 'package:duemate/main.dart';
 
 void main() {
-  testWidgets('DueMate app renders welcome animation and transitions to dashboard', (WidgetTester tester) async {
+  testWidgets('DueMate launches directly into Dashboard with 4-tab navigation dock', (WidgetTester tester) async {
     final testDb = AppDatabase(NativeDatabase.memory());
 
     await tester.pumpWidget(
@@ -18,41 +18,37 @@ void main() {
       ),
     );
 
-    // Initial pump for welcome animation
-    await tester.pump();
     await tester.pump(const Duration(milliseconds: 500));
 
-    // Verify Welcome screen renders
-    expect(find.text('Get Started'), findsOneWidget);
+    // Verify Direct Startup Dashboard renders with net ledger balance and quick actions
+    expect(find.text('Net Ledger Balance'), findsOneWidget);
+    expect(find.text('Top Active Dues'), findsOneWidget);
+    expect(find.text('Give'), findsOneWidget);
+    expect(find.text('Receive'), findsOneWidget);
 
-    // Tap "Get Started" button to enter Dashboard
-    await tester.tap(find.text('Get Started'));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 500));
-
-    // Verify dashboard renders with new floating dock navigation
-    expect(find.text('DueMate'), findsWidgets);
-    expect(find.text('Settlement Progress'), findsOneWidget);
-    expect(find.text('Top Dues'), findsOneWidget);
-    expect(find.text('They owe you'), findsOneWidget);
-    expect(find.text('You owe'), findsOneWidget);
+    // Verify 4-tab floating dock navbar
     expect(find.byTooltip('Dashboard'), findsOneWidget);
     expect(find.byTooltip('Directory'), findsOneWidget);
+    expect(find.byTooltip('Expenses'), findsOneWidget);
     expect(find.byTooltip('Transactions'), findsOneWidget);
-    expect(find.byTooltip('Notifications'), findsNothing);
 
-    // Tap on Directory tab to leave dashboard
+    // Tap Directory tab
     await tester.tap(find.byTooltip('Directory'));
-    await tester.pumpAndSettle();
-    expect(find.text('Search people or notes...'), findsOneWidget);
+    await tester.pump(const Duration(milliseconds: 500));
+    expect(find.text('Directory'), findsWidgets);
 
-    // Simulate system back button: should navigate back to Dashboard
-    await tester.binding.handlePopRoute();
-    await tester.pumpAndSettle();
+    // Tap Expenses tab
+    await tester.tap(find.byTooltip('Expenses'));
+    await tester.pump(const Duration(milliseconds: 500));
+    expect(find.text('My Expenses & Outflows'), findsOneWidget);
 
-    // Verify we are back on Dashboard, not closing app
-    expect(find.text('Settlement Progress'), findsOneWidget);
-    expect(find.text('Top Dues'), findsOneWidget);
+    // Tap Transactions tab
+    await tester.tap(find.byTooltip('Transactions'));
+    await tester.pump(const Duration(milliseconds: 500));
+    expect(find.text('Transactions & Outflows'), findsOneWidget);
+
+    // Finish all ticking animation controllers & pending microtasks
+    await tester.pump(const Duration(seconds: 5));
 
     await testDb.close();
   });

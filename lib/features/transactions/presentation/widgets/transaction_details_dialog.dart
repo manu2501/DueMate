@@ -46,15 +46,17 @@ class TransactionDetailsDialog extends ConsumerWidget {
   void _confirmDelete(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
-    final personName = person?.name ?? 'the borrower';
+    final isSelf = person?.id == AppConstants.selfPersonId;
+    final personName = person?.name ?? 'this contact';
 
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text('Delete Entry?', style: TextStyle(color: cs.error)),
         content: Text(
-          'Are you sure you want to delete this record?\n\n'
-          'Deleting this will recalculate $personName\'s outstanding balance.',
+          isSelf || person == null
+              ? 'Are you sure you want to delete this record?'
+              : 'Are you sure you want to delete this record?\n\nDeleting this will recalculate $personName\'s outstanding balance.',
         ),
         actions: [
           TextButton(
@@ -282,7 +284,7 @@ class TransactionDetailsDialog extends ConsumerWidget {
                       color: accentColor,
                     ),
                   ),
-                  if (person != null) ...[
+                  if (person != null && person!.id != AppConstants.selfPersonId) ...[
                     const SizedBox(height: 8),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,

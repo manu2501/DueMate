@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:duemate/core/constants/app_constants.dart';
 import 'package:duemate/core/widgets/whatsapp_icon.dart';
 import 'package:duemate/core/utils/currency_formatter.dart';
 import 'package:duemate/core/utils/date_formatter.dart';
@@ -195,13 +196,17 @@ class EmiDetailsSheet extends ConsumerWidget {
                       const SizedBox(width: 10),
                       Expanded(
                         child: Text(
-                          isLoan
-                              ? (emi.isPaidByMe
-                                  ? 'You gave the loan ($personName repays you monthly)'
-                                  : 'You took the loan (You repay $personName monthly)')
-                              : (emi.isPaidByMe
-                                  ? 'Paid with your card ($personName owes you monthly)'
-                                  : "Paid with $personName's card (You owe monthly)"),
+                          emi.isForSelf
+                              ? (isLoan
+                                  ? 'Personal Loan (Your monthly repayment schedule)'
+                                  : 'Personal Credit Card EMI (Your monthly payment schedule)')
+                              : (isLoan
+                                  ? (emi.isPaidByMe
+                                      ? 'You gave the loan ($personName repays you monthly)'
+                                      : 'You took the loan (You repay $personName monthly)')
+                                  : (emi.isPaidByMe
+                                      ? 'Paid with your card ($personName owes you monthly)'
+                                      : "Paid with $personName's card (You owe monthly)")),
                           style: GoogleFonts.inter(
                             fontSize: 12.5,
                             fontWeight: FontWeight.w600,
@@ -454,7 +459,7 @@ class EmiDetailsSheet extends ConsumerWidget {
 
                 const SizedBox(height: 20),
 
-                if (!isCompleted && person != null) ...[
+                if (!isCompleted && person != null && !emi.isForSelf && person!.id != AppConstants.selfPersonId) ...[
                   OutlinedButton.icon(
                     onPressed: () {
                       final msg = WhatsAppHelper.generateEmiReminderMessage(
