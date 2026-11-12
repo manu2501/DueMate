@@ -1,5 +1,4 @@
 import 'package:drift/native.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -16,6 +15,7 @@ import 'package:duemate/domain/entities/person.dart';
 import 'package:duemate/main.dart';
 
 import 'helpers/fake_app_lock_service.dart';
+import 'helpers/test_db.dart';
 
 void main() {
   group('DisplayMoney', () {
@@ -105,9 +105,7 @@ void main() {
       expect(lockService.prompts, 2);
       expect(find.textContaining('500'), findsWidgets);
 
-      await tester.pumpWidget(const SizedBox.shrink());
-      await tester.pump(const Duration(seconds: 1));
-      await tester.runAsync(() => db.close());
+      await closeTestDb(tester, db);
     },
     timeout: const Timeout(Duration(seconds: 30)),
   );

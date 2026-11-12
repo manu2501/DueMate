@@ -9,6 +9,7 @@ import 'package:duemate/data/providers/app_providers.dart';
 import 'package:duemate/data/repositories/emi_repository_impl.dart';
 import 'package:duemate/domain/entities/credit_card_emi.dart';
 import 'package:duemate/features/emis/presentation/screens/add_edit_emi_screen.dart';
+import 'helpers/test_db.dart';
 
 Future<AppDatabase> _openForm(WidgetTester tester) async {
   SharedPreferences.setMockInitialValues({});
@@ -40,12 +41,6 @@ Future<AppDatabase> _openForm(WidgetTester tester) async {
   await tester.pump();
   await tester.pump(const Duration(milliseconds: 500));
   return db;
-}
-
-Future<void> _closeDb(WidgetTester tester, AppDatabase db) async {
-  await tester.pumpWidget(const SizedBox.shrink());
-  await tester.pump(const Duration(seconds: 1));
-  await tester.runAsync(() => db.close());
 }
 
 Future<void> _fill(WidgetTester tester, String label, String text) async {
@@ -89,7 +84,7 @@ void main() {
       expect(emi.monthlyInstallment, 1050);
       expect(emi.totalTenureMonths, 12);
 
-      await _closeDb(tester, db);
+      await closeTestDb(tester, db);
     },
     timeout: const Timeout(Duration(seconds: 30)),
   );
@@ -119,7 +114,7 @@ void main() {
       expect(emi.principal, 100000);
       expect(emi.charges, 1000);
 
-      await _closeDb(tester, db);
+      await closeTestDb(tester, db);
     },
     timeout: const Timeout(Duration(seconds: 30)),
   );
@@ -186,7 +181,7 @@ void main() {
       expect(after.totalAmount, closeTo(106619, 2));
       expect(after.monthlyInstallment, closeTo(8884.92, 0.1));
 
-      await _closeDb(tester, db);
+      await closeTestDb(tester, db);
     },
     timeout: const Timeout(Duration(seconds: 30)),
   );

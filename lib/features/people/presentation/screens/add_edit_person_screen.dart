@@ -162,7 +162,7 @@ class _AddEditPersonScreenState extends ConsumerState<AddEditPersonScreen> {
           email: _emailController.text.trim().isEmpty ? null : _emailController.text.trim(),
           notes: _notesController.text.trim().isEmpty ? null : _notesController.text.trim(),
           updatedAt: now,
-          upiId: inputUpi.isEmpty ? null : inputUpi,
+          upiId: inputUpi,
           clearUpiId: inputUpi.isEmpty,
         );
         await ref.read(personRepositoryProvider).updatePerson(updated);

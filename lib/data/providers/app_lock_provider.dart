@@ -8,11 +8,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:duemate/core/services/app_lock_service.dart';
 import 'package:duemate/data/providers/settings_providers.dart';
 
-/// Preferences loaded before `runApp`, so settings that must be right on the
-/// very first frame (App Lock) can be read synchronously. Null in tests that
-/// don't override it; notifiers then fall back to loading asynchronously.
-final sharedPreferencesProvider = Provider<SharedPreferences?>((ref) => null);
-
 final appLockServiceProvider = Provider<AppLockService>((ref) => AppLockService());
 
 /// Injectable clock for the lock-delay logic.
@@ -48,19 +43,15 @@ class AppLockSettings {
   int get hashCode => Object.hash(enabled, delay);
 }
 
-class AppLockSettingsNotifier extends Notifier<AppLockSettings> {
+class AppLockSettingsNotifier extends PrefsNotifier<AppLockSettings> {
   static const enabledKey = 'duemate_app_lock_enabled';
   static const delayKey = 'duemate_app_lock_delay';
 
   @override
-  AppLockSettings build() {
-    final prefs = ref.read(sharedPreferencesProvider);
-    if (prefs != null) return _fromPrefs(prefs);
-    _loadAsync();
-    return const AppLockSettings();
-  }
+  AppLockSettings get initial => const AppLockSettings();
 
-  static AppLockSettings _fromPrefs(SharedPreferences prefs) => AppLockSettings(
+  @override
+  AppLockSettings read(SharedPreferences prefs) => AppLockSettings(
         enabled: prefs.getBool(enabledKey) ?? false,
         delay: AppLockDelay.values.firstWhere(
           (d) => d.name == prefs.getString(delayKey),
@@ -68,22 +59,16 @@ class AppLockSettingsNotifier extends Notifier<AppLockSettings> {
         ),
       );
 
-  Future<void> _loadAsync() async {
-    state = _fromPrefs(await SharedPreferences.getInstance());
-  }
-
   /// Persists the switch. Verification is the controller's job
   /// ([AppLockController.setEnabled]); call that from UI.
   Future<void> setEnabled(bool enabled) async {
     state = state.copyWith(enabled: enabled);
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(enabledKey, enabled);
+    await (await prefs()).setBool(enabledKey, enabled);
   }
 
   Future<void> setDelay(AppLockDelay delay) async {
     state = state.copyWith(delay: delay);
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(delayKey, delay.name);
+    await putString(delayKey, delay.name);
   }
 }
 

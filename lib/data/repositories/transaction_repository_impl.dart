@@ -2,11 +2,11 @@ import 'dart:async';
 import 'package:drift/drift.dart';
 import '../../domain/entities/ledger_summary.dart';
 import '../../domain/entities/ledger_transaction.dart';
-import '../../domain/entities/person.dart' as domain;
 import '../../domain/entities/person_summary.dart';
 import '../../domain/repositories/transaction_repository.dart';
 import '../database/app_database.dart' as db;
 import '../database/tables.dart';
+import 'person_mapper.dart';
 
 class TransactionRepositoryImpl implements TransactionRepository {
   final db.AppDatabase _database;
@@ -235,18 +235,7 @@ class TransactionRepositoryImpl implements TransactionRepository {
 
         summaries.add(
           PersonSummary(
-            person: domain.Person(
-              id: p.id,
-              name: p.name,
-              phone: p.phone,
-              email: p.email,
-              notes: p.notes,
-              upiId: p.upiId,
-              avatarPath: p.avatarPath,
-              createdAt: p.createdAt,
-              updatedAt: p.updatedAt,
-              archivedAt: p.archivedAt,
-            ),
+            person: p.toDomain(),
             totalGiven: given,
             totalReceived: received,
             balance: balance,
@@ -289,18 +278,7 @@ class TransactionRepositoryImpl implements TransactionRepository {
       final lastTx = txList.isNotEmpty ? _toDomain(txList.first) : null;
 
       return PersonSummary(
-        person: domain.Person(
-          id: p.id,
-          name: p.name,
-          phone: p.phone,
-          email: p.email,
-          notes: p.notes,
-          upiId: p.upiId,
-          avatarPath: p.avatarPath,
-          createdAt: p.createdAt,
-          updatedAt: p.updatedAt,
-          archivedAt: p.archivedAt,
-        ),
+        person: p.toDomain(),
         totalGiven: given,
         totalReceived: received,
         balance: balance,

@@ -17,6 +17,8 @@ import 'package:duemate/domain/upi.dart';
 // in both themes. This is the one deliberate exception to theme colours.
 const _qrInk = Color(0xFF000000);
 const _qrPaper = Color(0xFFFFFFFF);
+const _qrEye = QrEyeStyle(eyeShape: QrEyeShape.square, color: _qrInk);
+const _qrModules = QrDataModuleStyle(dataModuleShape: QrDataModuleShape.square, color: _qrInk);
 
 /// Asks for your UPI ID and the name payers see. Returns true when a valid
 /// ID is saved.
@@ -182,8 +184,8 @@ class UpiQrSheet extends ConsumerWidget {
                   size: 232,
                   padding: EdgeInsets.zero,
                   backgroundColor: _qrPaper,
-                  eyeStyle: const QrEyeStyle(eyeShape: QrEyeShape.square, color: _qrInk),
-                  dataModuleStyle: const QrDataModuleStyle(dataModuleShape: QrDataModuleShape.square, color: _qrInk),
+                  eyeStyle: _qrEye,
+                  dataModuleStyle: _qrModules,
                   semanticsLabel: 'UPI QR code for $id',
                 ),
               ),
@@ -251,8 +253,8 @@ class UpiQrSheet extends ConsumerWidget {
       data: data,
       version: QrVersions.auto,
       gapless: true,
-      eyeStyle: const QrEyeStyle(eyeShape: QrEyeShape.square, color: _qrInk),
-      dataModuleStyle: const QrDataModuleStyle(dataModuleShape: QrDataModuleShape.square, color: _qrInk),
+      eyeStyle: _qrEye,
+      dataModuleStyle: _qrModules,
     ).paint(canvas, const Size.square(qrSize));
     final image = await recorder.endRecording().toImage((qrSize + margin * 2).toInt(), (qrSize + margin * 2).toInt());
     final bytes = await image.toByteData(format: ui.ImageByteFormat.png);

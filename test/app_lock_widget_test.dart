@@ -11,6 +11,7 @@ import 'package:duemate/data/providers/app_providers.dart';
 import 'package:duemate/main.dart';
 
 import 'helpers/fake_app_lock_service.dart';
+import 'helpers/test_db.dart';
 
 void main() {
   testWidgets('App Lock: locked on cold start, back does not pop hidden pages, unlock reveals them',
@@ -67,8 +68,6 @@ void main() {
     expect(find.text('DueMate is locked'), findsNothing);
     expect(settingsTitle, findsOneWidget);
 
-    await tester.pumpWidget(const SizedBox.shrink());
-    await tester.pump(const Duration(seconds: 1));
-    await tester.runAsync(() => db.close());
+    await closeTestDb(tester, db);
   }, timeout: const Timeout(Duration(seconds: 30)));
 }

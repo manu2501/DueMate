@@ -131,6 +131,27 @@ class _LedgerEntrySheetState extends ConsumerState<LedgerEntrySheet> {
     await payWithUpiApp(context, payeeId: upiId, payeeName: name, amount: _amount, note: _note);
   }
 
+  /// UPI shortcut (rupees only): your QR when receiving; a UPI app when
+  /// giving to someone whose UPI ID is saved.
+  Widget? _upiAction(PersonSummary? selected, String symbol) {
+    final amount = _amount > 0 ? ' ${CurrencyFormatter.format(_amount, symbol: symbol)}' : '';
+    if (!_isGive) {
+      return OutlinedButton.icon(
+        onPressed: _showUpiQr,
+        icon: const Icon(Icons.qr_code_2_rounded),
+        label: Text(amount.isEmpty ? 'Show UPI QR' : 'Show UPI QR for$amount'),
+      );
+    }
+    final payee = selected?.person;
+    final upiId = payee?.upiId;
+    if (payee == null || upiId == null || upiId.isEmpty) return null;
+    return OutlinedButton.icon(
+      onPressed: () => _payWithUpi(payee.name, upiId),
+      icon: const Icon(Icons.open_in_new_rounded),
+      label: Text('Pay$amount with UPI app'),
+    );
+  }
+
   Future<void> _save() async {
     final amount = _amount;
     final messenger = ScaffoldMessenger.of(context);
@@ -195,27 +216,7 @@ class _LedgerEntrySheetState extends ConsumerState<LedgerEntrySheet> {
         ? null
         : summaries?.where((s) => s.person.id == _selectedPersonId).firstOrNull;
 
-    // UPI: show your QR when receiving; open a UPI app when giving to
-    // someone whose UPI ID is saved. Rupees only.
-    final upiOn = ref.watch(upiAvailableProvider);
-    final payeeUpi = selected?.person.upiId;
-    final Widget? upiAction = !upiOn
-        ? null
-        : !_isGive
-            ? OutlinedButton.icon(
-                onPressed: _showUpiQr,
-                icon: const Icon(Icons.qr_code_2_rounded),
-                label: Text(_amount > 0 ? 'Show UPI QR for ${CurrencyFormatter.format(_amount, symbol: symbol)}' : 'Show UPI QR'),
-              )
-            : (payeeUpi == null || payeeUpi.isEmpty)
-                ? null
-                : OutlinedButton.icon(
-                    onPressed: () => _payWithUpi(selected!.person.name, payeeUpi),
-                    icon: const Icon(Icons.open_in_new_rounded),
-                    label: Text(_amount > 0
-                        ? 'Pay ${CurrencyFormatter.format(_amount, symbol: symbol)} with UPI app'
-                        : 'Pay with UPI app'),
-                  );
+    final upiAction = ref.watch(upiAvailableProvider) ? _upiAction(selected, symbol) : null;
 
     return Padding(
       padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),

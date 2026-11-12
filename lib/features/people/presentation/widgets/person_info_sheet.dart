@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:duemate/data/providers/app_providers.dart';
+import 'package:duemate/core/theme/app_theme.dart';
 import 'package:duemate/core/utils/date_formatter.dart';
 import 'package:duemate/core/utils/whatsapp_helper.dart';
 import 'package:duemate/core/widgets/avatar_widget.dart';
@@ -9,7 +10,7 @@ import 'package:duemate/domain/entities/person.dart';
 import 'package:duemate/domain/entities/person_summary.dart';
 import 'package:duemate/features/people/presentation/screens/add_edit_person_screen.dart';
 
-class PersonInfoSheet extends StatelessWidget {
+class PersonInfoSheet extends ConsumerWidget {
   final Person person;
   final PersonSummary summary;
   final String currencySymbol;
@@ -41,10 +42,13 @@ class PersonInfoSheet extends StatelessWidget {
     );
   }
 
+  static bool _has(String? s) => s != null && s.isNotEmpty;
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
+    final hasPhone = _has(person.phone);
 
     return SafeArea(
       child: Padding(
@@ -114,98 +118,75 @@ class PersonInfoSheet extends StatelessWidget {
               ),
               child: Column(
                 children: [
-                  ListTile(
-                    leading: Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF25D366).withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: const WhatsAppIcon(size: 18),
+                  for (final (i, row) in [
+                    _InfoRow(
+                      icon: const WhatsAppIcon(size: 18),
+                      tint: const Color(0xFF25D366), // WhatsApp brand green, as on its icon
+                      title: 'WhatsApp Number',
+                      subtitle: Text(hasPhone ? person.phone! : 'No phone number added'),
+                      onTap: hasPhone
+                          ? () {
+                              Navigator.of(context).pop();
+                              WhatsAppHelper.sendWhatsAppMessage(
+                                phoneNumber: person.phone,
+                                message: WhatsAppHelper.generateLedgerReminderMessage(summary,
+                                    currencySymbol: currencySymbol, upiId: ref.read(upiIdForRemindersProvider)),
+                                context: context,
+                              );
+                            }
+                          : null,
                     ),
-                    title: const Text('WhatsApp Number'),
-                    subtitle: Text(person.phone ?? 'No phone number added'),
-                    trailing: (person.phone != null && person.phone!.isNotEmpty)
-                        ? const Icon(Icons.arrow_forward_ios_rounded, size: 14)
-                        : null,
-                    onTap: (person.phone != null && person.phone!.isNotEmpty)
-                        ? () {
-                            Navigator.of(context).pop();
-                            final upiId = ProviderScope.containerOf(context, listen: false).read(upiIdForRemindersProvider);
-                            final msg = WhatsAppHelper.generateLedgerReminderMessage(summary,
-                                currencySymbol: currencySymbol, upiId: upiId);
-                            WhatsAppHelper.sendWhatsAppMessage(
-                              phoneNumber: person.phone,
-                              message: msg,
-                              context: context,
-                            );
-                          }
-                        : null,
-                  ),
-                  if (person.email != null && person.email!.isNotEmpty) ...[
-                    Divider(height: 1, indent: 56, color: cs.outlineVariant),
-                    ListTile(
-                      leading: Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: cs.primary.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Icon(Icons.email_outlined, size: 18, color: cs.primary),
-                      ),
-                      title: const Text('Email Address'),
-                      subtitle: Text(person.email!),
-                    ),
+                    if (_has(person.email))
+                      _InfoRow.icon(Icons.email_outlined, cs.primary, 'Email Address', Text(person.email!)),
+                    if (_has(person.upiId))
+                      _InfoRow.icon(Icons.account_balance_wallet_outlined, cs.primary, 'UPI ID',
+                          SelectableText(person.upiId!)),
+                    if (_has(person.notes))
+                      _InfoRow.icon(Icons.note_alt_outlined, cs.secondary, 'Notes', Text(person.notes!)),
+                    _InfoRow.icon(Icons.calendar_today_outlined, cs.tertiary, 'Added to Ledger',
+                        Text(DateFormatter.formatDate(person.createdAt))),
+                  ].indexed) ...[
+                    if (i > 0) Divider(height: 1, indent: 56, color: cs.outlineVariant),
+                    row,
                   ],
-                  if (person.upiId != null && person.upiId!.isNotEmpty) ...[
-                    Divider(height: 1, indent: 56, color: cs.outlineVariant),
-                    ListTile(
-                      leading: Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: cs.primary.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Icon(Icons.account_balance_wallet_outlined, size: 18, color: cs.primary),
-                      ),
-                      title: const Text('UPI ID'),
-                      subtitle: SelectableText(person.upiId!),
-                    ),
-                  ],
-                  if (person.notes != null && person.notes!.isNotEmpty) ...[
-                    Divider(height: 1, indent: 56, color: cs.outlineVariant),
-                    ListTile(
-                      leading: Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: cs.secondary.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Icon(Icons.note_alt_outlined, size: 18, color: cs.secondary),
-                      ),
-                      title: const Text('Notes'),
-                      subtitle: Text(person.notes!),
-                    ),
-                  ],
-                  Divider(height: 1, indent: 56, color: cs.outlineVariant),
-                  ListTile(
-                    leading: Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: cs.tertiary.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Icon(Icons.calendar_today_outlined, size: 18, color: cs.tertiary),
-                    ),
-                    title: const Text('Added to Ledger'),
-                    subtitle: Text(DateFormatter.formatDate(person.createdAt)),
-                  ),
                 ],
               ),
             ),
           ],
         ),
       ),
+    );
+  }
+}
+
+/// One contact-detail row: a tinted icon badge, a label and the value.
+class _InfoRow extends StatelessWidget {
+  final Widget icon;
+  final Color tint;
+  final String title;
+  final Widget subtitle;
+  final VoidCallback? onTap;
+
+  const _InfoRow({required this.icon, required this.tint, required this.title, required this.subtitle, this.onTap});
+
+  _InfoRow.icon(IconData data, Color color, String title, Widget subtitle)
+      : this(icon: Icon(data, size: 18, color: color), tint: color, title: title, subtitle: subtitle);
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      leading: Container(
+        padding: const EdgeInsets.all(AppSpace.sm),
+        decoration: BoxDecoration(
+          color: tint.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(AppRadius.sm),
+        ),
+        child: icon,
+      ),
+      title: Text(title),
+      subtitle: subtitle,
+      trailing: onTap == null ? null : const Icon(Icons.arrow_forward_ios_rounded, size: 14),
+      onTap: onTap,
     );
   }
 }

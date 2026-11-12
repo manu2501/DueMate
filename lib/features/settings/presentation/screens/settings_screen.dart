@@ -57,16 +57,23 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     if (mounted) _snack(ok ? 'Test reminder sent. Check your notifications.' : "Couldn't send. Check notification permission.");
   }
 
-  void _pickCurrency(String current) {
+  /// Pick-one sheet: a title and one radio row per option; picking saves and closes.
+  void _showRadioPicker<T>({
+    required String title,
+    required T current,
+    required List<T> options,
+    required Widget Function(BuildContext ctx, T option) tile,
+    required ValueChanged<T> onPicked,
+  }) {
     showModalBottomSheet<void>(
       context: context,
       useRootNavigator: true,
       isScrollControlled: true,
       builder: (ctx) => SafeArea(
-        child: RadioGroup<String>(
+        child: RadioGroup<T>(
           groupValue: current,
-          onChanged: (symbol) {
-            if (symbol != null) ref.read(currencySymbolProvider.notifier).setCurrency(symbol);
+          onChanged: (value) {
+            if (value != null) onPicked(value);
             Navigator.of(ctx).pop();
           },
           child: ListView(
@@ -74,54 +81,44 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             children: [
               Padding(
                 padding: const EdgeInsets.fromLTRB(AppSpace.screenGutter, 0, AppSpace.screenGutter, AppSpace.sm),
-                child: Text('Currency', style: Theme.of(ctx).textTheme.titleMedium),
+                child: Text(title, style: Theme.of(ctx).textTheme.titleMedium),
               ),
-              for (final c in AppConstants.supportedCurrencies)
-                RadioListTile<String>(
-                  value: c.symbol,
-                  title: Text(c.name),
-                  subtitle: Text(c.code),
-                  secondary: Text(c.symbol, style: Theme.of(ctx).textTheme.titleMedium),
-                ),
+              for (final o in options) tile(ctx, o),
             ],
           ),
         ),
       ),
     );
   }
+
+  void _pickCurrency(String current) => _showRadioPicker<String>(
+        title: 'Currency',
+        current: current,
+        options: [for (final c in AppConstants.supportedCurrencies) c.symbol],
+        tile: (ctx, symbol) {
+          final c = AppConstants.supportedCurrencies.firstWhere((c) => c.symbol == symbol);
+          return RadioListTile<String>(
+            value: c.symbol,
+            title: Text(c.name),
+            subtitle: Text(c.code),
+            secondary: Text(c.symbol, style: Theme.of(ctx).textTheme.titleMedium),
+          );
+        },
+        onPicked: (symbol) => ref.read(currencySymbolProvider.notifier).setCurrency(symbol),
+      );
+
+  void _pickLockDelay(AppLockDelay current) => _showRadioPicker<AppLockDelay>(
+        title: 'Lock after leaving the app',
+        current: current,
+        options: AppLockDelay.values,
+        tile: (_, d) => RadioListTile<AppLockDelay>(value: d, title: Text(d.label)),
+        onPicked: (d) => ref.read(appLockSettingsProvider.notifier).setDelay(d),
+      );
 
   Future<void> _setAppLock(bool on) async {
     final result = await ref.read(appLockControllerProvider.notifier).setEnabled(on);
     final message = appLockMessage(result);
     if (message != null && mounted) _snack(message);
-  }
-
-  void _pickLockDelay(AppLockDelay current) {
-    showModalBottomSheet<void>(
-      context: context,
-      useRootNavigator: true,
-      builder: (ctx) => SafeArea(
-        child: RadioGroup<AppLockDelay>(
-          groupValue: current,
-          onChanged: (delay) {
-            if (delay != null) ref.read(appLockSettingsProvider.notifier).setDelay(delay);
-            Navigator.of(ctx).pop();
-          },
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(AppSpace.screenGutter, 0, AppSpace.screenGutter, AppSpace.sm),
-                child: Text('Lock after leaving the app', style: Theme.of(ctx).textTheme.titleMedium),
-              ),
-              for (final d in AppLockDelay.values)
-                RadioListTile<AppLockDelay>(value: d, title: Text(d.label)),
-            ],
-          ),
-        ),
-      ),
-    );
   }
 
   Future<void> _exportCsv() async {

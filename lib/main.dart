@@ -10,9 +10,12 @@ import 'features/settings/presentation/screens/app_lock_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // Settings are loaded up front so they're right on the very first frame
+  // (App Lock in force, amounts hidden). Independent of notifications, so
+  // both start together.
+  final prefsLoading = SharedPreferences.getInstance();
   await NotificationService().initialize();
-  // Loaded up front so App Lock is in force on the very first frame.
-  final prefs = await SharedPreferences.getInstance();
+  final prefs = await prefsLoading;
   runApp(
     ProviderScope(
       overrides: [sharedPreferencesProvider.overrideWithValue(prefs)],
@@ -57,40 +60,55 @@ class _DueMateAppState extends ConsumerState<DueMateApp> with WidgetsBindingObse
     return true;
   }
 
+  static final _lightTheme = AppTheme.light();
+  static final _darkTheme = AppTheme.dark();
+
   @override
   Widget build(BuildContext context) {
-    final router = ref.watch(appRouterProvider);
-    final themeMode = ref.watch(themeModeProvider);
-    final lock = ref.watch(appLockControllerProvider);
+    return MaterialApp.router(
+      title: 'DueMate',
+      debugShowCheckedModeBanner: false,
+      theme: _lightTheme,
+      darkTheme: _darkTheme,
+      themeMode: ref.watch(themeModeProvider),
+      routerConfig: ref.watch(appRouterProvider),
+      // Lock state lives in its own widget so locking, and the privacy cover
+      // on every trip to the background, don't rebuild the whole app.
+      builder: (context, child) => _LockOverlay(child: child ?? const SizedBox.shrink()),
+    );
+  }
+}
+
+/// Draws the lock screen or privacy cover over the app. The tree shape stays
+/// the same whether or not the app is covered, so locking never rebuilds the
+/// router and open pages keep their state.
+class _LockOverlay extends ConsumerWidget {
+  final Widget child;
+  const _LockOverlay({required this.child});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final (locked, obscured) = ref.watch(appLockControllerProvider.select((s) => (s.locked, s.obscured)));
+    final covered = locked || obscured;
 
     ref.listen(appLockControllerProvider.select((s) => s.locked), (_, locked) {
       // Don't leave the keyboard up over the lock screen.
       if (locked) FocusManager.instance.primaryFocus?.unfocus();
     });
 
-    return MaterialApp.router(
-      title: 'DueMate',
-      debugShowCheckedModeBanner: false,
-      theme: AppTheme.light(),
-      darkTheme: AppTheme.dark(),
-      themeMode: themeMode,
-      routerConfig: router,
-      // The tree shape stays the same whether or not the app is covered, so
-      // locking never rebuilds the router and open pages keep their state.
-      builder: (context, child) => Stack(
-        fit: StackFit.expand,
-        children: [
-          // Hidden content mustn't be read out by TalkBack or keep animating.
-          ExcludeSemantics(
-            excluding: lock.covered,
-            child: TickerMode(enabled: !lock.covered, child: child ?? const SizedBox.shrink()),
-          ),
-          if (lock.locked)
-            const AppLockScreen()
-          else if (lock.obscured)
-            const AppPrivacyCover(),
-        ],
-      ),
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        // Hidden content mustn't be read out by TalkBack or keep animating.
+        ExcludeSemantics(
+          excluding: covered,
+          child: TickerMode(enabled: !covered, child: child),
+        ),
+        if (locked)
+          const AppLockScreen()
+        else if (obscured)
+          const AppPrivacyCover(),
+      ],
     );
   }
 }

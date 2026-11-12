@@ -11,6 +11,7 @@ import 'package:duemate/data/database/tables.dart';
 import 'package:duemate/data/providers/app_providers.dart';
 import 'package:duemate/data/repositories/person_repository_impl.dart';
 import 'package:duemate/domain/entities/person.dart';
+import 'helpers/test_db.dart';
 
 /// Opens the Give/Receive sheet for [personId] in a bare app.
 Future<AppDatabase> _openSheet(
@@ -53,12 +54,6 @@ Future<AppDatabase> _openSheet(
   return db;
 }
 
-Future<void> _tearDown(WidgetTester tester, AppDatabase db) async {
-  await tester.pumpWidget(const SizedBox.shrink());
-  await tester.pump(const Duration(seconds: 1));
-  await tester.runAsync(db.close);
-}
-
 void main() {
   testWidgets('Receive: without a UPI ID it asks for one, then shows a QR with the amount', (tester) async {
     final db = await _openSheet(tester, type: TransactionType.paymentReceived, personId: 'asha');
@@ -91,28 +86,28 @@ void main() {
     final prefs = await tester.runAsync(SharedPreferences.getInstance);
     expect(prefs!.getString('duemate_upi_id'), 'me@oksbi');
 
-    await _tearDown(tester, db);
+    await closeTestDb(tester, db);
   }, timeout: const Timeout(Duration(seconds: 30)));
 
   testWidgets('Give: "Pay with UPI app" only for people with a UPI ID', (tester) async {
     var db = await _openSheet(tester, type: TransactionType.moneyGiven, personId: 'ravi');
     expect(find.text('Pay with UPI app'), findsOneWidget);
-    await _tearDown(tester, db);
+    await closeTestDb(tester, db);
 
     db = await _openSheet(tester, type: TransactionType.moneyGiven, personId: 'asha');
     expect(find.text('Pay with UPI app'), findsNothing);
-    await _tearDown(tester, db);
+    await closeTestDb(tester, db);
   }, timeout: const Timeout(Duration(seconds: 30)));
 
   testWidgets('No UPI actions when the currency is not rupees', (tester) async {
     var db = await _openSheet(tester,
         type: TransactionType.paymentReceived, personId: 'asha', prefs: {'duemate_currency_symbol': '\$'});
     expect(find.textContaining('UPI '), findsNothing);
-    await _tearDown(tester, db);
+    await closeTestDb(tester, db);
 
     db = await _openSheet(tester,
         type: TransactionType.moneyGiven, personId: 'ravi', prefs: {'duemate_currency_symbol': '\$'});
     expect(find.textContaining('UPI '), findsNothing);
-    await _tearDown(tester, db);
+    await closeTestDb(tester, db);
   }, timeout: const Timeout(Duration(seconds: 30)));
 }
