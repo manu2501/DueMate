@@ -13,6 +13,7 @@ import 'package:duemate/core/widgets/transaction_tile.dart';
 import 'package:duemate/core/widgets/ui_kit.dart';
 import 'package:duemate/data/providers/app_providers.dart';
 import 'package:duemate/domain/entities/credit_card_emi.dart';
+import 'package:duemate/features/emis/presentation/screens/add_edit_emi_screen.dart';
 import 'package:duemate/features/emis/presentation/widgets/emi_details_sheet.dart';
 import 'package:duemate/features/expenses/presentation/widgets/add_edit_expense_sheet.dart';
 import 'package:duemate/features/people/presentation/screens/add_edit_person_screen.dart';
@@ -80,7 +81,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             else ...[
               SliverToBoxAdapter(child: _Position(symbol: symbol)),
               const SliverToBoxAdapter(child: _PrimaryActions()),
-              SliverToBoxAdapter(child: _ComingUp(symbol: symbol)),
+              SliverToBoxAdapter(child: _EmisAndCards(symbol: symbol)),
               SliverToBoxAdapter(child: _MonthSpend(symbol: symbol)),
               SliverToBoxAdapter(child: _Balances(symbol: symbol)),
               SliverToBoxAdapter(child: _Recent(symbol: symbol)),
@@ -174,35 +175,61 @@ class _PrimaryActions extends StatelessWidget {
   }
 }
 
-/// EMIs due in the next 30 days, soonest first.
-class _ComingUp extends ConsumerWidget {
+/// Shortcut to EMIs and cards: how many, what goes out each month, and the
+/// next installments due. Always shown, so EMIs are one tap from Home.
+class _EmisAndCards extends ConsumerWidget {
   final String symbol;
-  const _ComingUp({required this.symbol});
+  const _EmisAndCards({required this.symbol});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final emis = ref.watch(activeEmisProvider).value ?? const <CreditCardEmi>[];
     final people = ref.watch(personsMapProvider);
-    final horizon = DateTime.now().add(const Duration(days: 30));
-    final upcoming = emis.where((e) => e.nextDueDate != null && e.nextDueDate!.isBefore(horizon)).toList()
+    void openAll() => context.go('/expenses?tab=emis');
+
+    final upcoming = emis.where((e) => e.nextDueDate != null).toList()
       ..sort((a, b) => a.nextDueDate!.compareTo(b.nextDueDate!));
-    if (upcoming.isEmpty) return const SizedBox.shrink();
+    // What leaves your account each month: your own EMIs and those on your card.
+    final monthly = emis
+        .where((e) => e.isForSelf || e.isPaidByMe)
+        .fold<double>(0, (s, e) => s + e.getMonthlyInstallmentFor(e.installmentsPaid + 1));
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        SectionHeader('Coming up', actionLabel: 'All EMIs', onAction: () => context.go('/expenses?tab=emis')),
+        SectionHeader('EMIs & cards', actionLabel: 'Add', onAction: () => AddEditEmiScreen.show(context)),
         GroupCard(
-          children: [
-            for (final e in upcoming.take(3))
-              ListTile(
-                onTap: () => EmiDetailsSheet.show(context, emi: e, person: people[e.personId]),
-                leading: const IconBadge(Icons.event_outlined),
-                title: Text(e.itemName, maxLines: 1, overflow: TextOverflow.ellipsis),
-                subtitle: Text('Due ${DateFormatter.formatRelative(e.nextDueDate!)} · ${e.cardName}'),
-                trailing: MoneyText(e.getMonthlyInstallmentFor(e.installmentsPaid + 1), symbol: symbol),
-              ),
-          ],
+          children: emis.isEmpty
+              ? [
+                  ListTile(
+                    onTap: () => AddEditEmiScreen.show(context),
+                    leading: const IconBadge(Icons.credit_card_outlined),
+                    title: const Text('Add an EMI or loan'),
+                    subtitle: const Text('Installments go into the ledger on their due dates'),
+                    trailing: const Icon(Icons.chevron_right_rounded),
+                  ),
+                ]
+              : [
+                  ListTile(
+                    onTap: openAll,
+                    leading: const IconBadge(Icons.credit_card_outlined),
+                    title: Text('${emis.length} active'),
+                    subtitle: Text(
+                      monthly > 0
+                          ? '${CurrencyFormatter.format(monthly, symbol: symbol)} goes out each month'
+                          : 'Paid by others',
+                    ),
+                    trailing: const Icon(Icons.chevron_right_rounded),
+                  ),
+                  for (final e in upcoming.take(3))
+                    ListTile(
+                      onTap: () => EmiDetailsSheet.show(context, emi: e, person: people[e.personId]),
+                      leading: const IconBadge(Icons.event_outlined),
+                      title: Text(e.itemName, maxLines: 1, overflow: TextOverflow.ellipsis),
+                      subtitle: Text('Due ${DateFormatter.formatRelative(e.nextDueDate!)} · ${e.cardName}'),
+                      trailing: MoneyText(e.getMonthlyInstallmentFor(e.installmentsPaid + 1), symbol: symbol),
+                    ),
+                ],
         ),
       ],
     );
