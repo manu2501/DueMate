@@ -9,6 +9,7 @@ import 'package:duemate/core/utils/date_formatter.dart';
 import 'package:duemate/core/widgets/avatar_widget.dart';
 import 'package:duemate/core/widgets/empty_state_widget.dart';
 import 'package:duemate/core/widgets/export_options_sheet.dart';
+import 'package:duemate/core/widgets/fade_slide_transition.dart';
 import 'package:duemate/core/widgets/transaction_tile.dart';
 import 'package:duemate/data/database/tables.dart';
 import 'package:duemate/data/providers/app_providers.dart';
@@ -360,17 +361,20 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> with SingleTicker
                               itemBuilder: (ctx, index) {
                                 final tx = filteredTxs[index];
                                 final person = personsMap[tx.personId];
-                                return TransactionTile(
-                                  transaction: tx,
-                                  person: person,
-                                  currencySymbol: currencySymbol,
-                                  onTap: () {
-                                    TransactionDetailsDialog.show(
-                                      context,
-                                      transaction: tx,
-                                      person: person,
-                                    );
-                                  },
+                                return FadeSlideTransition(
+                                  index: index,
+                                  child: TransactionTile(
+                                    transaction: tx,
+                                    person: person,
+                                    currencySymbol: currencySymbol,
+                                    onTap: () {
+                                      TransactionDetailsDialog.show(
+                                        context,
+                                        transaction: tx,
+                                        person: person,
+                                      );
+                                    },
+                                  ),
                                 );
                               },
                             ),

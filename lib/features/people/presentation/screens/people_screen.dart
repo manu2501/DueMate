@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:uuid/uuid.dart';
 import 'package:duemate/core/utils/contacts_helper.dart';
 import 'package:duemate/core/widgets/empty_state_widget.dart';
+import 'package:duemate/core/widgets/fade_slide_transition.dart';
 import 'package:duemate/data/providers/app_providers.dart';
 import 'package:duemate/domain/entities/person.dart';
 import 'package:duemate/features/people/presentation/screens/add_edit_person_screen.dart';
@@ -306,9 +307,12 @@ class _PeopleScreenState extends ConsumerState<PeopleScreen> {
                       itemCount: people.length,
                       separatorBuilder: (_, _) => const SizedBox(height: 10),
                       itemBuilder: (ctx, index) {
-                        return PersonDirectoryTile(
-                          summary: people[index],
-                          currencySymbol: currencySymbol,
+                        return FadeSlideTransition(
+                          index: index,
+                          child: PersonDirectoryTile(
+                            summary: people[index],
+                            currencySymbol: currencySymbol,
+                          ),
                         );
                       },
                     ),

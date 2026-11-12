@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:duemate/core/constants/app_constants.dart';
 import 'package:duemate/core/utils/permission_manager.dart';
 import 'package:duemate/core/widgets/empty_state_widget.dart';
+import 'package:duemate/core/widgets/fade_slide_transition.dart';
 import 'package:duemate/core/widgets/transaction_tile.dart';
 import 'package:duemate/data/providers/app_providers.dart';
 import 'package:duemate/features/dashboard/presentation/widgets/dashboard_quick_actions_bar.dart';
@@ -193,9 +194,12 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     itemCount: topPeople.length,
                     separatorBuilder: (_, _) => const SizedBox(width: 12),
                     itemBuilder: (context, index) {
-                      return DashboardTopDuesCard(
-                        summary: topPeople[index],
-                        currencySymbol: currencySymbol,
+                      return FadeSlideTransition(
+                        index: index,
+                        child: DashboardTopDuesCard(
+                          summary: topPeople[index],
+                          currencySymbol: currencySymbol,
+                        ),
                       );
                     },
                   ),

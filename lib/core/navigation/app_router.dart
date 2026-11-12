@@ -10,7 +10,6 @@ import 'package:duemate/features/people/presentation/screens/people_screen.dart'
 import 'package:duemate/features/people/presentation/screens/person_details_screen.dart';
 import 'package:duemate/features/reports/presentation/screens/reports_screen.dart';
 import 'package:duemate/features/settings/presentation/screens/settings_screen.dart';
-import 'package:duemate/features/welcome/presentation/screens/welcome_screen.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
 final _shellNavigatorKey = GlobalKey<NavigatorState>();
@@ -72,16 +71,8 @@ CustomTransitionPage<void> _buildSlideTransition({
 final appRouterProvider = Provider<GoRouter>((ref) {
   return GoRouter(
     navigatorKey: _rootNavigatorKey,
-    initialLocation: '/welcome',
+    initialLocation: '/',
     routes: [
-      GoRoute(
-        path: '/welcome',
-        pageBuilder: (context, state) => _buildSlideTransition(
-          context: context,
-          state: state,
-          child: const WelcomeScreen(),
-        ),
-      ),
       ShellRoute(
         navigatorKey: _shellNavigatorKey,
         builder: (context, state, child) {

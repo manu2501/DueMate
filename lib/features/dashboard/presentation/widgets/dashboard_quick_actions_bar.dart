@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:duemate/core/widgets/pressable_scale.dart';
 import 'package:duemate/core/widgets/quick_give_sheet.dart';
 import 'package:duemate/core/widgets/quick_receive_sheet.dart';
 import 'package:duemate/features/emis/presentation/screens/add_edit_emi_screen.dart';
@@ -73,7 +74,7 @@ class _QuickActionTile extends StatelessWidget {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
 
-    return InkWell(
+    return PressableScale(
       onTap: onTap,
       borderRadius: BorderRadius.circular(16),
       child: Container(

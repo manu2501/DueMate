@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:duemate/core/theme/app_theme.dart';
-import 'package:duemate/core/utils/currency_formatter.dart';
+import 'package:duemate/core/widgets/animated_currency_text.dart';
 import 'package:duemate/data/providers/app_providers.dart';
 
 class DashboardStatsCard extends StatelessWidget {
@@ -107,8 +107,9 @@ class DashboardStatsCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 14),
 
-                Text(
-                  CurrencyFormatter.format(netBalance.abs(), symbol: currencySymbol),
+                AnimatedCurrencyText(
+                  amount: netBalance.abs(),
+                  currencySymbol: currencySymbol,
                   style: GoogleFonts.dmSans(
                     fontSize: 32,
                     fontWeight: FontWeight.w800,
@@ -214,8 +215,9 @@ class DashboardStatsCard extends StatelessWidget {
                         ],
                       ),
                       const SizedBox(height: 10),
-                      Text(
-                        CurrencyFormatter.format(totals.totalTheyOwe, symbol: currencySymbol),
+                      AnimatedCurrencyText(
+                        amount: totals.totalTheyOwe,
+                        currencySymbol: currencySymbol,
                         style: GoogleFonts.dmSans(
                           fontSize: 20,
                           fontWeight: FontWeight.w800,
@@ -288,8 +290,9 @@ class DashboardStatsCard extends StatelessWidget {
                         ],
                       ),
                       const SizedBox(height: 10),
-                      Text(
-                        CurrencyFormatter.format(totals.totalUserOwes, symbol: currencySymbol),
+                      AnimatedCurrencyText(
+                        amount: totals.totalUserOwes,
+                        currencySymbol: currencySymbol,
                         style: GoogleFonts.dmSans(
                           fontSize: 20,
                           fontWeight: FontWeight.w800,
