@@ -30,16 +30,16 @@ class EmptyStateWidget extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(18),
               decoration: BoxDecoration(
-                color: cs.primary.withValues(alpha: 0.06),
+                color: cs.surfaceContainer,
                 shape: BoxShape.circle,
               ),
-              child: Icon(icon, size: 32, color: cs.primary.withValues(alpha: 0.6)),
+              child: Icon(icon, size: 32, color: cs.onSurfaceVariant),
             ),
             const SizedBox(height: 14),
             Text(
               title,
               textAlign: TextAlign.center,
-              style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+              style: theme.textTheme.titleMedium,
             ),
             const SizedBox(height: 6),
             Text(

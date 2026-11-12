@@ -3,22 +3,19 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 import 'package:duemate/core/constants/app_constants.dart';
-import 'package:duemate/core/theme/app_theme.dart';
-import 'package:duemate/core/utils/currency_formatter.dart';
-import 'package:duemate/core/utils/date_formatter.dart';
-import 'package:duemate/core/widgets/avatar_widget.dart';
 import 'package:duemate/core/widgets/person_picker_sheet.dart';
 import 'package:duemate/data/providers/app_providers.dart';
 import 'package:duemate/domain/emi_calculator.dart';
 import 'package:duemate/domain/entities/credit_card_emi.dart';
+import 'package:duemate/core/widgets/choice_tile_group.dart';
+import 'package:duemate/core/widgets/person_select_field.dart';
+import 'package:duemate/core/widgets/suggest_text_field.dart';
 import 'package:duemate/features/emis/presentation/widgets/add_edit_emi_suggestions.dart';
+import 'package:duemate/features/emis/presentation/widgets/emi_custom_months_dialog.dart';
+import 'package:duemate/features/emis/presentation/widgets/emi_schedule_section.dart';
+import 'package:duemate/features/emis/presentation/widgets/emi_summary_card.dart';
 import 'package:duemate/features/emis/presentation/widgets/emi_tenure_selector.dart';
 import 'package:duemate/features/emis/presentation/widgets/emi_type_selector.dart';
-
-enum EmiType {
-  creditCard,
-  loan,
-}
 
 class AddEditEmiScreen extends ConsumerStatefulWidget {
   final String? initialPersonId;
@@ -200,8 +197,6 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
     _emiController.addListener(_onAmountChanged);
     _chargesController.addListener(_onChargesEdited);
     _interestRateController.addListener(_onAmountChanged);
-    _itemController.addListener(_onTextChanged);
-    _cardController.addListener(_onTextChanged);
 
     if (emi == null) {
       // A purchase made today has its first EMI next month.
@@ -219,8 +214,6 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
   void dispose() {
     _tenureController.removeListener(_onTenureChanged);
     _tenureController.dispose();
-    _itemController.removeListener(_onTextChanged);
-    _cardController.removeListener(_onTextChanged);
     _itemController.dispose();
     _cardController.dispose();
     _baseAmountController.removeListener(_onAmountChanged);
@@ -254,10 +247,6 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
         _installmentsPaid = parsed;
       });
     }
-  }
-
-  void _onTextChanged() {
-    setState(() {});
   }
 
   void _onAmountChanged() {
@@ -443,184 +432,24 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
     }
   }
 
-  void _showCustomizeMonthlyAmountsDialog(BuildContext context) {
-    final controllers = <int, TextEditingController>{};
-    for (int i = 1; i <= _tenureMonths; i++) {
-      final currentVal = _customScheduleMap[i] ?? _monthlyInstallment;
-      controllers[i] = TextEditingController(
-        text: currentVal % 1 == 0 ? currentVal.toInt().toString() : currentVal.toStringAsFixed(2),
-      );
-    }
-
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.12),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(Icons.edit_calendar_rounded, color: Theme.of(context).colorScheme.primary, size: 20),
-            ),
-            const SizedBox(width: 10),
-            const Text('Uneven months'),
-          ],
-        ),
-        content: SizedBox(
-          width: double.maxFinite,
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Set a different amount for specific months, for example when the first month includes a fee.',
-                  style: TextStyle(fontSize: 12),
-                ),
-                const SizedBox(height: 12),
-                ...List.generate(_tenureMonths, (idx) {
-                  final monthNum = idx + 1;
-                  final dueDate = _dueDateFor(monthNum);
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 10),
-                    child: TextField(
-                      controller: controllers[monthNum],
-                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                      decoration: InputDecoration(
-                        labelText: 'Month $monthNum (${DateFormatter.formatShortDate(dueDate)})',
-                        prefixText: '${ref.read(currencySymbolProvider)} ',
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                      ),
-                    ),
-                  );
-                }),
-              ],
-            ),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () {
-              final newMap = <int, double>{};
-              for (int i = 1; i <= _tenureMonths; i++) {
-                final val = double.tryParse(controllers[i]?.text.trim() ?? '') ?? _monthlyInstallment;
-                newMap[i] = val;
-              }
-              setState(() {
-                _customScheduleMap = newMap;
-              });
-              Navigator.of(ctx).pop();
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Month amounts updated')),
-              );
-            },
-            child: const Text('Apply'),
-          ),
-        ],
-      ),
+  Future<void> _customizeMonths() async {
+    final result = await showEmiCustomMonthsDialog(
+      context,
+      months: _tenureMonths,
+      defaultAmount: _monthlyInstallment,
+      current: _customScheduleMap,
+      dueDateFor: _dueDateFor,
+      currencySymbol: ref.read(currencySymbolProvider),
     );
-  }
-
-  Widget _buildOwnershipSelector(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-
-    return Container(
-      padding: const EdgeInsets.all(4),
-      decoration: BoxDecoration(
-        color: cs.surfaceContainerHigh.withValues(alpha: 0.6),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.6)),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: InkWell(
-              onTap: () {
-                setState(() {
-                  _isForSelf = true;
-                  _selectedPersonId = AppConstants.selfPersonId;
-                  _isPaidByMe = true;
-                });
-              },
-              borderRadius: BorderRadius.circular(12),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                padding: const EdgeInsets.symmetric(vertical: 10),
-                decoration: BoxDecoration(
-                  color: _isForSelf ? cs.primary : Colors.transparent,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.person_rounded,
-                      size: 16,
-                      color: _isForSelf ? cs.onPrimary : cs.onSurfaceVariant,
-                    ),
-                    const SizedBox(width: 6),
-                    Text(
-                      'For myself',
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
-                        color: _isForSelf ? cs.onPrimary : cs.onSurfaceVariant,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-          Expanded(
-            child: InkWell(
-              onTap: () {
-                setState(() {
-                  _isForSelf = false;
-                  if (_selectedPersonId == AppConstants.selfPersonId) {
-                    _selectedPersonId = null;
-                  }
-                });
-              },
-              borderRadius: BorderRadius.circular(12),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                padding: const EdgeInsets.symmetric(vertical: 10),
-                decoration: BoxDecoration(
-                  color: !_isForSelf ? cs.primary : Colors.transparent,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.people_rounded,
-                      size: 16,
-                      color: !_isForSelf ? cs.onPrimary : cs.onSurfaceVariant,
-                    ),
-                    const SizedBox(width: 6),
-                    Text(
-                      'For someone else',
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
-                        color: !_isForSelf ? cs.onPrimary : cs.onSurfaceVariant,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
+    if (result == null || !mounted) return;
+    setState(() {
+      _customScheduleMap = result;
+      _customWasReset = false;
+      _lastPlanMonthly = _plan.monthly;
+      _lastMonths = _tenureMonths;
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Month amounts updated')),
     );
   }
 
@@ -809,181 +638,6 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
     ];
   }
 
-  Widget _summaryCard(BuildContext context, String symbol, bool isLoan) {
-    final theme = Theme.of(context);
-    final cs = theme.colorScheme;
-    final muted = cs.onSurfaceVariant;
-    final plan = _plan;
-    String money(double v) => CurrencyFormatter.format(v, symbol: symbol);
-
-    Widget row(String label, String value, {bool strong = false}) => Padding(
-          padding: const EdgeInsets.symmetric(vertical: 3),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Flexible(child: Text(label, style: theme.textTheme.bodyMedium?.copyWith(color: muted))),
-              const SizedBox(width: 12),
-              Text(
-                value,
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  fontWeight: strong ? FontWeight.w600 : FontWeight.w500,
-                ),
-              ),
-            ],
-          ),
-        );
-
-    final rate = (!_splitMode && plan.isValid)
-        ? EmiCalculator.impliedAnnualRate(
-            principal: plan.principal,
-            monthly: plan.monthly,
-            months: plan.months,
-          )
-        : null;
-
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: cs.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(AppRadius.lg),
-        border: Border.all(color: cs.outlineVariant),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('Monthly EMI', style: theme.textTheme.labelLarge?.copyWith(color: muted)),
-          const SizedBox(height: 2),
-          if (!plan.isValid)
-            Text(
-              _splitMode
-                  ? 'Enter the amount and months to see the EMI.'
-                  : 'Enter the EMI and months to see the total.',
-              style: theme.textTheme.bodyMedium?.copyWith(color: muted),
-            )
-          else ...[
-            Text(
-              '${money(plan.monthly)} × ${plan.months} months',
-              style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w600),
-            ),
-            const SizedBox(height: 10),
-            Divider(height: 1, color: cs.outlineVariant),
-            const SizedBox(height: 8),
-            if (plan.principal > 0) row(isLoan ? 'Loan amount' : 'Amount', money(plan.principal)),
-            if (_splitMode && plan.interest > 0) row('Interest', money(plan.interest)),
-            if (plan.charges > 0)
-              row(
-                plan.chargesInsideEmi ? 'Charges (spread over the EMIs)' : 'Charges (billed separately)',
-                money(plan.charges),
-              ),
-            row(
-              plan.chargesInsideEmi ? 'Total to pay' : 'EMIs add up to',
-              money(plan.totalPayable),
-              strong: plan.chargesInsideEmi,
-            ),
-            if (!plan.chargesInsideEmi && plan.charges > 0)
-              row('Total cost with charges', money(plan.totalCost), strong: true),
-            if (plan.extraCost != null && plan.extraCost! > 0)
-              row('Extra over the amount', money(plan.extraCost!)),
-            if (rate != null) row('Effective interest', '≈ ${rate.toStringAsFixed(1)}% a year'),
-            row('Last installment', DateFormatter.formatShortDate(_dueDateFor(plan.months))),
-          ],
-          if (plan.isValid) ...[
-            const SizedBox(height: 10),
-            OutlinedButton.icon(
-              onPressed: () => _showCustomizeMonthlyAmountsDialog(context),
-              icon: const Icon(Icons.edit_calendar_outlined, size: 18),
-              label: Text(
-                _customScheduleMap.isNotEmpty
-                    ? 'Uneven months (${_customScheduleMap.length} set)'
-                    : 'Make some months different',
-              ),
-            ),
-          ],
-          if (_customWasReset)
-            Padding(
-              padding: const EdgeInsets.only(top: 8),
-              child: Text(
-                'Your per-month amounts were cleared because the plan changed.',
-                style: theme.textTheme.bodySmall?.copyWith(color: cs.error),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-
-  List<Widget> _scheduleSection(BuildContext context) {
-    final theme = Theme.of(context);
-    final muted = theme.colorScheme.onSurfaceVariant;
-    final dueNow = _dueSoFar;
-    final unpaidDue = dueNow - _installmentsPaid;
-
-    return [
-      Text('Schedule', style: theme.textTheme.titleSmall),
-      const SizedBox(height: 8),
-      InkWell(
-        onTap: _selectStartDate,
-        borderRadius: BorderRadius.circular(14),
-        child: InputDecorator(
-          decoration: InputDecoration(
-            labelText: 'First due date',
-            prefixIcon: const Icon(Icons.event_outlined),
-            helperText: 'Due on day $_dueDayOfMonth of every month.',
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
-          ),
-          child: Text(DateFormatter.formatShortDate(_startDate)),
-        ),
-      ),
-      const SizedBox(height: 16),
-      TextFormField(
-        controller: _installmentsPaidController,
-        keyboardType: TextInputType.number,
-        decoration: InputDecoration(
-          labelText: 'Already paid',
-          hintText: '0',
-          prefixIcon: const Icon(Icons.history_rounded),
-          helperText: "Installments paid before you started tracking. They won't be added to the ledger.",
-          helperMaxLines: 3,
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
-        ),
-        validator: (v) {
-          final n = int.tryParse(v?.trim().isEmpty ?? true ? '0' : v!.trim());
-          if (n == null || n < 0) return 'Enter a valid number';
-          if (n > _tenureMonths) return 'More than the number of months';
-          return null;
-        },
-      ),
-      if (!isEditing && unpaidDue > 0) ...[
-        const SizedBox(height: 10),
-        Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: theme.colorScheme.surfaceContainer,
-            borderRadius: BorderRadius.circular(AppRadius.md),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                unpaidDue == 1
-                    ? '1 installment is already due, so it will be added to the ledger when you save.'
-                    : '$unpaidDue installments are already due, so they will be added to the ledger when you save.',
-                style: theme.textTheme.bodySmall?.copyWith(color: muted),
-              ),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: TextButton(
-                  onPressed: () => _installmentsPaidController.text = dueNow.toString(),
-                  child: const Text('I already paid these'),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    ];
-  }
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -1026,510 +680,97 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
         child: ListView(
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
           children: [
-            // Ownership Selector: For Myself vs For Someone Else
-            _buildOwnershipSelector(context),
+            // Whose is it, and what kind
+            SegmentedButton<bool>(
+              showSelectedIcon: false,
+              segments: const [
+                ButtonSegment(
+                  value: true,
+                  label: Text('For myself'),
+                  icon: Icon(Icons.person_outline, size: 18),
+                ),
+                ButtonSegment(
+                  value: false,
+                  label: Text('With someone'),
+                  icon: Icon(Icons.people_outline, size: 18),
+                ),
+              ],
+              selected: {_isForSelf},
+              onSelectionChanged: (sel) => setState(() {
+                _isForSelf = sel.first;
+                if (_isForSelf) {
+                  _selectedPersonId = AppConstants.selfPersonId;
+                  _isPaidByMe = true;
+                } else if (_selectedPersonId == AppConstants.selfPersonId) {
+                  _selectedPersonId = null;
+                }
+              }),
+            ),
             const SizedBox(height: 16),
-
-            // Category Selector: Credit Card vs Loan
             EmiTypeSelector(
               selectedType: _emiType,
-              onChanged: (newType) {
-                setState(() {
-                  _emiType = newType;
-                });
-              },
+              onChanged: (t) => setState(() => _emiType = t),
             ),
-
             const SizedBox(height: 20),
 
-            // 1. Person Selector Card (Only shown if For Someone Else is selected)
             if (!_isForSelf) ...[
-              Text(
-                isLoan ? 'Loan with' : 'EMI with',
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: cs.onSurfaceVariant,
-                ),
-              ),
-              const SizedBox(height: 8),
-              InkWell(
+              PersonSelectField(
+                person: selectedPerson,
+                placeholder: isLoan ? 'Choose who the loan is with' : 'Choose who the EMI is shared with',
                 onTap: _pickPerson,
-                borderRadius: BorderRadius.circular(16),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                  decoration: BoxDecoration(
-                    color: cs.surfaceContainerLow,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: _selectedPersonId == null ? cs.outlineVariant : cs.primary.withValues(alpha: 0.5),
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      if (selectedPerson != null) ...[
-                        AvatarWidget(
-                          name: selectedPerson.name,
-                          radius: 20,
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                selectedPerson.name,
-                                style: theme.textTheme.titleMedium?.copyWith(
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                              if (selectedPerson.phone != null)
-                                Text(
-                                  selectedPerson.phone!,
-                                  style: theme.textTheme.bodySmall?.copyWith(
-                                    color: cs.onSurfaceVariant,
-                                  ),
-                                ),
-                            ],
-                          ),
-                        ),
-                        TextButton(
-                          onPressed: _pickPerson,
-                          child: const Text('Change'),
-                        ),
-                      ] else ...[
-                        Container(
-                          width: 40,
-                          height: 40,
-                          decoration: BoxDecoration(
-                            color: (isLoan ? const Color(0xFF0D9488) : cs.primary).withValues(alpha: 0.1),
-                            shape: BoxShape.circle,
-                          ),
-                          child: Icon(
-                            Icons.person_add_outlined,
-                            color: isLoan ? const Color(0xFF0D9488) : cs.primary,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Text(
-                            isLoan ? 'Select borrower or lender' : 'Select person to share EMI with',
-                            style: theme.textTheme.bodyMedium?.copyWith(
-                              color: cs.onSurfaceVariant,
-                            ),
-                          ),
-                        ),
-                        const Icon(Icons.chevron_right_rounded),
-                      ],
-                    ],
-                  ),
-                ),
               ),
-              const SizedBox(height: 20),
-            ],
-
-            const SizedBox(height: 20),
-
-            // 2. Direction Toggle (Only shown when For Someone Else is selected)
-            if (!_isForSelf) ...[
-              Text(
-                isLoan ? 'Who pays whom?' : 'Whose card is it?',
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: cs.onSurfaceVariant,
-                ),
-              ),
+              const SizedBox(height: 16),
+              Text(isLoan ? 'Who pays whom?' : 'Whose card is it?', style: theme.textTheme.titleSmall),
               const SizedBox(height: 8),
-              Row(
-                children: [
-                  Expanded(
-                    child: InkWell(
-                      onTap: () => setState(() => _isPaidByMe = true),
-                      borderRadius: BorderRadius.circular(14),
-                      child: Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: _isPaidByMe ? cs.primary.withValues(alpha: 0.1) : cs.surfaceContainerLow,
-                          borderRadius: BorderRadius.circular(14),
-                          border: Border.all(
-                            color: _isPaidByMe ? cs.primary : cs.outlineVariant,
-                            width: _isPaidByMe ? 1.5 : 1,
-                          ),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Icon(
-                                  isLoan ? Icons.payments_outlined : Icons.credit_card_rounded,
-                                  size: 18,
-                                  color: _isPaidByMe ? cs.primary : cs.onSurfaceVariant,
-                                ),
-                                const Spacer(),
-                                if (_isPaidByMe)
-                                  Icon(Icons.check_circle_rounded, size: 16, color: cs.primary),
-                              ],
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              isLoan ? 'I lent money' : 'My card',
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w700,
-                                color: _isPaidByMe ? cs.primary : cs.onSurface,
-                              ),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              isLoan ? 'Contact repays in installments' : 'Contact repays monthly installment',
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: cs.onSurfaceVariant,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
+              ChoiceTileGroup<bool>(
+                selected: _isPaidByMe,
+                onChanged: (v) => setState(() => _isPaidByMe = v),
+                options: [
+                  ChoiceOption(
+                    value: true,
+                    label: isLoan ? 'I lent money' : 'My card',
+                    subtitle: isLoan ? 'They repay in installments' : 'They repay me each month',
+                    icon: isLoan ? Icons.payments_outlined : Icons.credit_card_rounded,
                   ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: InkWell(
-                      onTap: () => setState(() => _isPaidByMe = false),
-                      borderRadius: BorderRadius.circular(14),
-                      child: Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: !_isPaidByMe ? cs.error.withValues(alpha: 0.1) : cs.surfaceContainerLow,
-                          borderRadius: BorderRadius.circular(14),
-                          border: Border.all(
-                            color: !_isPaidByMe ? cs.error : cs.outlineVariant,
-                            width: !_isPaidByMe ? 1.5 : 1,
-                          ),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Icon(
-                                  isLoan ? Icons.handshake_outlined : Icons.payment_rounded,
-                                  size: 18,
-                                  color: !_isPaidByMe ? cs.error : cs.onSurfaceVariant,
-                                ),
-                                const Spacer(),
-                                if (!_isPaidByMe)
-                                  Icon(Icons.check_circle_rounded, size: 16, color: cs.error),
-                              ],
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              isLoan ? 'I borrowed' : "Their card",
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w700,
-                                color: !_isPaidByMe ? cs.error : cs.onSurface,
-                              ),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              isLoan ? 'I repay in monthly installments' : 'I repay monthly installment',
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: cs.onSurfaceVariant,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
+                  ChoiceOption(
+                    value: false,
+                    label: isLoan ? 'I borrowed' : 'Their card',
+                    subtitle: isLoan ? 'I repay in installments' : 'I repay them each month',
+                    icon: isLoan ? Icons.handshake_outlined : Icons.payment_rounded,
                   ),
                 ],
               ),
               const SizedBox(height: 20),
             ],
 
-            const SizedBox(height: 20),
-
-            // 3. Purchase Item / Loan Purpose Name
-            TextFormField(
+            // What and from where
+            SuggestTextField(
               controller: _itemController,
-              decoration: InputDecoration(
-                labelText: isLoan ? 'What is the loan for?' : 'What did you buy?',
-                hintText: isLoan ? 'e.g. Personal Loan, Bike Loan, Emergency' : 'e.g. iPhone 16 Pro, Flight Tickets',
-                prefixIcon: Icon(isLoan ? Icons.receipt_long_outlined : Icons.shopping_bag_outlined),
-                suffixIcon: _itemController.text.isNotEmpty
-                    ? IconButton(
-                        icon: const Icon(Icons.clear_rounded, size: 18),
-                        onPressed: () => _itemController.clear(),
-                      )
-                    : null,
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
-              ),
-              validator: (v) => v == null || v.trim().isEmpty
-                  ? (isLoan ? 'Please enter loan title' : 'Please enter item name')
+              label: isLoan ? 'What is the loan for?' : 'What did you buy?',
+              hint: isLoan ? 'e.g. Bike loan, emergency' : 'e.g. iPhone 16 Pro, flight tickets',
+              prefixIcon: isLoan ? Icons.receipt_long_outlined : Icons.shopping_bag_outlined,
+              suggestions: [
+                for (final s in isLoan ? _loanPurposeSuggestions : _itemSuggestions) s.asSuggestion,
+              ],
+              quickPickTitle: 'Common',
+              validator: (v) => (v == null || v.trim().isEmpty)
+                  ? (isLoan ? 'Enter what the loan is for' : 'Enter what you bought')
                   : null,
             ),
-            Builder(
-              builder: (context) {
-                final itemQuery = _itemController.text.trim().toLowerCase();
-                final itemSource = isLoan ? _loanPurposeSuggestions : _itemSuggestions;
-                final itemMatches = itemQuery.isEmpty
-                    ? <EmiItemSuggestion>[]
-                    : itemSource.where((item) =>
-                        item.label.toLowerCase().contains(itemQuery) ||
-                        item.fillValue.toLowerCase().contains(itemQuery)).toList();
-
-                final isExact = itemMatches.any((m) => m.fillValue.toLowerCase() == itemQuery);
-
-                if (itemQuery.isNotEmpty && itemMatches.isNotEmpty && !isExact) {
-                  return Container(
-                    margin: const EdgeInsets.only(top: 8),
-                    decoration: BoxDecoration(
-                      color: cs.surfaceContainerHighest.withValues(alpha: 0.5),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.6)),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
-                          child: Row(
-                            children: [
-                              Icon(Icons.auto_awesome, size: 14, color: isLoan ? const Color(0xFF0D9488) : cs.primary),
-                              const SizedBox(width: 6),
-                              Text(
-                                'Suggestions matching "$itemQuery":',
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w600,
-                                  color: cs.onSurfaceVariant,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const Divider(height: 1),
-                        ...itemMatches.take(5).map((match) => InkWell(
-                          onTap: () {
-                            _itemController.text = match.fillValue;
-                            _itemController.selection = TextSelection.fromPosition(
-                              TextPosition(offset: match.fillValue.length),
-                            );
-                          },
-                          borderRadius: BorderRadius.circular(10),
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                            child: Row(
-                              children: [
-                                Icon(match.icon, size: 18, color: isLoan ? const Color(0xFF0D9488) : cs.primary),
-                                const SizedBox(width: 10),
-                                Expanded(
-                                  child: Text(
-                                    match.label,
-                                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-                                  ),
-                                ),
-                                Icon(Icons.north_west_rounded, size: 14, color: cs.onSurfaceVariant),
-                              ],
-                            ),
-                          ),
-                        )),
-                      ],
-                    ),
-                  );
-                }
-
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const SizedBox(height: 8),
-                    Text(
-                      isLoan ? 'Quick Loan Suggestions:' : 'Quick Item Suggestions:',
-                      style: TextStyle(
-                        fontSize: 11.5,
-                        fontWeight: FontWeight.w500,
-                        color: cs.onSurfaceVariant,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: Row(
-                        children: itemSource.map((item) {
-                          return Padding(
-                            padding: const EdgeInsets.only(right: 8),
-                            child: ActionChip(
-                              avatar: Icon(
-                                item.icon,
-                                size: 16,
-                                color: isLoan ? const Color(0xFF0D9488) : cs.primary,
-                              ),
-                              label: Text(item.label, style: const TextStyle(fontSize: 12)),
-                              onPressed: () {
-                                _itemController.text = item.fillValue;
-                              },
-                              visualDensity: VisualDensity.compact,
-                            ),
-                          );
-                        }).toList(),
-                      ),
-                    ),
-                  ],
-                );
-              },
-            ),
-
             const SizedBox(height: 20),
-
-            // 4. Source / Bank / Lender Field
-            TextFormField(
+            SuggestTextField(
               controller: _cardController,
-              decoration: InputDecoration(
-                labelText: isLoan ? 'Lender' : 'Card or bank',
-                hintText: isLoan ? 'e.g. Bank Transfer, Cash, SBI, HDFC' : 'e.g. HDFC Millennia, ICICI Amazon Pay',
-                prefixIcon: Icon(isLoan ? Icons.account_balance_outlined : Icons.credit_card_outlined),
-                suffixIcon: _cardController.text.isNotEmpty
-                    ? IconButton(
-                        icon: const Icon(Icons.clear_rounded, size: 18),
-                        onPressed: () => _cardController.clear(),
-                      )
-                    : null,
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
-              ),
-              validator: (v) => v == null || v.trim().isEmpty
-                  ? (isLoan ? 'Please enter loan source or lender' : 'Please enter credit card name')
+              label: isLoan ? 'Lender' : 'Card or bank',
+              hint: isLoan ? 'e.g. SBI, HDFC, a friend' : 'e.g. HDFC Millennia',
+              prefixIcon: isLoan ? Icons.account_balance_outlined : Icons.credit_card_outlined,
+              suggestions: [
+                for (final s in isLoan ? _loanSourceSuggestions : _cardSuggestions) s.asSuggestion,
+              ],
+              quickPickTitle: isLoan ? 'Common lenders' : 'Popular cards',
+              validator: (v) => (v == null || v.trim().isEmpty)
+                  ? (isLoan ? 'Enter the lender' : 'Enter the card or bank')
                   : null,
             ),
-            Builder(
-              builder: (context) {
-                final cardQuery = _cardController.text.trim().toLowerCase();
-                final cardSource = isLoan ? _loanSourceSuggestions : _cardSuggestions;
-                final cardMatches = cardQuery.isEmpty
-                    ? <EmiCardSuggestion>[]
-                    : cardSource.where((b) =>
-                        b.name.toLowerCase().contains(cardQuery) ||
-                        b.fillValue.toLowerCase().contains(cardQuery)).toList();
-
-                final isExact = cardMatches.any((m) => m.fillValue.toLowerCase() == cardQuery);
-
-                if (cardQuery.isNotEmpty && cardMatches.isNotEmpty && !isExact) {
-                  return Container(
-                    margin: const EdgeInsets.only(top: 8),
-                    decoration: BoxDecoration(
-                      color: cs.surfaceContainerHighest.withValues(alpha: 0.5),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.6)),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
-                          child: Row(
-                            children: [
-                              Icon(Icons.auto_awesome, size: 14, color: isLoan ? const Color(0xFF0D9488) : cs.primary),
-                              const SizedBox(width: 6),
-                              Text(
-                                isLoan ? 'Matching loan sources:' : 'Matching banks & cards:',
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w600,
-                                  color: cs.onSurfaceVariant,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const Divider(height: 1),
-                        ...cardMatches.take(5).map((bank) => InkWell(
-                          onTap: () {
-                            _cardController.text = bank.fillValue;
-                            _cardController.selection = TextSelection.fromPosition(
-                              TextPosition(offset: bank.fillValue.length),
-                            );
-                          },
-                          borderRadius: BorderRadius.circular(10),
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                            child: Row(
-                              children: [
-                                CircleAvatar(
-                                  radius: 10,
-                                  backgroundColor: bank.color.withValues(alpha: 0.15),
-                                  child: Icon(bank.icon, size: 12, color: bank.color),
-                                ),
-                                const SizedBox(width: 10),
-                                Expanded(
-                                  child: Text(
-                                    bank.fillValue,
-                                    style: TextStyle(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w600,
-                                      color: bank.color,
-                                    ),
-                                  ),
-                                ),
-                                Icon(Icons.north_west_rounded, size: 14, color: cs.onSurfaceVariant),
-                              ],
-                            ),
-                          ),
-                        )),
-                      ],
-                    ),
-                  );
-                }
-
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const SizedBox(height: 8),
-                    Text(
-                      isLoan ? 'Common Loan Sources & Banks:' : 'Popular Banks & Cards:',
-                      style: TextStyle(
-                        fontSize: 11.5,
-                        fontWeight: FontWeight.w500,
-                        color: cs.onSurfaceVariant,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: Row(
-                        children: cardSource.map((bank) {
-                          return Padding(
-                            padding: const EdgeInsets.only(right: 8),
-                            child: ActionChip(
-                              avatar: CircleAvatar(
-                                radius: 8,
-                                backgroundColor: bank.color.withValues(alpha: 0.15),
-                                child: Icon(bank.icon, size: 12, color: bank.color),
-                              ),
-                              label: Text(
-                                bank.name,
-                                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: bank.color),
-                              ),
-                              onPressed: () {
-                                if (_cardController.text.trim().isEmpty) {
-                                  _cardController.text = bank.fillValue;
-                                } else if (!_cardController.text.contains(bank.name)) {
-                                  _cardController.text = '${bank.name} ${_cardController.text}'.trim();
-                                }
-                              },
-                              visualDensity: VisualDensity.compact,
-                            ),
-                          );
-                        }).toList(),
-                      ),
-                    ),
-                  ],
-                );
-              },
-            ),
-
             const SizedBox(height: 22),
 
             // Money: either split a total or type the EMI
@@ -1537,11 +778,29 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
             const SizedBox(height: 20),
 
             // Live result
-            _summaryCard(context, currencySymbol, isLoan),
+            EmiSummaryCard(
+              plan: _plan,
+              isLoan: isLoan,
+              splitMode: _splitMode,
+              currencySymbol: currencySymbol,
+              lastInstallmentDate: _plan.isValid ? _dueDateFor(_plan.months) : null,
+              customMonthsCount: _customScheduleMap.length,
+              customWasReset: _customWasReset,
+              onCustomizeMonths: _customizeMonths,
+            ),
             const SizedBox(height: 24),
 
             // When
-            ..._scheduleSection(context),
+            EmiScheduleSection(
+              firstDueDate: _startDate,
+              dueDayOfMonth: _dueDayOfMonth,
+              paidController: _installmentsPaidController,
+              tenureMonths: _tenureMonths,
+              installmentsPaid: _installmentsPaid,
+              dueSoFar: _dueSoFar,
+              isEditing: isEditing,
+              onPickDate: _selectStartDate,
+            ),
             const SizedBox(height: 20),
 
             // 10. Notes

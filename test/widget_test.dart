@@ -30,11 +30,10 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 500));
 
-    // Verify Direct Startup Dashboard renders with net ledger balance and quick actions
-    expect(find.text('Net Ledger Balance'), findsOneWidget);
-    expect(find.text('Largest balances'), findsOneWidget);
-    expect(find.text('Give'), findsOneWidget);
-    expect(find.text('Receive'), findsOneWidget);
+    // Empty ledger: Home shows the first-run welcome and its two ways in.
+    expect(find.text('Keep track of who owes what'), findsOneWidget);
+    expect(find.text('Add a person'), findsOneWidget);
+    expect(find.text('Add an expense'), findsOneWidget);
 
     // Verify 4-tab navigation bar
     expect(find.byTooltip('Home'), findsOneWidget);
@@ -42,7 +41,7 @@ void main() {
     expect(find.byTooltip('Expenses'), findsOneWidget);
     expect(find.byTooltip('Activity'), findsOneWidget);
 
-    // Tap Directory tab
+    // Tap People tab
     await tester.tap(find.byTooltip('People'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 500));
@@ -54,7 +53,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 500));
     expect(find.text('Expenses'), findsWidgets);
 
-    // Tap Transactions tab
+    // Tap Activity tab
     await tester.tap(find.byTooltip('Activity'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 500));

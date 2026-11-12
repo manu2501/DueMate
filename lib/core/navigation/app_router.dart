@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:duemate/core/theme/app_motion.dart';
 import 'package:duemate/core/widgets/dock_nav_icon.dart';
 import 'package:duemate/features/dashboard/presentation/screens/dashboard_screen.dart';
 import 'package:duemate/features/emis/presentation/screens/add_edit_emi_screen.dart';
@@ -15,6 +16,7 @@ import 'package:duemate/features/settings/presentation/screens/settings_screen.d
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
 final _shellNavigatorKey = GlobalKey<NavigatorState>();
 
+/// Peer tabs: fade through, no direction.
 CustomTransitionPage<void> _buildTabTransition({
   required BuildContext context,
   required GoRouterState state,
@@ -23,22 +25,13 @@ CustomTransitionPage<void> _buildTabTransition({
   return CustomTransitionPage<void>(
     key: state.pageKey,
     child: child,
-    transitionDuration: const Duration(milliseconds: 280),
-    transitionsBuilder: (context, animation, secondaryAnimation, child) {
-      final fade = CurvedAnimation(
-        parent: animation,
-        curve: Curves.easeOutCubic,
-      );
-      final scale = Tween<double>(begin: 0.98, end: 1.0).animate(fade);
-
-      return FadeTransition(
-        opacity: fade,
-        child: ScaleTransition(scale: scale, child: child),
-      );
-    },
+    transitionDuration: AppMotion.medium,
+    reverseTransitionDuration: AppMotion.short,
+    transitionsBuilder: AppMotion.fadeThrough,
   );
 }
 
+/// Going deeper: shared-axis slide, so back has a direction.
 CustomTransitionPage<void> _buildSlideTransition({
   required BuildContext context,
   required GoRouterState state,
@@ -47,25 +40,9 @@ CustomTransitionPage<void> _buildSlideTransition({
   return CustomTransitionPage<void>(
     key: state.pageKey,
     child: child,
-    transitionDuration: const Duration(milliseconds: 320),
-    reverseTransitionDuration: const Duration(milliseconds: 260),
-    transitionsBuilder: (context, animation, secondaryAnimation, child) {
-      final curved = CurvedAnimation(
-        parent: animation,
-        curve: Curves.easeOutCubic,
-        reverseCurve: Curves.easeInCubic,
-      );
-
-      final offset = Tween<Offset>(
-        begin: const Offset(0.08, 0.0),
-        end: Offset.zero,
-      ).animate(curved);
-
-      return SlideTransition(
-        position: offset,
-        child: FadeTransition(opacity: curved, child: child),
-      );
-    },
+    transitionDuration: AppMotion.medium,
+    reverseTransitionDuration: AppMotion.medium,
+    transitionsBuilder: AppMotion.sharedAxisX,
   );
 }
 
@@ -101,7 +78,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             pageBuilder: (context, state) => _buildTabTransition(
               context: context,
               state: state,
-              child: const ExpensesScreen(),
+              child: ExpensesScreen(initialTab: state.uri.queryParameters['tab']),
             ),
           ),
           GoRoute(

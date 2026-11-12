@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:duemate/core/widgets/suggest_text_field.dart';
 
 class EmiItemSuggestion {
   final String label;
@@ -6,6 +7,8 @@ class EmiItemSuggestion {
   final IconData icon;
 
   const EmiItemSuggestion(this.label, this.fillValue, this.icon);
+
+  Suggestion get asSuggestion => Suggestion(label: label, fillValue: fillValue, icon: icon);
 }
 
 class EmiCardSuggestion {
@@ -15,6 +18,9 @@ class EmiCardSuggestion {
   final Color color;
 
   const EmiCardSuggestion(this.name, this.fillValue, this.icon, this.color);
+
+  Suggestion get asSuggestion =>
+      Suggestion(label: name, fillValue: fillValue, icon: icon, iconColor: color);
 }
 
 class EmiSuggestionsData {

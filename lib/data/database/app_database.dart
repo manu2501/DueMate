@@ -12,6 +12,16 @@ class AppDatabase extends _$AppDatabase {
   @override
   int get schemaVersion => 7;
 
+  /// Deletes every person, transaction, EMI and expense, in one transaction.
+  /// The user's own "self" row is kept: EMIs and expenses added afterwards
+  /// reference it.
+  Future<void> eraseAllData() => transaction(() async {
+        await delete(transactions).go();
+        await delete(creditCardEmis).go();
+        await delete(expenses).go();
+        await (delete(persons)..where((p) => p.id.equals(AppConstants.selfPersonId).not())).go();
+      });
+
   @override
   MigrationStrategy get migration => MigrationStrategy(
     onCreate: (m) async {

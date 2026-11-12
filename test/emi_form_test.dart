@@ -73,7 +73,7 @@ void main() {
       await _fill(tester, 'What did you buy?', 'Laptop');
       await _fill(tester, 'Card or bank', 'HDFC');
       await _fill(tester, 'Purchase amount', '12000');
-      await _fill(tester, 'Or type the number of months', '12');
+      await _fill(tester, 'Number of months', '12');
       await _fill(tester, 'Charges and fees (optional)', '600');
 
       // (12000 + 600) / 12
@@ -105,7 +105,7 @@ void main() {
       await _fill(tester, 'What did you buy?', 'Phone');
       await _fill(tester, 'Card or bank', 'ICICI');
       await _fill(tester, 'Monthly EMI', '9500');
-      await _fill(tester, 'Or type the number of months', '12');
+      await _fill(tester, 'Number of months', '12');
       await _fill(tester, 'Purchase amount (optional)', '100000');
       await _fill(tester, 'Charges and fees (optional)', '1000');
 

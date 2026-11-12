@@ -1,24 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
+import 'package:duemate/core/constants/app_constants.dart';
+import 'package:duemate/core/constants/expense_category_x.dart';
+import 'package:duemate/core/theme/app_theme.dart';
 import 'package:duemate/core/utils/csv_exporter.dart';
-import 'package:duemate/core/utils/pdf_exporter.dart';
-import 'package:duemate/core/utils/currency_formatter.dart';
 import 'package:duemate/core/utils/date_formatter.dart';
-import 'package:duemate/core/widgets/avatar_widget.dart';
+import 'package:duemate/core/utils/pdf_exporter.dart';
 import 'package:duemate/core/widgets/empty_state_widget.dart';
 import 'package:duemate/core/widgets/export_options_sheet.dart';
-import 'package:duemate/core/widgets/fade_slide_transition.dart';
 import 'package:duemate/core/widgets/transaction_tile.dart';
+import 'package:duemate/core/widgets/ui_kit.dart';
 import 'package:duemate/data/database/tables.dart';
 import 'package:duemate/data/providers/app_providers.dart';
 import 'package:duemate/domain/entities/ledger_transaction.dart';
-import 'package:duemate/domain/entities/person_summary.dart';
 import 'package:duemate/domain/entities/personal_expense.dart';
 import 'package:duemate/features/expenses/presentation/widgets/add_edit_expense_sheet.dart';
 import 'package:duemate/features/transactions/presentation/widgets/transaction_details_dialog.dart';
 
 enum ReportDateFilter { allTime, thisMonth, lastMonth, thisYear, custom }
+
 enum ActivityTypeFilter { all, ledger, expenses }
 
 class ActivityItem {
@@ -38,6 +38,8 @@ class ActivityItem {
         transaction = null;
 }
 
+/// Everything that happened, newest first: ledger entries and expenses in
+/// one timeline, with search and filters.
 class ReportsScreen extends ConsumerStatefulWidget {
   const ReportsScreen({super.key});
 
@@ -45,641 +47,349 @@ class ReportsScreen extends ConsumerStatefulWidget {
   ConsumerState<ReportsScreen> createState() => _ReportsScreenState();
 }
 
-class _ReportsScreenState extends ConsumerState<ReportsScreen> with SingleTickerProviderStateMixin {
-  late TabController _tabController;
+class _ReportsScreenState extends ConsumerState<ReportsScreen> {
   final _searchController = TextEditingController();
 
   ReportDateFilter _dateFilter = ReportDateFilter.allTime;
   ActivityTypeFilter _typeFilter = ActivityTypeFilter.all;
-  PaymentMethod? _paymentMethodFilter;
-  DateTimeRange? _customDateRange;
+  PaymentMethod? _methodFilter;
+  DateTimeRange? _customRange;
 
-  @override
-  void initState() {
-    super.initState();
-    _tabController = TabController(length: 2, vsync: this);
-  }
+  static const _typeLabels = {
+    ActivityTypeFilter.all: 'Everything',
+    ActivityTypeFilter.ledger: 'Lending',
+    ActivityTypeFilter.expenses: 'Expenses',
+  };
 
   @override
   void dispose() {
-    _tabController.dispose();
     _searchController.dispose();
     super.dispose();
   }
 
-  bool _isDateInRange(DateTime date) {
-    final now = DateTime.now();
+  String get _periodLabel => switch (_dateFilter) {
+        ReportDateFilter.allTime => 'All time',
+        ReportDateFilter.thisMonth => 'This month',
+        ReportDateFilter.lastMonth => 'Last month',
+        ReportDateFilter.thisYear => 'This year',
+        ReportDateFilter.custom => _customRange == null
+            ? 'Custom'
+            : '${DateFormatter.formatShortDate(_customRange!.start)} – ${DateFormatter.formatShortDate(_customRange!.end)}',
+      };
 
+  bool _inPeriod(DateTime date) {
+    final now = DateTime.now();
     switch (_dateFilter) {
       case ReportDateFilter.allTime:
         return true;
       case ReportDateFilter.thisMonth:
         return date.year == now.year && date.month == now.month;
       case ReportDateFilter.lastMonth:
-        final lastMonthDate = DateTime(now.year, now.month - 1, 1);
-        return date.year == lastMonthDate.year && date.month == lastMonthDate.month;
+        final last = DateTime(now.year, now.month - 1, 1);
+        return date.year == last.year && date.month == last.month;
       case ReportDateFilter.thisYear:
         return date.year == now.year;
       case ReportDateFilter.custom:
-        if (_customDateRange == null) return true;
-        return date.isAfter(_customDateRange!.start.subtract(const Duration(seconds: 1))) &&
-            date.isBefore(_customDateRange!.end.add(const Duration(days: 1)));
+        final r = _customRange;
+        if (r == null) return true;
+        return !date.isBefore(r.start) && date.isBefore(r.end.add(const Duration(days: 1)));
     }
   }
 
-  Future<void> _pickCustomRange() async {
-    final initial = _customDateRange ??
-        DateTimeRange(
-          start: DateTime.now().subtract(const Duration(days: 30)),
-          end: DateTime.now(),
-        );
-
-    final picked = await showDateRangePicker(
+  Future<void> _pickPeriod() async {
+    final choice = await showModalBottomSheet<ReportDateFilter>(
       context: context,
-      firstDate: DateTime(2020),
-      lastDate: DateTime.now().add(const Duration(days: 365)),
-      initialDateRange: initial,
+      useRootNavigator: true,
+      builder: (ctx) => SafeArea(
+        child: RadioGroup<ReportDateFilter>(
+          groupValue: _dateFilter,
+          onChanged: (v) => Navigator.of(ctx).pop(v),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              for (final f in ReportDateFilter.values)
+                RadioListTile<ReportDateFilter>(
+                  value: f,
+                  title: Text(switch (f) {
+                    ReportDateFilter.allTime => 'All time',
+                    ReportDateFilter.thisMonth => 'This month',
+                    ReportDateFilter.lastMonth => 'Last month',
+                    ReportDateFilter.thisYear => 'This year',
+                    ReportDateFilter.custom => 'Pick dates…',
+                  }),
+                ),
+            ],
+          ),
+        ),
+      ),
     );
-
-    if (picked != null) {
+    if (choice == null || !mounted) return;
+    if (choice == ReportDateFilter.custom) {
+      final picked = await showDateRangePicker(
+        context: context,
+        firstDate: DateTime(2020),
+        lastDate: DateTime.now().add(const Duration(days: 365)),
+        initialDateRange: _customRange ??
+            DateTimeRange(start: DateTime.now().subtract(const Duration(days: 30)), end: DateTime.now()),
+      );
+      if (picked == null) return;
       setState(() {
-        _customDateRange = picked;
+        _customRange = picked;
         _dateFilter = ReportDateFilter.custom;
       });
+    } else {
+      setState(() => _dateFilter = choice);
     }
   }
 
-  String _getCategoryName(ExpenseCategory category) {
-    switch (category) {
-      case ExpenseCategory.groceries:
-        return '🛒 Groceries';
-      case ExpenseCategory.utilities:
-        return '⚡ Utilities';
-      case ExpenseCategory.rent:
-        return '🏠 Rent';
-      case ExpenseCategory.fuel:
-        return '⛽ Fuel';
-      case ExpenseCategory.food:
-        return '🍔 Food';
-      case ExpenseCategory.shopping:
-        return '🛍️ Shopping';
-      case ExpenseCategory.entertainment:
-        return '🎬 Entertainment';
-      case ExpenseCategory.health:
-        return '🏥 Health';
-      case ExpenseCategory.other:
-        return '📦 Other';
-    }
+  Future<void> _pickMethod() async {
+    final choice = await showModalBottomSheet<Object>(
+      context: context,
+      useRootNavigator: true,
+      builder: (ctx) => SafeArea(
+        child: RadioGroup<Object>(
+          groupValue: _methodFilter ?? 'any',
+          onChanged: (v) => Navigator.of(ctx).pop(v),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const RadioListTile<Object>(value: 'any', title: Text('Any method')),
+              for (final m in PaymentMethod.values) RadioListTile<Object>(value: m, title: Text(m.label)),
+            ],
+          ),
+        ),
+      ),
+    );
+    if (choice == null) return;
+    setState(() => _methodFilter = choice is PaymentMethod ? choice : null);
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
-    final isDark = theme.brightness == Brightness.dark;
-    final currencySymbol = ref.watch(currencySymbolProvider);
-    final allTxsAsync = ref.watch(allTransactionsProvider);
-    final allExpensesAsync = ref.watch(allExpensesProvider);
-    final allSummariesAsync = ref.watch(allPersonSummariesProvider);
-    final personsMap = ref.watch(personsMapProvider);
-
-    final allTxs = allTxsAsync.value ?? [];
-    final allExpenses = allExpensesAsync.value ?? [];
+    final symbol = ref.watch(currencySymbolProvider);
+    final people = ref.watch(personsMapProvider);
+    final allTxs = ref.watch(allTransactionsProvider).value ?? const <LedgerTransaction>[];
+    final allExpenses = ref.watch(allExpensesProvider).value ?? const <PersonalExpense>[];
     final query = _searchController.text.trim().toLowerCase();
 
-    // 1. Filter Ledger Transactions
-    final filteredTxs = allTxs.where((t) {
-      if (!_isDateInRange(t.transactionDate)) return false;
+    final txs = allTxs.where((t) {
       if (_typeFilter == ActivityTypeFilter.expenses) return false;
-      if (_paymentMethodFilter != null && t.paymentMethod != _paymentMethodFilter) return false;
-
-      if (query.isNotEmpty) {
-        final person = personsMap[t.personId];
-        final nameMatch = person?.name.toLowerCase().contains(query) ?? false;
-        final noteMatch = t.note?.toLowerCase().contains(query) ?? false;
-        return nameMatch || noteMatch;
-      }
-      return true;
+      if (!_inPeriod(t.transactionDate)) return false;
+      if (_methodFilter != null && t.paymentMethod != _methodFilter) return false;
+      if (query.isEmpty) return true;
+      final name = people[t.personId]?.name.toLowerCase() ?? '';
+      return name.contains(query) || (t.note?.toLowerCase().contains(query) ?? false);
     }).toList();
 
-    // 2. Filter Personal Expenses
-    final filteredExpenses = allExpenses.where((e) {
-      if (!_isDateInRange(e.expenseDate)) return false;
+    final expenses = allExpenses.where((e) {
       if (_typeFilter == ActivityTypeFilter.ledger) return false;
-      if (_paymentMethodFilter != null && e.paymentMethod != _paymentMethodFilter) return false;
-
-      if (query.isNotEmpty) {
-        final titleMatch = e.title.toLowerCase().contains(query);
-        final notesMatch = e.notes?.toLowerCase().contains(query) ?? false;
-        final catMatch = _getCategoryName(e.category).toLowerCase().contains(query);
-        return titleMatch || notesMatch || catMatch;
-      }
-      return true;
+      if (!_inPeriod(e.expenseDate)) return false;
+      if (_methodFilter != null && e.paymentMethod != _methodFilter) return false;
+      if (query.isEmpty) return true;
+      return e.title.toLowerCase().contains(query) ||
+          (e.notes?.toLowerCase().contains(query) ?? false) ||
+          e.category.label.toLowerCase().contains(query);
     }).toList();
 
-    // 3. Combine into Unified Activity Timeline
-    final List<ActivityItem> activityTimeline = [
-      ...filteredTxs.map((t) => ActivityItem.transaction(t)),
-      ...filteredExpenses.map((e) => ActivityItem.expense(e)),
-    ];
-    activityTimeline.sort((a, b) => b.date.compareTo(a.date));
+    final items = [
+      ...txs.map(ActivityItem.transaction),
+      ...expenses.map(ActivityItem.expense),
+    ]..sort((a, b) => b.date.compareTo(a.date));
 
-    // Stats calculations
-    double totalGiven = 0;
-    double totalReceived = 0;
-    for (final tx in filteredTxs) {
-      if (tx.type == TransactionType.moneyGiven) {
-        totalGiven += tx.amount;
-      } else {
-        totalReceived += tx.amount;
-      }
+    double moneyIn = 0, moneyOut = 0, spent = 0;
+    for (final t in txs) {
+      t.type == TransactionType.paymentReceived ? moneyIn += t.amount : moneyOut += t.amount;
     }
-    double totalPersonalExpenses = 0;
-    for (final e in filteredExpenses) {
-      totalPersonalExpenses += e.amount;
+    for (final e in expenses) {
+      spent += e.amount;
     }
-    final totalVolume = totalGiven + totalReceived + totalPersonalExpenses;
 
-    return Scaffold(
-      appBar: PreferredSize(
-        preferredSize: const Size.fromHeight(112),
-        child: SafeArea(
+    final byDay = <DateTime, List<ActivityItem>>{};
+    for (final i in items) {
+      byDay.putIfAbsent(DateTime(i.date.year, i.date.month, i.date.day), () => []).add(i);
+    }
+
+    void export() => ExportOptionsSheet.show(
+          context: context,
+          title: 'Share activity ($_periodLabel)',
+          onSharePdf: () => PdfExporter.exportAndShareAllTransactions(
+            transactions: txs,
+            personsMap: people,
+            currencySymbol: symbol,
+            filterTitle: _periodLabel,
+          ),
+          onShareCsv: () => CsvExporter.exportAndShareAllTransactions(
+            transactions: txs,
+            personsMap: people,
+            currencySymbol: symbol,
+          ),
+        );
+
+    Widget figure(String label, double v, MoneyTone tone, String sign) => Expanded(
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(
-                            'Activity',
-                            style: TextStyle(
-                              fontSize: 22,
-                              fontWeight: FontWeight.w600,
-                              letterSpacing: -0.4,
-                              color: Theme.of(context).colorScheme.onSurface,
-                            ),
-                          ),
-                          Text(
-                            '${activityTimeline.length} Items • ${CurrencyFormatter.formatCompact(totalVolume, symbol: currencySymbol)} Total Volume',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w500,
-                              color: cs.onSurfaceVariant,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    IconButton.filledTonal(
-                      tooltip: 'Share Report',
-                      icon: const Icon(Icons.share_outlined, size: 18),
-                      onPressed: () {
-                        final filterName = switch (_dateFilter) {
-                          ReportDateFilter.allTime => 'All Time',
-                          ReportDateFilter.thisMonth => 'This Month',
-                          ReportDateFilter.lastMonth => 'Last Month',
-                          ReportDateFilter.thisYear => 'This Year',
-                          ReportDateFilter.custom => 'Custom Range',
-                        };
-
-                        ExportOptionsSheet.show(
-                          context: context,
-                          title: 'Share Activity Report ($filterName)',
-                          onSharePdf: () => PdfExporter.exportAndShareAllTransactions(
-                            transactions: filteredTxs,
-                            personsMap: personsMap,
-                            currencySymbol: currencySymbol,
-                            filterTitle: filterName,
-                          ),
-                          onShareCsv: () => CsvExporter.exportAndShareAllTransactions(
-                            transactions: filteredTxs,
-                            personsMap: personsMap,
-                            currencySymbol: currencySymbol,
-                          ),
-                        );
-                      },
-                    ),
-                  ],
-                ),
-              ),
-              TabBar(
-                controller: _tabController,
-                indicatorSize: TabBarIndicatorSize.tab,
-                labelStyle: TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
-                unselectedLabelStyle: TextStyle(fontWeight: FontWeight.w500, fontSize: 13),
-                tabs: const [
-                  Tab(text: 'Activity Feed'),
-                  Tab(text: 'By Person'),
-                ],
-              ),
+              Text(label, style: theme.textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant)),
+              MoneyText(v, symbol: symbol, tone: v == 0 ? MoneyTone.muted : tone, sign: v == 0 ? '' : sign),
             ],
           ),
-        ),
-      ),
-      body: Column(
-        children: [
-          // Search Field
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 8, 20, 4),
-            child: SearchBar(
+        );
+
+    return TabScaffold(
+      title: 'Activity',
+      actions: [
+        IconButton(tooltip: 'Share or export', icon: const Icon(Icons.ios_share_rounded), onPressed: export),
+      ],
+      slivers: [
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: AppSpace.lg),
+            child: TextField(
               controller: _searchController,
-              elevation: const WidgetStatePropertyAll(0),
-              backgroundColor: WidgetStatePropertyAll(cs.surfaceContainerLow),
-              shape: WidgetStatePropertyAll(
-                RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                  side: BorderSide(color: cs.outlineVariant),
-                ),
+              textInputAction: TextInputAction.search,
+              decoration: InputDecoration(
+                hintText: 'Search people, notes or expenses',
+                prefixIcon: const Icon(Icons.search_rounded),
+                suffixIcon: query.isEmpty
+                    ? null
+                    : IconButton(
+                        tooltip: 'Clear search',
+                        icon: const Icon(Icons.close_rounded),
+                        onPressed: () => setState(_searchController.clear),
+                      ),
               ),
-              hintText: 'Search by title, person or note',
-              hintStyle: WidgetStatePropertyAll(
-                TextStyle(color: cs.onSurfaceVariant, fontSize: 13.5),
-              ),
-              leading: Icon(Icons.search_rounded, size: 18, color: cs.onSurfaceVariant),
-              trailing: [
-                if (_searchController.text.isNotEmpty)
-                  IconButton(
-                    icon: const Icon(Icons.clear_rounded, size: 18),
-                    onPressed: () {
-                      _searchController.clear();
-                      setState(() {});
-                    },
-                  ),
-              ],
               onChanged: (_) => setState(() {}),
             ),
           ),
-
-          // Multi-Filter Chips Bar
-          SingleChildScrollView(
+        ),
+        SliverToBoxAdapter(
+          child: SingleChildScrollView(
             scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+            padding: const EdgeInsets.fromLTRB(AppSpace.lg, AppSpace.md, AppSpace.lg, 0),
             child: Row(
               children: [
-                // Type Filter Chips
-                ChoiceChip(
-                  label: const Text('All'),
-                  selected: _typeFilter == ActivityTypeFilter.all,
-                  onSelected: (_) => setState(() => _typeFilter = ActivityTypeFilter.all),
+                _MenuChip(
+                  label: _typeLabels[_typeFilter]!,
+                  active: _typeFilter != ActivityTypeFilter.all,
+                  onTap: () async {
+                    final v = await showModalBottomSheet<ActivityTypeFilter>(
+                      context: context,
+                      useRootNavigator: true,
+                      builder: (ctx) => SafeArea(
+                        child: RadioGroup<ActivityTypeFilter>(
+                          groupValue: _typeFilter,
+                          onChanged: (v) => Navigator.of(ctx).pop(v),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              for (final e in _typeLabels.entries)
+                                RadioListTile<ActivityTypeFilter>(value: e.key, title: Text(e.value)),
+                            ],
+                          ),
+                        ),
+                      ),
+                    );
+                    if (v != null) setState(() => _typeFilter = v);
+                  },
                 ),
-                const SizedBox(width: 6),
-                ChoiceChip(
-                  label: const Text('Lending'),
-                  selected: _typeFilter == ActivityTypeFilter.ledger,
-                  onSelected: (_) => setState(() => _typeFilter = ActivityTypeFilter.ledger),
+                const SizedBox(width: AppSpace.sm),
+                _MenuChip(
+                  label: _periodLabel,
+                  active: _dateFilter != ReportDateFilter.allTime,
+                  onTap: _pickPeriod,
                 ),
-                const SizedBox(width: 6),
-                ChoiceChip(
-                  label: const Text('Expenses'),
-                  selected: _typeFilter == ActivityTypeFilter.expenses,
-                  onSelected: (_) => setState(() => _typeFilter = ActivityTypeFilter.expenses),
-                ),
-                const SizedBox(width: 12),
-                Container(width: 1, height: 24, color: cs.outlineVariant),
-                const SizedBox(width: 12),
-
-                // Date Filter Chips
-                _filterChip('All Time', ReportDateFilter.allTime),
-                const SizedBox(width: 6),
-                _filterChip('This Month', ReportDateFilter.thisMonth),
-                const SizedBox(width: 6),
-                _filterChip('Last Month', ReportDateFilter.lastMonth),
-                const SizedBox(width: 6),
-                _filterChip('This Year', ReportDateFilter.thisYear),
-                const SizedBox(width: 6),
-                ActionChip(
-                  avatar: Icon(Icons.date_range_rounded, size: 16, color: cs.primary),
-                  label: Text(
-                    _dateFilter == ReportDateFilter.custom && _customDateRange != null
-                        ? '${DateFormatter.formatShortDate(_customDateRange!.start)} - ${DateFormatter.formatShortDate(_customDateRange!.end)}'
-                        : 'Custom Range',
-                  ),
-                  onPressed: _pickCustomRange,
-                ),
-                const SizedBox(width: 12),
-                Container(width: 1, height: 24, color: cs.outlineVariant),
-                const SizedBox(width: 12),
-
-                // Payment Mode Filter Chips
-                ChoiceChip(
-                  label: const Text('Any method'),
-                  selected: _paymentMethodFilter == null,
-                  onSelected: (_) => setState(() => _paymentMethodFilter = null),
-                ),
-                const SizedBox(width: 6),
-                ChoiceChip(
-                  label: const Text('UPI'),
-                  selected: _paymentMethodFilter == PaymentMethod.upi,
-                  onSelected: (_) => setState(() => _paymentMethodFilter = PaymentMethod.upi),
-                ),
-                const SizedBox(width: 6),
-                ChoiceChip(
-                  label: const Text('Cash'),
-                  selected: _paymentMethodFilter == PaymentMethod.cash,
-                  onSelected: (_) => setState(() => _paymentMethodFilter = PaymentMethod.cash),
-                ),
-                const SizedBox(width: 6),
-                ChoiceChip(
-                  label: const Text('Card'),
-                  selected: _paymentMethodFilter == PaymentMethod.card,
-                  onSelected: (_) => setState(() => _paymentMethodFilter = PaymentMethod.card),
-                ),
-                const SizedBox(width: 6),
-                ChoiceChip(
-                  label: const Text('Bank'),
-                  selected: _paymentMethodFilter == PaymentMethod.bankTransfer,
-                  onSelected: (_) => setState(() => _paymentMethodFilter = PaymentMethod.bankTransfer),
+                const SizedBox(width: AppSpace.sm),
+                _MenuChip(
+                  label: _methodFilter?.label ?? 'Any method',
+                  active: _methodFilter != null,
+                  onTap: _pickMethod,
                 ),
               ],
             ),
           ),
-
-          // Cashflow Overview Card
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
-            child: Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: cs.surfaceContainerLow,
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: cs.outlineVariant),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: isDark ? 0.15 : 0.03),
-                    blurRadius: 10,
-                    offset: const Offset(0, 3),
-                  ),
-                ],
-              ),
-              child: Row(
-                children: [
-                  _statBox('LENT / GIVEN', totalGiven, cs.error, cs.surfaceContainer, currencySymbol, context),
-                  const SizedBox(width: 8),
-                  _statBox('RECEIVED', totalReceived, const Color(0xFF10B981), cs.surfaceContainer, currencySymbol, context),
-                  const SizedBox(width: 8),
-                  _statBox('EXPENSES', totalPersonalExpenses, const Color(0xFFF59E0B), cs.surfaceContainer, currencySymbol, context),
-                ],
-              ),
-            ),
-          ),
-
-          const SizedBox(height: 6),
-
-          Expanded(
-            child: allTxsAsync.when(
-              data: (_) {
-                // Group filtered transactions by personId for Tab 2
-                final Map<String, ({double given, double received, LedgerTransaction? lastTx, int count})> personStats = {};
-                for (final tx in filteredTxs) {
-                  final current = personStats[tx.personId];
-                  final isGiven = tx.type == TransactionType.moneyGiven;
-                  final g = (current?.given ?? 0.0) + (isGiven ? tx.amount : 0.0);
-                  final r = (current?.received ?? 0.0) + (!isGiven ? tx.amount : 0.0);
-                  final last = current?.lastTx == null || tx.transactionDate.isAfter(current!.lastTx!.transactionDate)
-                      ? tx
-                      : current.lastTx;
-                  final c = (current?.count ?? 0) + 1;
-                  personStats[tx.personId] = (given: g, received: r, lastTx: last, count: c);
-                }
-
-                final List<PersonSummary> filteredPersonSummaries = [];
-                for (final entry in personStats.entries) {
-                  final person = personsMap[entry.key];
-                  if (person != null) {
-                    filteredPersonSummaries.add(
-                      PersonSummary(
-                        person: person,
-                        totalGiven: entry.value.given,
-                        totalReceived: entry.value.received,
-                        balance: entry.value.given - entry.value.received,
-                        lastTransaction: entry.value.lastTx,
-                        transactionCount: entry.value.count,
-                      ),
-                    );
-                  }
-                }
-
-                if (_dateFilter == ReportDateFilter.allTime) {
-                  final allSummaries = allSummariesAsync.value ?? [];
-                  for (final s in allSummaries) {
-                    if (!personStats.containsKey(s.person.id)) {
-                      filteredPersonSummaries.add(s);
-                    }
-                  }
-                }
-
-                filteredPersonSummaries.sort((a, b) {
-                  final volumeA = a.totalGiven + a.totalReceived;
-                  final volumeB = b.totalGiven + b.totalReceived;
-                  final cmp = volumeB.compareTo(volumeA);
-                  if (cmp != 0) return cmp;
-                  return a.person.name.compareTo(b.person.name);
-                });
-
-                return TabBarView(
-                  controller: _tabController,
-                  children: [
-                    // Tab 1: Activity Timeline (Ledger + Personal Expenses)
-                    activityTimeline.isEmpty
-                        ? const EmptyStateWidget(
-                            icon: Icons.filter_list_off_rounded,
-                            title: 'Nothing matches these filters',
-                            description: 'Try a different search, type or date range.',
-                          )
-                        : Container(
-                            margin: const EdgeInsets.fromLTRB(20, 4, 20, 24),
-                            decoration: BoxDecoration(
-                              color: cs.surfaceContainerLow,
-                              borderRadius: BorderRadius.circular(20),
-                              border: Border.all(color: cs.outlineVariant),
-                            ),
-                            child: ListView.separated(
-                              padding: const EdgeInsets.symmetric(vertical: 6),
-                              itemCount: activityTimeline.length,
-                              separatorBuilder: (_, _) => Divider(
-                                height: 1,
-                                indent: 68,
-                                endIndent: 16,
-                                color: cs.outlineVariant.withValues(alpha: 0.6),
-                              ),
-                              itemBuilder: (ctx, index) {
-                                final item = activityTimeline[index];
-                                if (!item.isExpense) {
-                                  final tx = item.transaction!;
-                                  final person = personsMap[tx.personId];
-                                  return FadeSlideTransition(
-                                    index: index,
-                                    child: TransactionTile(
-                                      transaction: tx,
-                                      person: person,
-                                      currencySymbol: currencySymbol,
-                                      onTap: () {
-                                        TransactionDetailsDialog.show(
-                                          context,
-                                          transaction: tx,
-                                          person: person,
-                                        );
-                                      },
-                                    ),
-                                  );
-                                } else {
-                                  final expense = item.expense!;
-                                  return FadeSlideTransition(
-                                    index: index,
-                                    child: ListTile(
-                                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                                      leading: Container(
-                                        padding: const EdgeInsets.all(10),
-                                        decoration: BoxDecoration(
-                                          color: const Color(0xFFF59E0B).withValues(alpha: 0.12),
-                                          shape: BoxShape.circle,
-                                        ),
-                                        child: Text(
-                                          _getCategoryName(expense.category).split(' ').first,
-                                          style: const TextStyle(fontSize: 16),
-                                        ),
-                                      ),
-                                      title: Text(
-                                        expense.title,
-                                        style: TextStyle(
-                                          fontSize: 14.5,
-                                          fontWeight: FontWeight.w700,
-                                          color: Theme.of(context).colorScheme.onSurface,
-                                        ),
-                                      ),
-                                      subtitle: Text(
-                                        'Personal Expense • ${DateFormatter.formatRelative(expense.expenseDate)}',
-                                        style: theme.textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
-                                      ),
-                                      trailing: Text(
-                                        '-${CurrencyFormatter.format(expense.amount, symbol: currencySymbol)}',
-                                        style: TextStyle(
-                                          fontSize: 15,
-                                          fontWeight: FontWeight.w600,
-                                          color: cs.error,
-                                        ),
-                                      ),
-                                      onTap: () => AddEditExpenseSheet.show(context, expenseToEdit: expense),
-                                    ),
-                                  );
-                                }
-                              },
-                            ),
-                          ),
-
-                    // Tab 2: By Person Breakdown
-                    filteredPersonSummaries.isEmpty
-                        ? const EmptyStateWidget(
-                            icon: Icons.people_outline_rounded,
-                            title: 'Nothing matches these filters',
-                            description: 'Try a different search or filter.',
-                          )
-                        : Container(
-                            margin: const EdgeInsets.fromLTRB(20, 4, 20, 24),
-                            decoration: BoxDecoration(
-                              color: cs.surfaceContainerLow,
-                              borderRadius: BorderRadius.circular(20),
-                              border: Border.all(color: cs.outlineVariant),
-                            ),
-                            child: ListView.separated(
-                              padding: const EdgeInsets.symmetric(vertical: 6),
-                              itemCount: filteredPersonSummaries.length,
-                              separatorBuilder: (_, _) => Divider(
-                                height: 1,
-                                indent: 68,
-                                endIndent: 16,
-                                color: cs.outlineVariant.withValues(alpha: 0.6),
-                              ),
-                              itemBuilder: (ctx, index) {
-                                final s = filteredPersonSummaries[index];
-                                return ListTile(
-                                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                                  leading: AvatarWidget(name: s.person.name, radius: 20),
-                                  title: Text(
-                                    s.person.name,
-                                    style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
-                                  ),
-                                  subtitle: Text(
-                                    'Given: ${CurrencyFormatter.formatCompact(s.totalGiven, symbol: currencySymbol)} • Received: ${CurrencyFormatter.formatCompact(s.totalReceived, symbol: currencySymbol)}',
-                                    style: theme.textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
-                                  ),
-                                  trailing: Text(
-                                    CurrencyFormatter.format(s.balance, symbol: currencySymbol),
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.w600,
-                                      fontSize: 14,
-                                      color: s.balance > 0.001
-                                          ? cs.error
-                                          : s.balance < -0.001
-                                              ? const Color(0xFF10B981)
-                                              : cs.primary,
-                                    ),
-                                  ),
-                                  onTap: () => context.push('/people/${s.person.id}'),
-                                );
-                              },
-                            ),
-                          ),
-                  ],
-                );
-              },
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (err, _) => const Center(child: Text("Couldn't load this. Please try again.")),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _filterChip(String label, ReportDateFilter filter) {
-    return ChoiceChip(
-      label: Text(label),
-      selected: _dateFilter == filter,
-      onSelected: (_) => setState(() => _dateFilter = filter),
-    );
-  }
-
-  Widget _statBox(String label, double amount, Color accent, Color bg, String symbol, BuildContext context) {
-    final theme = Theme.of(context);
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.all(10),
-        decoration: BoxDecoration(
-          color: bg,
-          borderRadius: BorderRadius.circular(14),
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              label,
-              style: theme.textTheme.labelSmall?.copyWith(
-                color: accent,
-                fontWeight: FontWeight.w700,
-                fontSize: 10,
-                letterSpacing: 0.5,
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(AppSpace.screenGutter, AppSpace.lg, AppSpace.screenGutter, 0),
+            child: Row(
+              children: [
+                figure('Money in', moneyIn, MoneyTone.positive, '+'),
+                figure('Money out', moneyOut, MoneyTone.neutral, '−'),
+                figure('Spent', spent, MoneyTone.neutral, '−'),
+              ],
             ),
-            const SizedBox(height: 4),
-            Text(
-              CurrencyFormatter.formatCompact(amount, symbol: symbol),
-              style: TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w600,
-                color: accent,
+          ),
+        ),
+        if (items.isEmpty)
+          SliverFillRemaining(
+            hasScrollBody: false,
+            child: EmptyStateWidget(
+              icon: query.isEmpty ? Icons.receipt_long_outlined : Icons.search_off_rounded,
+              title: query.isEmpty ? 'Nothing in this period' : 'Nothing matches "${_searchController.text}"',
+              description: 'Try a different period, type or search.',
+            ),
+          )
+        else
+          for (final entry in byDay.entries) ...[
+            SliverToBoxAdapter(child: DateHeader(entry.key)),
+            SliverToBoxAdapter(
+              child: GroupCard(
+                children: [
+                  for (final item in entry.value)
+                    if (item.isExpense)
+                      ListTile(
+                        onTap: () => AddEditExpenseSheet.show(context, expenseToEdit: item.expense),
+                        leading: IconBadge(item.expense!.category.icon),
+                        title: Text(item.expense!.title, maxLines: 1, overflow: TextOverflow.ellipsis),
+                        subtitle: Text('Expense · ${item.expense!.category.label}'),
+                        trailing: MoneyText(item.expense!.amount, symbol: symbol, sign: '−'),
+                      )
+                    else
+                      TransactionTile(
+                        transaction: item.transaction!,
+                        person: people[item.transaction!.personId],
+                        currencySymbol: symbol,
+                        showDate: false,
+                        onTap: () => TransactionDetailsDialog.show(
+                          context,
+                          transaction: item.transaction!,
+                          person: item.transaction!.personId == AppConstants.selfPersonId
+                              ? null
+                              : people[item.transaction!.personId],
+                        ),
+                      ),
+                ],
               ),
             ),
           ],
-        ),
+      ],
+    );
+  }
+}
+
+/// A chip that opens a choice sheet and shows the current choice.
+class _MenuChip extends StatelessWidget {
+  final String label;
+  final bool active;
+  final VoidCallback onTap;
+
+  const _MenuChip({required this.label, required this.active, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return FilterChip(
+      label: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(label),
+          const SizedBox(width: 2),
+          const Icon(Icons.arrow_drop_down_rounded, size: 20),
+        ],
       ),
+      selected: active,
+      onSelected: (_) => onTap(),
     );
   }
 }

@@ -114,4 +114,45 @@ void main() {
     expect(emis.first.isForSelf, isTrue);
     expect(emis.first.personId, equals(AppConstants.selfPersonId));
   });
+
+  test('Erase all data removes everything except the self row', () async {
+    final now = DateTime.now();
+    final person = Person(id: 'p1', name: 'Asha', createdAt: now, updatedAt: now);
+    await personRepo.createPerson(person);
+    await txRepo.addTransaction(LedgerTransaction(
+      id: 't1',
+      personId: 'p1',
+      type: TransactionType.moneyGiven,
+      amount: 100,
+      transactionDate: now,
+      paymentMethod: PaymentMethod.cash,
+      createdAt: now,
+      updatedAt: now,
+    ));
+    await emiRepo.createEmi(CreditCardEmi(
+      id: 'e1',
+      personId: AppConstants.selfPersonId,
+      itemName: 'Phone',
+      cardName: 'Card',
+      totalAmount: 1200,
+      monthlyInstallment: 100,
+      totalTenureMonths: 12,
+      startDate: now.add(const Duration(days: 30)),
+      dueDayOfMonth: 1,
+      createdAt: now,
+      updatedAt: now,
+    ));
+    await db.customStatement(
+      "INSERT INTO expenses (id, title, amount, category, expense_date, payment_method, created_at, updated_at) "
+      "VALUES ('x1', 'Tea', 20, 0, 0, 0, 0, 0)",
+    );
+
+    await db.eraseAllData();
+
+    expect(await db.select(db.transactions).get(), isEmpty);
+    expect(await db.select(db.creditCardEmis).get(), isEmpty);
+    expect(await db.select(db.expenses).get(), isEmpty, reason: 'expenses used to survive an erase');
+    final persons = await db.select(db.persons).get();
+    expect(persons.map((p) => p.id), [AppConstants.selfPersonId]);
+  });
 }

@@ -2,13 +2,21 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:uuid/uuid.dart';
+import 'package:duemate/core/theme/app_theme.dart';
 import 'package:duemate/core/utils/contacts_helper.dart';
+import 'package:duemate/core/utils/currency_formatter.dart';
+import 'package:duemate/core/utils/whatsapp_helper.dart';
+import 'package:duemate/core/widgets/avatar_widget.dart';
+import 'package:duemate/core/widgets/confirm_dialog.dart';
 import 'package:duemate/core/widgets/empty_state_widget.dart';
-import 'package:duemate/core/widgets/fade_slide_transition.dart';
+import 'package:duemate/core/widgets/quick_give_sheet.dart';
+import 'package:duemate/core/widgets/quick_receive_sheet.dart';
+import 'package:duemate/core/widgets/ui_kit.dart';
 import 'package:duemate/data/providers/app_providers.dart';
 import 'package:duemate/domain/entities/person.dart';
+import 'package:duemate/domain/entities/person_summary.dart';
+import 'package:duemate/domain/person_matcher.dart';
 import 'package:duemate/features/people/presentation/screens/add_edit_person_screen.dart';
-import 'package:duemate/features/people/presentation/widgets/person_directory_tile.dart';
 
 class PeopleScreen extends ConsumerStatefulWidget {
   const PeopleScreen({super.key});
@@ -21,20 +29,24 @@ class _PeopleScreenState extends ConsumerState<PeopleScreen> {
   final _searchController = TextEditingController();
   bool _isImporting = false;
 
+  static const _filters = {
+    PeopleFilter.all: 'All',
+    PeopleFilter.active: 'Open balance',
+    PeopleFilter.settled: 'Settled',
+    PeopleFilter.archived: 'Archived',
+  };
+
+  static const _sorts = {
+    PeopleSort.highestOutstanding: 'Largest balance',
+    PeopleSort.recentlyActive: 'Recent activity',
+    PeopleSort.alphabetical: 'Name (A–Z)',
+    PeopleSort.recentlyAdded: 'Recently added',
+  };
+
   @override
   void dispose() {
     _searchController.dispose();
     super.dispose();
-  }
-
-  static final _nonDigitsRegex = RegExp(r'\D');
-
-  String _normalizePhone(String raw) {
-    final digitsOnly = raw.replaceAll(_nonDigitsRegex, '');
-    if (digitsOnly.length > 10) {
-      return digitsOnly.substring(digitsOnly.length - 10);
-    }
-    return digitsOnly;
   }
 
   Future<void> _importFromContacts() async {
@@ -43,49 +55,11 @@ class _PeopleScreenState extends ConsumerState<PeopleScreen> {
       final contact = await ContactsHelper.pickContact();
       if (contact == null) return;
 
-      final allPersons = await ref.read(allPersonSummariesProvider.future);
-      final contactName = contact.name.trim();
-      final contactPhone = contact.phone != null ? contact.phone!.trim() : '';
-      final normPhone = contactPhone.isNotEmpty ? _normalizePhone(contactPhone) : '';
-
-      final existing = allPersons.where((s) {
-        // Phone numbers decide it when both sides have one; otherwise fall
-        // back to the name, so different people sharing a name can coexist.
-        final existingNorm = (s.person.phone ?? '').trim().isNotEmpty
-            ? _normalizePhone(s.person.phone!)
-            : '';
-        if (normPhone.isNotEmpty && existingNorm.isNotEmpty) {
-          return existingNorm == normPhone;
-        }
-        return s.person.name.trim().toLowerCase() == contactName.toLowerCase();
-      }).firstOrNull;
-
+      final people = (await ref.read(allPersonSummariesProvider.future)).map((s) => s.person);
+      final existing = PersonMatcher.findDuplicate(people, name: contact.name, phone: contact.phone);
       if (existing != null) {
-        if (mounted) {
-          showDialog(
-            context: context,
-            builder: (ctx) => AlertDialog(
-              title: const Text('Already in your ledger'),
-              content: Text(
-                existing.person.phone == null || existing.person.phone!.isEmpty
-                    ? '${existing.person.name} is already in your ledger.'
-                    : '${existing.person.name} (${existing.person.phone}) is already in your ledger.',
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(ctx).pop(),
-                  child: const Text('Cancel'),
-                ),
-                FilledButton(
-                  onPressed: () {
-                    Navigator.of(ctx).pop();
-                    context.push('/people/${existing.person.id}');
-                  },
-                  child: const Text('Open ledger'),
-                ),
-              ],
-            ),
-          );
+        if (mounted && await showAlreadyInLedgerDialog(context, existing) && mounted) {
+          context.push('/people/${existing.id}');
         }
         return;
       }
@@ -99,18 +73,13 @@ class _PeopleScreenState extends ConsumerState<PeopleScreen> {
         createdAt: now,
         updatedAt: now,
       );
-
       await ref.read(personRepositoryProvider).createPerson(newPerson);
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('${newPerson.name} added'),
-          ),
-        );
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${newPerson.name} added')));
         context.push('/people/${newPerson.id}');
       }
-    } catch (e) {
+    } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text("Couldn't read that contact.")),
@@ -121,33 +90,28 @@ class _PeopleScreenState extends ConsumerState<PeopleScreen> {
     }
   }
 
-  void _showSortMenu(BuildContext context) {
-    final currentSort = ref.read(peopleSortProvider);
-    final theme = Theme.of(context);
-    final cs = theme.colorScheme;
-
-    showModalBottomSheet(
+  void _showSortSheet() {
+    final current = ref.read(peopleSortProvider);
+    showModalBottomSheet<void>(
       context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
       useRootNavigator: true,
-      showDragHandle: true,
       builder: (ctx) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+        child: RadioGroup<PeopleSort>(
+          groupValue: current,
+          onChanged: (v) {
+            if (v != null) ref.read(peopleSortProvider.notifier).setSort(v);
+            Navigator.of(ctx).pop();
+          },
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                'Sort by',
-                style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(AppSpace.screenGutter, 0, AppSpace.screenGutter, AppSpace.sm),
+                child: Text('Sort by', style: Theme.of(ctx).textTheme.titleMedium),
               ),
-              const SizedBox(height: 14),
-              _sortItem('Largest balance', PeopleSort.highestOutstanding, currentSort, Icons.trending_up_rounded, cs),
-              _sortItem('Recent activity', PeopleSort.recentlyActive, currentSort, Icons.history_rounded, cs),
-              _sortItem('Name (A–Z)', PeopleSort.alphabetical, currentSort, Icons.sort_by_alpha_rounded, cs),
-              _sortItem('Recently added', PeopleSort.recentlyAdded, currentSort, Icons.schedule_rounded, cs),
+              for (final e in _sorts.entries) RadioListTile<PeopleSort>(value: e.key, title: Text(e.value)),
+              const SizedBox(height: AppSpace.sm),
             ],
           ),
         ),
@@ -155,31 +119,68 @@ class _PeopleScreenState extends ConsumerState<PeopleScreen> {
     );
   }
 
-  Widget _sortItem(String title, PeopleSort sort, PeopleSort current, IconData icon, ColorScheme cs) {
-    final isSelected = sort == current;
-    return ListTile(
-      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-      tileColor: isSelected ? cs.primary.withValues(alpha: 0.08) : Colors.transparent,
-      leading: Icon(
-        icon,
-        color: isSelected ? cs.primary : cs.onSurfaceVariant,
-        size: 20,
-      ),
-      title: Text(
-        title,
-        style: TextStyle(
-          fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-          color: isSelected ? cs.primary : cs.onSurface,
+  /// Long-press shortcuts so common actions don't need opening the ledger.
+  void _showQuickActions(PersonSummary s, String symbol) {
+    final p = s.person;
+    final canRemind = s.owesMoney && (p.phone?.isNotEmpty ?? false);
+    showModalBottomSheet<void>(
+      context: context,
+      useRootNavigator: true,
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: AvatarWidget(name: p.name, radius: 20),
+              title: Text(p.name),
+              subtitle: Text(
+                s.balance.abs() < 0.0001
+                    ? 'Settled'
+                    : '${balanceWording(s).label} ${CurrencyFormatter.format(s.balance.abs(), symbol: symbol)}',
+              ),
+            ),
+            const Divider(),
+            ListTile(
+              leading: const Icon(Icons.north_east_rounded),
+              title: const Text('Give money'),
+              onTap: () {
+                Navigator.of(ctx).pop();
+                QuickGiveSheet.show(context, personId: p.id);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.south_west_rounded),
+              title: const Text('Receive money'),
+              onTap: () {
+                Navigator.of(ctx).pop();
+                QuickReceiveSheet.show(context, personId: p.id);
+              },
+            ),
+            if (canRemind)
+              ListTile(
+                leading: const Icon(Icons.chat_outlined),
+                title: const Text('Send a reminder on WhatsApp'),
+                onTap: () {
+                  Navigator.of(ctx).pop();
+                  WhatsAppHelper.sendWhatsAppMessage(
+                    phoneNumber: p.phone,
+                    message: WhatsAppHelper.generateLedgerReminderMessage(s, currencySymbol: symbol),
+                    context: context,
+                  );
+                },
+              ),
+            ListTile(
+              leading: const Icon(Icons.open_in_new_rounded),
+              title: const Text('Open ledger'),
+              onTap: () {
+                Navigator.of(ctx).pop();
+                context.push('/people/${p.id}');
+              },
+            ),
+            const SizedBox(height: AppSpace.sm),
+          ],
         ),
       ),
-      trailing: isSelected
-          ? Icon(Icons.check_rounded, color: cs.primary, size: 20)
-          : null,
-      onTap: () {
-        ref.read(peopleSortProvider.notifier).setSort(sort);
-        Navigator.of(context).pop();
-      },
     );
   }
 
@@ -187,178 +188,120 @@ class _PeopleScreenState extends ConsumerState<PeopleScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
-    final currencySymbol = ref.watch(currencySymbolProvider);
-    final currentFilter = ref.watch(peopleFilterProvider);
+    final symbol = ref.watch(currencySymbolProvider);
+    final filter = ref.watch(peopleFilterProvider);
     final people = ref.watch(filteredPersonSummariesProvider);
-    final allSummariesAsync = ref.watch(allPersonSummariesProvider);
-    final allPersons = allSummariesAsync.value ?? [];
+    final totals = ref.watch(dashboardTotalsProvider);
+    final searching = _searchController.text.isNotEmpty;
+    String money(double v) => CurrencyFormatter.format(v, symbol: symbol);
 
-    final totalCount = allPersons.length;
-    final activeDuesCount = allPersons.where((s) => s.owesMoney || s.isOverpaid).length;
+    final summary = [
+      if (totals.totalTheyOwe > 0) '${money(totals.totalTheyOwe)} to collect',
+      if (totals.totalUserOwes > 0) '${money(totals.totalUserOwes)} to pay',
+    ].join(' · ');
 
-    return Scaffold(
-      appBar: PreferredSize(
-        preferredSize: const Size.fromHeight(68),
-        child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        'People',
-                        style: TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.w600,
-                          letterSpacing: -0.4,
-                          color: Theme.of(context).colorScheme.onSurface,
-                        ),
-                      ),
-                      Text(
-                        '$totalCount Contacts • $activeDuesCount Active Dues',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
-                          color: cs.onSurfaceVariant,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                _isImporting
-                    ? const Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 12.0),
-                        child: SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        ),
-                      )
-                    : IconButton.filledTonal(
-                        tooltip: 'Import from Contacts',
-                        icon: const Icon(Icons.contacts_rounded, size: 18),
-                        onPressed: _importFromContacts,
-                      ),
-                const SizedBox(width: 8),
-                IconButton.filledTonal(
-                  tooltip: 'Sort',
-                  icon: const Icon(Icons.sort_rounded, size: 18),
-                  onPressed: () => _showSortMenu(context),
-                ),
-              ],
+    return TabScaffold(
+      title: 'People',
+      actions: [
+        IconButton(
+          tooltip: 'Add from contacts',
+          onPressed: _isImporting ? null : _importFromContacts,
+          icon: _isImporting
+              ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+              : const Icon(Icons.contacts_outlined),
+        ),
+        IconButton(tooltip: 'Sort', onPressed: _showSortSheet, icon: const Icon(Icons.sort_rounded)),
+      ],
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => AddEditPersonScreen.show(context),
+        icon: const Icon(Icons.person_add_alt_outlined),
+        label: const Text('Add person'),
+      ),
+      slivers: [
+        if (summary.isNotEmpty)
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(AppSpace.screenGutter, 0, AppSpace.screenGutter, AppSpace.md),
+              child: Text(summary, style: theme.textTheme.bodyMedium?.copyWith(color: cs.onSurfaceVariant)),
             ),
           ),
-        ),
-      ),
-      floatingActionButton: Padding(
-        padding: const EdgeInsets.only(bottom: 88),
-        child: FloatingActionButton.extended(
-          onPressed: () => AddEditPersonScreen.show(context),
-          icon: const Icon(Icons.person_add_rounded, size: 20),
-          label: Text('Add person', style: TextStyle(fontWeight: FontWeight.w700)),
-        ),
-      ),
-      body: Column(
-        children: [
-          // Search Field
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 8, 20, 8),
-            child: SearchBar(
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: AppSpace.lg),
+            child: TextField(
               controller: _searchController,
-              elevation: const WidgetStatePropertyAll(0),
-              backgroundColor: WidgetStatePropertyAll(cs.surfaceContainerLow),
-              shape: WidgetStatePropertyAll(
-                RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                  side: BorderSide(color: cs.outlineVariant),
-                ),
+              textInputAction: TextInputAction.search,
+              decoration: InputDecoration(
+                hintText: 'Search name, phone or notes',
+                prefixIcon: const Icon(Icons.search_rounded),
+                suffixIcon: searching
+                    ? IconButton(
+                        tooltip: 'Clear search',
+                        icon: const Icon(Icons.close_rounded),
+                        onPressed: () {
+                          _searchController.clear();
+                          ref.read(peopleSearchQueryProvider.notifier).setQuery('');
+                          setState(() {});
+                        },
+                      )
+                    : null,
               ),
-              hintText: 'Search by name, phone or notes',
-              hintStyle: WidgetStatePropertyAll(
-                TextStyle(color: cs.onSurfaceVariant, fontSize: 14),
-              ),
-              leading: Icon(Icons.search_rounded, size: 20, color: cs.onSurfaceVariant),
-              trailing: [
-                if (_searchController.text.isNotEmpty)
-                  IconButton(
-                    icon: const Icon(Icons.clear_rounded, size: 18),
-                    onPressed: () {
-                      _searchController.clear();
-                      ref.read(peopleSearchQueryProvider.notifier).setQuery('');
-                    },
-                  ),
-              ],
-              onChanged: (val) {
-                ref.read(peopleSearchQueryProvider.notifier).setQuery(val);
+              onChanged: (v) {
+                ref.read(peopleSearchQueryProvider.notifier).setQuery(v);
+                setState(() {});
               },
             ),
           ),
-
-          // Filter Chips
-          SingleChildScrollView(
+        ),
+        SliverToBoxAdapter(
+          child: SingleChildScrollView(
             scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+            padding: const EdgeInsets.fromLTRB(AppSpace.lg, AppSpace.md, AppSpace.lg, AppSpace.md),
             child: Row(
               children: [
-                _filterChip('All', PeopleFilter.all, currentFilter),
-                const SizedBox(width: 8),
-                _filterChip('Owes You', PeopleFilter.active, currentFilter),
-                const SizedBox(width: 8),
-                _filterChip('Settled', PeopleFilter.settled, currentFilter),
-                const SizedBox(width: 8),
-                _filterChip('Archived', PeopleFilter.archived, currentFilter),
+                for (final e in _filters.entries) ...[
+                  ChoiceChip(
+                    label: Text(e.value),
+                    selected: filter == e.key,
+                    onSelected: (_) => ref.read(peopleFilterProvider.notifier).setFilter(e.key),
+                  ),
+                  const SizedBox(width: AppSpace.sm),
+                ],
               ],
             ),
           ),
-          const SizedBox(height: 8),
-
-          // People List
-          Expanded(
-            child: AnimatedSwitcher(
-              duration: const Duration(milliseconds: 300),
-              child: people.isEmpty
-                  ? EmptyStateWidget(
-                      key: ValueKey('empty_${currentFilter.name}_${_searchController.text}'),
-                      icon: Icons.people_outline_rounded,
-                      title: _searchController.text.isNotEmpty ? 'No matches' : 'No records yet',
-                      description: _searchController.text.isNotEmpty
-                          ? 'Try searching with another name or phone number.'
-                          : 'Add someone to track balances and payments.',
-                      actionLabel: _searchController.text.isNotEmpty ? null : 'Add Person',
-                      onActionPressed: () => AddEditPersonScreen.show(context),
-                    )
-                  : ListView.separated(
-                      key: ValueKey('list_${currentFilter.name}'),
-                      padding: const EdgeInsets.fromLTRB(20, 4, 20, 160),
-                      itemCount: people.length,
-                      separatorBuilder: (_, _) => const SizedBox(height: 10),
-                      itemBuilder: (ctx, index) {
-                        return FadeSlideTransition(
-                          index: index,
-                          child: PersonDirectoryTile(
-                            summary: people[index],
-                            currencySymbol: currencySymbol,
-                          ),
-                        );
-                      },
-                    ),
+        ),
+        if (people.isEmpty)
+          SliverFillRemaining(
+            hasScrollBody: false,
+            child: EmptyStateWidget(
+              icon: searching ? Icons.search_off_rounded : Icons.people_outline_rounded,
+              title: searching
+                  ? 'No one matches "${_searchController.text}"'
+                  : filter == PeopleFilter.all
+                      ? 'No one here yet'
+                      : 'No one in ${_filters[filter]!.toLowerCase()}',
+              description: searching
+                  ? 'Try a different name or number.'
+                  : 'Add someone you lend to, borrow from, or share EMIs with.',
+              actionLabel: searching ? null : 'Add person',
+              onActionPressed: searching ? null : () => AddEditPersonScreen.show(context),
+            ),
+          )
+        else
+          SliverToBoxAdapter(
+            child: GroupCard(
+              children: [
+                for (final s in people)
+                  PersonRow(
+                    summary: s,
+                    symbol: symbol,
+                    onLongPress: () => _showQuickActions(s, symbol),
+                  ),
+              ],
             ),
           ),
-        ],
-      ),
-    );
-  }
-
-  Widget _filterChip(String label, PeopleFilter filter, PeopleFilter current) {
-    final isSelected = filter == current;
-    return ChoiceChip(
-      label: Text(label),
-      selected: isSelected,
-      onSelected: (_) => ref.read(peopleFilterProvider.notifier).setFilter(filter),
+      ],
     );
   }
 }
