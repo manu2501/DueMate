@@ -13,6 +13,18 @@ enum PaymentMethod {
   other,
 }
 
+enum ExpenseCategory {
+  groceries,
+  utilities,
+  rent,
+  fuel,
+  food,
+  shopping,
+  entertainment,
+  health,
+  other,
+}
+
 class Persons extends Table {
   TextColumn get id => text()();
   TextColumn get name => text().withLength(min: 1, max: 100)();
@@ -62,6 +74,21 @@ class CreditCardEmis extends Table {
   DateTimeColumn get createdAt => dateTime()();
   DateTimeColumn get updatedAt => dateTime()();
   DateTimeColumn get lastProcessedDate => dateTime().nullable()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
+class Expenses extends Table {
+  TextColumn get id => text()();
+  TextColumn get title => text().withLength(min: 1, max: 150)();
+  RealColumn get amount => real()();
+  IntColumn get category => intEnum<ExpenseCategory>()();
+  DateTimeColumn get expenseDate => dateTime()();
+  IntColumn get paymentMethod => intEnum<PaymentMethod>()();
+  TextColumn get notes => text().nullable()();
+  DateTimeColumn get createdAt => dateTime()();
+  DateTimeColumn get updatedAt => dateTime()();
 
   @override
   Set<Column> get primaryKey => {id};

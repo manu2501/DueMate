@@ -4,6 +4,7 @@ import 'package:duemate/core/widgets/pressable_scale.dart';
 import 'package:duemate/core/widgets/quick_give_sheet.dart';
 import 'package:duemate/core/widgets/quick_receive_sheet.dart';
 import 'package:duemate/features/emis/presentation/screens/add_edit_emi_screen.dart';
+import 'package:duemate/features/expenses/presentation/widgets/add_edit_expense_sheet.dart';
 import 'package:duemate/features/people/presentation/screens/add_edit_person_screen.dart';
 
 class DashboardQuickActionsBar extends StatelessWidget {
@@ -17,13 +18,13 @@ class DashboardQuickActionsBar extends StatelessWidget {
         children: [
           Expanded(
             child: _QuickActionTile(
-              label: 'Give Money',
+              label: 'Give',
               icon: Icons.north_east_rounded,
               color: const Color(0xFFEF4444),
               onTap: () => QuickGiveSheet.show(context),
             ),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 6),
           Expanded(
             child: _QuickActionTile(
               label: 'Receive',
@@ -32,7 +33,16 @@ class DashboardQuickActionsBar extends StatelessWidget {
               onTap: () => QuickReceiveSheet.show(context),
             ),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 6),
+          Expanded(
+            child: _QuickActionTile(
+              label: 'Expense',
+              icon: Icons.receipt_rounded,
+              color: const Color(0xFFF59E0B),
+              onTap: () => AddEditExpenseSheet.show(context),
+            ),
+          ),
+          const SizedBox(width: 6),
           Expanded(
             child: _QuickActionTile(
               label: 'Add EMI',
@@ -41,12 +51,12 @@ class DashboardQuickActionsBar extends StatelessWidget {
               onTap: () => AddEditEmiScreen.show(context),
             ),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 6),
           Expanded(
             child: _QuickActionTile(
-              label: 'Add Person',
+              label: 'Person',
               icon: Icons.person_add_outlined,
-              color: const Color(0xFFF59E0B),
+              color: const Color(0xFF4F46E5),
               onTap: () => AddEditPersonScreen.show(context),
             ),
           ),

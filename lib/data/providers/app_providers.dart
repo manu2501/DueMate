@@ -8,11 +8,14 @@ import 'package:duemate/domain/entities/ledger_summary.dart';
 import 'package:duemate/domain/entities/ledger_transaction.dart';
 import 'package:duemate/domain/entities/person.dart' as domain;
 import 'package:duemate/domain/entities/person_summary.dart';
+import 'package:duemate/domain/entities/personal_expense.dart';
 import 'package:duemate/domain/repositories/emi_repository.dart';
+import 'package:duemate/domain/repositories/expense_repository.dart';
 import 'package:duemate/domain/repositories/person_repository.dart';
 import 'package:duemate/domain/repositories/transaction_repository.dart';
 import 'package:duemate/data/database/app_database.dart' hide CreditCardEmi;
 import 'package:duemate/data/repositories/emi_repository_impl.dart';
+import 'package:duemate/data/repositories/expense_repository_impl.dart';
 import 'package:duemate/data/repositories/person_repository_impl.dart';
 import 'package:duemate/data/repositories/transaction_repository_impl.dart';
 
@@ -35,6 +38,52 @@ final transactionRepositoryProvider = Provider<TransactionRepository>((ref) {
 final emiRepositoryProvider = Provider<EmiRepository>((ref) {
   return EmiRepositoryImpl(ref.watch(databaseProvider));
 });
+
+final expenseRepositoryProvider = Provider<ExpenseRepository>((ref) {
+  return ExpenseRepositoryImpl(ref.watch(databaseProvider));
+});
+
+final allExpensesProvider = StreamProvider<List<PersonalExpense>>((ref) {
+  return ref.watch(expenseRepositoryProvider).watchAllExpenses();
+});
+
+final monthlyExpensesProvider = StreamProvider<List<PersonalExpense>>((ref) {
+  return ref.watch(expenseRepositoryProvider).watchCurrentMonthExpenses();
+});
+
+final monthlyExpenseTotalProvider = Provider<double>((ref) {
+  final expensesAsync = ref.watch(monthlyExpensesProvider);
+  return expensesAsync.maybeWhen(
+    data: (list) => list.fold(0.0, (sum, item) => sum + item.amount),
+    orElse: () => 0.0,
+  );
+});
+
+class MonthlyBudgetNotifier extends Notifier<double> {
+  static const _key = 'duemate_monthly_budget_limit';
+
+  @override
+  double build() {
+    _load();
+    return 25000.0;
+  }
+
+  Future<void> _load() async {
+    final prefs = await SharedPreferences.getInstance();
+    final saved = prefs.getDouble(_key);
+    if (saved != null && saved > 0) {
+      state = saved;
+    }
+  }
+
+  Future<void> setBudget(double budget) async {
+    state = budget;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setDouble(_key, budget);
+  }
+}
+
+final monthlyBudgetLimitProvider = NotifierProvider<MonthlyBudgetNotifier, double>(MonthlyBudgetNotifier.new);
 
 final emiProcessorServiceProvider = Provider<EmiProcessorService>((ref) {
   return EmiProcessorService(

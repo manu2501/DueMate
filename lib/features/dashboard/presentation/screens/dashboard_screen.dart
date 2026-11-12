@@ -12,6 +12,7 @@ import 'package:duemate/features/dashboard/presentation/widgets/dashboard_quick_
 import 'package:duemate/features/dashboard/presentation/widgets/dashboard_stats_card.dart';
 import 'package:duemate/features/dashboard/presentation/widgets/dashboard_top_dues_card.dart';
 import 'package:duemate/features/emis/presentation/screens/add_edit_emi_screen.dart';
+import 'package:duemate/features/expenses/presentation/widgets/monthly_budget_card.dart';
 import 'package:duemate/features/emis/presentation/widgets/emi_card.dart';
 import 'package:duemate/features/people/presentation/screens/add_edit_person_screen.dart';
 import 'package:duemate/features/transactions/presentation/widgets/transaction_details_dialog.dart';
@@ -141,9 +142,14 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 currencySymbol: currencySymbol,
               ),
 
+              const SizedBox(height: 16),
+
+              // 2. Monthly Personal Expenses & Budget Card
+              const MonthlyBudgetCard(),
+
               const SizedBox(height: 20),
 
-              // 2. Prominent Quick Actions Dock Bar
+              // 3. Prominent Quick Actions Dock Bar
               const DashboardQuickActionsBar(),
 
               const SizedBox(height: 24),
