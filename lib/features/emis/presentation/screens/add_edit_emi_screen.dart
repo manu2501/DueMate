@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:uuid/uuid.dart';
+import 'package:duemate/core/constants/app_constants.dart';
 import 'package:duemate/core/utils/currency_formatter.dart';
 import 'package:duemate/core/utils/date_formatter.dart';
 import 'package:duemate/core/widgets/avatar_widget.dart';
@@ -54,6 +55,7 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
   late final TextEditingController _tenureController;
 
   EmiType _emiType = EmiType.creditCard;
+  bool _isForSelf = true;
   String? _selectedPersonId;
   bool _isPaidByMe = true;
   int _tenureMonths = 6;
@@ -82,7 +84,17 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
   void initState() {
     super.initState();
     final emi = widget.emiToEdit;
-    _selectedPersonId = emi?.personId ?? widget.initialPersonId;
+
+    if (emi != null) {
+      _isForSelf = emi.isForSelf;
+      _selectedPersonId = emi.personId;
+    } else if (widget.initialPersonId != null && widget.initialPersonId != AppConstants.selfPersonId) {
+      _isForSelf = false;
+      _selectedPersonId = widget.initialPersonId;
+    } else {
+      _isForSelf = true;
+      _selectedPersonId = AppConstants.selfPersonId;
+    }
     _itemController = TextEditingController(text: emi?.itemName ?? '');
     _cardController = TextEditingController(text: emi?.cardName ?? '');
     _baseAmountController = TextEditingController(
@@ -190,9 +202,11 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
   Future<void> _saveEmi() async {
     if (!_formKey.currentState!.validate()) return;
 
-    if (_selectedPersonId == null) {
+    final targetPersonId = _isForSelf ? AppConstants.selfPersonId : _selectedPersonId;
+
+    if (!_isForSelf && (targetPersonId == null || targetPersonId == AppConstants.selfPersonId)) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select a person')),
+        const SnackBar(content: Text('Please select a contact')),
       );
       return;
     }
@@ -236,7 +250,7 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
       if (isEditing) {
         final current = widget.emiToEdit!;
         final updated = current.copyWith(
-          personId: _selectedPersonId!,
+          personId: targetPersonId!,
           itemName: _itemController.text.trim(),
           cardName: _cardController.text.trim(),
           totalAmount: totalAmount,
@@ -244,7 +258,7 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
           totalTenureMonths: _tenureMonths,
           startDate: _startDate,
           dueDayOfMonth: _dueDayOfMonth,
-          isPaidByMe: _isPaidByMe,
+          isPaidByMe: _isForSelf ? true : _isPaidByMe,
           notes: finalNotes,
           updatedAt: DateTime.now(),
         );
@@ -252,7 +266,7 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
       } else {
         final newEmi = CreditCardEmi(
           id: const Uuid().v4(),
-          personId: _selectedPersonId!,
+          personId: targetPersonId!,
           itemName: _itemController.text.trim(),
           cardName: _cardController.text.trim(),
           totalAmount: totalAmount,
@@ -261,7 +275,7 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
           installmentsPaid: 0,
           startDate: _startDate,
           dueDayOfMonth: _dueDayOfMonth,
-          isPaidByMe: _isPaidByMe,
+          isPaidByMe: _isForSelf ? true : _isPaidByMe,
           status: 'active',
           notes: finalNotes,
           createdAt: DateTime.now(),
@@ -296,6 +310,102 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
         setState(() => _isSaving = false);
       }
     }
+  }
+
+  Widget _buildOwnershipSelector(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: cs.surfaceContainerHigh.withValues(alpha: 0.6),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.6)),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: InkWell(
+              onTap: () {
+                setState(() {
+                  _isForSelf = true;
+                  _selectedPersonId = AppConstants.selfPersonId;
+                  _isPaidByMe = true;
+                });
+              },
+              borderRadius: BorderRadius.circular(12),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                decoration: BoxDecoration(
+                  color: _isForSelf ? cs.primary : Colors.transparent,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.person_rounded,
+                      size: 16,
+                      color: _isForSelf ? cs.onPrimary : cs.onSurfaceVariant,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      'For Myself',
+                      style: GoogleFonts.inter(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: _isForSelf ? cs.onPrimary : cs.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          Expanded(
+            child: InkWell(
+              onTap: () {
+                setState(() {
+                  _isForSelf = false;
+                  if (_selectedPersonId == AppConstants.selfPersonId) {
+                    _selectedPersonId = null;
+                  }
+                });
+              },
+              borderRadius: BorderRadius.circular(12),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                decoration: BoxDecoration(
+                  color: !_isForSelf ? cs.primary : Colors.transparent,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.people_rounded,
+                      size: 16,
+                      color: !_isForSelf ? cs.onPrimary : cs.onSurfaceVariant,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      'For Someone Else',
+                      style: GoogleFonts.inter(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        color: !_isForSelf ? cs.onPrimary : cs.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -340,6 +450,10 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
         child: ListView(
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
           children: [
+            // Ownership Selector: For Myself vs For Someone Else
+            _buildOwnershipSelector(context),
+            const SizedBox(height: 16),
+
             // Category Selector: Credit Card vs Loan
             EmiTypeSelector(
               selectedType: _emiType,
@@ -352,88 +466,91 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
 
             const SizedBox(height: 20),
 
-            // 1. Person Selector Card
-            Text(
-              isLoan ? 'Loan Shared With' : 'Shared With',
-              style: GoogleFonts.inter(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: cs.onSurfaceVariant,
-              ),
-            ),
-            const SizedBox(height: 8),
-            InkWell(
-              onTap: _pickPerson,
-              borderRadius: BorderRadius.circular(16),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                decoration: BoxDecoration(
-                  color: cs.surfaceContainerLow,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                    color: _selectedPersonId == null ? cs.outlineVariant : cs.primary.withValues(alpha: 0.5),
-                  ),
+            // 1. Person Selector Card (Only shown if For Someone Else is selected)
+            if (!_isForSelf) ...[
+              Text(
+                isLoan ? 'Loan Shared With' : 'Shared With',
+                style: GoogleFonts.inter(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: cs.onSurfaceVariant,
                 ),
-                child: Row(
-                  children: [
-                    if (selectedPerson != null) ...[
-                      AvatarWidget(
-                        name: selectedPerson.name,
-                        radius: 20,
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              selectedPerson.name,
-                              style: theme.textTheme.titleMedium?.copyWith(
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                            if (selectedPerson.phone != null)
+              ),
+              const SizedBox(height: 8),
+              InkWell(
+                onTap: _pickPerson,
+                borderRadius: BorderRadius.circular(16),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: cs.surfaceContainerLow,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: _selectedPersonId == null ? cs.outlineVariant : cs.primary.withValues(alpha: 0.5),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      if (selectedPerson != null) ...[
+                        AvatarWidget(
+                          name: selectedPerson.name,
+                          radius: 20,
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
                               Text(
-                                selectedPerson.phone!,
-                                style: theme.textTheme.bodySmall?.copyWith(
-                                  color: cs.onSurfaceVariant,
+                                selectedPerson.name,
+                                style: theme.textTheme.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.w700,
                                 ),
                               ),
-                          ],
-                        ),
-                      ),
-                      TextButton(
-                        onPressed: _pickPerson,
-                        child: const Text('Change'),
-                      ),
-                    ] else ...[
-                      Container(
-                        width: 40,
-                        height: 40,
-                        decoration: BoxDecoration(
-                          color: (isLoan ? const Color(0xFF0D9488) : cs.primary).withValues(alpha: 0.1),
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(
-                          Icons.person_add_outlined,
-                          color: isLoan ? const Color(0xFF0D9488) : cs.primary,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          isLoan ? 'Select borrower or lender' : 'Select person to share EMI with',
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            color: cs.onSurfaceVariant,
+                              if (selectedPerson.phone != null)
+                                Text(
+                                  selectedPerson.phone!,
+                                  style: theme.textTheme.bodySmall?.copyWith(
+                                    color: cs.onSurfaceVariant,
+                                  ),
+                                ),
+                            ],
                           ),
                         ),
-                      ),
-                      const Icon(Icons.chevron_right_rounded),
+                        TextButton(
+                          onPressed: _pickPerson,
+                          child: const Text('Change'),
+                        ),
+                      ] else ...[
+                        Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            color: (isLoan ? const Color(0xFF0D9488) : cs.primary).withValues(alpha: 0.1),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            Icons.person_add_outlined,
+                            color: isLoan ? const Color(0xFF0D9488) : cs.primary,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            isLoan ? 'Select borrower or lender' : 'Select person to share EMI with',
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              color: cs.onSurfaceVariant,
+                            ),
+                          ),
+                        ),
+                        const Icon(Icons.chevron_right_rounded),
+                      ],
                     ],
-                  ],
+                  ),
                 ),
               ),
-            ),
+              const SizedBox(height: 20),
+            ],
 
             const SizedBox(height: 20),
 

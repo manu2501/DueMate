@@ -183,17 +183,24 @@ class EmiCard extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                       decoration: BoxDecoration(
-                        color: (emi.isPaidByMe ? cs.primary : cs.error).withValues(alpha: 0.1),
+                        color: (emi.isForSelf
+                                ? cs.primary
+                                : (emi.isPaidByMe ? cs.primary : cs.error))
+                            .withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(
-                        isLoan
-                            ? (emi.isPaidByMe ? 'He repays' : 'You repay')
-                            : (emi.isPaidByMe ? 'He owes' : 'You owe'),
+                        emi.isForSelf
+                            ? 'For Myself'
+                            : (isLoan
+                                ? (emi.isPaidByMe ? 'He repays' : 'You repay')
+                                : (emi.isPaidByMe ? 'He owes' : 'You owe')),
                         style: GoogleFonts.inter(
                           fontSize: 10.5,
                           fontWeight: FontWeight.w700,
-                          color: emi.isPaidByMe ? cs.primary : cs.error,
+                          color: emi.isForSelf
+                              ? cs.primary
+                              : (emi.isPaidByMe ? cs.primary : cs.error),
                         ),
                       ),
                     ),

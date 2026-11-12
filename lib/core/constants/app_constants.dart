@@ -10,6 +10,10 @@ class AppConstants {
   static const int appBuildNumber = 1;
   static const String appVersionString = 'v$appVersion+$appBuildNumber';
 
+  // Self / Personal Vault Constants
+  static const String selfPersonId = 'self_person_me';
+  static const String selfPersonName = 'Myself (Personal)';
+
   // Currency
   static const String defaultCurrencySymbol = '₹';
   static const String defaultCurrencyCode = 'INR';

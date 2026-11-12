@@ -1,3 +1,5 @@
+import 'package:duemate/core/constants/app_constants.dart';
+
 class CreditCardEmi {
   final String id;
   final String personId;
@@ -38,6 +40,7 @@ class CreditCardEmi {
   bool get isActive => status == 'active' && installmentsPaid < totalTenureMonths;
   bool get isCompleted => status == 'completed' || installmentsPaid >= totalTenureMonths;
   bool get isCancelled => status == 'cancelled';
+  bool get isForSelf => personId == AppConstants.selfPersonId;
 
   int get remainingInstallments => (totalTenureMonths - installmentsPaid).clamp(0, totalTenureMonths);
   double get paidAmount => (installmentsPaid * monthlyInstallment).clamp(0.0, totalAmount);

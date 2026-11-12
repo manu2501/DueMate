@@ -7,6 +7,7 @@ import 'package:duemate/core/widgets/empty_state_widget.dart';
 import 'package:duemate/core/widgets/fade_slide_transition.dart';
 import 'package:duemate/data/database/tables.dart';
 import 'package:duemate/data/providers/app_providers.dart';
+import 'package:duemate/domain/entities/credit_card_emi.dart';
 import 'package:duemate/domain/entities/personal_expense.dart';
 import 'package:duemate/features/emis/presentation/screens/add_edit_emi_screen.dart';
 import 'package:duemate/features/emis/presentation/widgets/emi_card.dart';
@@ -22,11 +23,22 @@ class ExpensesScreen extends ConsumerStatefulWidget {
 
 class _ExpensesScreenState extends ConsumerState<ExpensesScreen> with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  int _emiOwnershipFilter = 0; // 0: For Myself, 1: For Others, 2: All
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+  }
+
+  List<CreditCardEmi> _filterEmis(List<CreditCardEmi> activeEmis) {
+    if (_emiOwnershipFilter == 0) {
+      return activeEmis.where((e) => e.isForSelf).toList();
+    } else if (_emiOwnershipFilter == 1) {
+      return activeEmis.where((e) => !e.isForSelf).toList();
+    } else {
+      return activeEmis;
+    }
   }
 
   @override
@@ -270,28 +282,65 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> with SingleTick
                 // Tab 2: EMIs & Bank Loans
                 activeEmisAsync.when(
                   data: (activeEmis) {
-                    if (activeEmis.isEmpty) {
-                      return EmptyStateWidget(
-                        icon: Icons.event_repeat_rounded,
-                        title: 'No active EMIs or loans',
-                        description: 'Track credit card EMIs or bank loans easily.',
-                        actionLabel: 'Add EMI / Loan',
-                        onActionPressed: () => AddEditEmiScreen.show(context),
-                      );
-                    }
-                    return ListView.separated(
-                      padding: const EdgeInsets.fromLTRB(20, 8, 20, 160),
-                      itemCount: activeEmis.length,
-                      separatorBuilder: (_, _) => const SizedBox(height: 10),
-                      itemBuilder: (ctx, index) {
-                        final emi = activeEmis[index];
-                        final person = personsMap[emi.personId];
-                        return EmiCard(
-                          emi: emi,
-                          person: person,
-                          currencySymbol: currencySymbol,
-                        );
-                      },
+                    final filteredEmis = _filterEmis(activeEmis);
+
+                    return Column(
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+                          child: Row(
+                            children: [
+                              ChoiceChip(
+                                label: const Text('For Myself'),
+                                selected: _emiOwnershipFilter == 0,
+                                onSelected: (_) => setState(() => _emiOwnershipFilter = 0),
+                              ),
+                              const SizedBox(width: 8),
+                              ChoiceChip(
+                                label: const Text('For Others'),
+                                selected: _emiOwnershipFilter == 1,
+                                onSelected: (_) => setState(() => _emiOwnershipFilter = 1),
+                              ),
+                              const SizedBox(width: 8),
+                              ChoiceChip(
+                                label: const Text('All'),
+                                selected: _emiOwnershipFilter == 2,
+                                onSelected: (_) => setState(() => _emiOwnershipFilter = 2),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+
+                        Expanded(
+                          child: filteredEmis.isEmpty
+                              ? EmptyStateWidget(
+                                  icon: Icons.event_repeat_rounded,
+                                  title: _emiOwnershipFilter == 0
+                                      ? 'No personal EMIs or loans'
+                                      : _emiOwnershipFilter == 1
+                                          ? 'No EMIs or loans for contacts'
+                                          : 'No active EMIs or loans',
+                                  description: 'Track credit card EMIs or bank loans easily.',
+                                  actionLabel: 'Add EMI / Loan',
+                                  onActionPressed: () => AddEditEmiScreen.show(context),
+                                )
+                              : ListView.separated(
+                                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 160),
+                                  itemCount: filteredEmis.length,
+                                  separatorBuilder: (_, _) => const SizedBox(height: 10),
+                                  itemBuilder: (ctx, index) {
+                                    final emi = filteredEmis[index];
+                                    final person = personsMap[emi.personId];
+                                    return EmiCard(
+                                      emi: emi,
+                                      person: person,
+                                      currencySymbol: currencySymbol,
+                                    );
+                                  },
+                                ),
+                        ),
+                      ],
                     );
                   },
                   loading: () => const Center(child: CircularProgressIndicator()),
