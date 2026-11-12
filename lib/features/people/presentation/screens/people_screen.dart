@@ -28,6 +28,14 @@ class _PeopleScreenState extends ConsumerState<PeopleScreen> {
     super.dispose();
   }
 
+  String _normalizePhone(String raw) {
+    final digitsOnly = raw.replaceAll(RegExp(r'\D'), '');
+    if (digitsOnly.length > 10) {
+      return digitsOnly.substring(digitsOnly.length - 10);
+    }
+    return digitsOnly;
+  }
+
   Future<void> _importFromContacts() async {
     setState(() => _isImporting = true);
     try {
@@ -38,23 +46,44 @@ class _PeopleScreenState extends ConsumerState<PeopleScreen> {
       }
 
       final allPersons = await ref.read(allPersonSummariesProvider.future);
+      final contactName = contact.name.trim();
+      final contactPhone = contact.phone != null ? contact.phone!.trim() : '';
+      final normPhone = contactPhone.isNotEmpty ? _normalizePhone(contactPhone) : '';
+
       final existing = allPersons.where((s) {
-        final sameName = s.person.name.toLowerCase() == contact.name.toLowerCase();
-        final samePhone = contact.phone != null &&
-            s.person.phone != null &&
-            s.person.phone!.replaceAll(RegExp(r'\s+'), '') ==
-                contact.phone!.replaceAll(RegExp(r'\s+'), '');
+        final sameName = s.person.name.trim().toLowerCase() == contactName.toLowerCase();
+        bool samePhone = false;
+        if (normPhone.isNotEmpty && s.person.phone != null && s.person.phone!.trim().isNotEmpty) {
+          final existingNorm = _normalizePhone(s.person.phone!);
+          samePhone = existingNorm.isNotEmpty && existingNorm == normPhone;
+        }
         return sameName || samePhone;
       }).firstOrNull;
 
       if (existing != null) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('${existing.person.name} is already in your ledger'),
+          showDialog(
+            context: context,
+            builder: (ctx) => AlertDialog(
+              title: const Text('Contact Already Exists'),
+              content: Text(
+                '${existing.person.name} (${existing.person.phone ?? 'No phone'}) is already in your ledger.',
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(ctx).pop(),
+                  child: const Text('Cancel'),
+                ),
+                FilledButton(
+                  onPressed: () {
+                    Navigator.of(ctx).pop();
+                    context.push('/people/${existing.person.id}');
+                  },
+                  child: const Text('Open Ledger'),
+                ),
+              ],
             ),
           );
-          context.push('/people/${existing.person.id}');
         }
         return;
       }

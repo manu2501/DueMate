@@ -62,11 +62,65 @@ class _AddEditPersonScreenState extends ConsumerState<AddEditPersonScreen> {
     super.dispose();
   }
 
+  String _normalizePhone(String raw) {
+    final digitsOnly = raw.replaceAll(RegExp(r'\D'), '');
+    if (digitsOnly.length > 10) {
+      return digitsOnly.substring(digitsOnly.length - 10);
+    }
+    return digitsOnly;
+  }
+
   Future<void> _importFromContacts() async {
     setState(() => _isImporting = true);
     try {
       final contact = await ContactsHelper.pickContact();
-      if (contact != null && mounted) {
+      if (contact == null) return;
+
+      final allPersons = await ref.read(allPersonSummariesProvider.future);
+      final contactName = contact.name.trim();
+      final contactPhone = contact.phone != null ? contact.phone!.trim() : '';
+      final normPhone = contactPhone.isNotEmpty ? _normalizePhone(contactPhone) : '';
+
+      final existing = allPersons.where((s) {
+        if (isEditing && s.person.id == widget.personToEdit!.id) return false;
+
+        final sameName = s.person.name.trim().toLowerCase() == contactName.toLowerCase();
+        bool samePhone = false;
+        if (normPhone.isNotEmpty && s.person.phone != null && s.person.phone!.trim().isNotEmpty) {
+          final existingNorm = _normalizePhone(s.person.phone!);
+          samePhone = existingNorm.isNotEmpty && existingNorm == normPhone;
+        }
+        return sameName || samePhone;
+      }).firstOrNull;
+
+      if (existing != null && mounted) {
+        showDialog(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: const Text('Contact Already Exists'),
+            content: Text(
+              '${existing.person.name} (${existing.person.phone ?? 'No phone'}) is already in your ledger.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(),
+                child: const Text('Cancel'),
+              ),
+              FilledButton(
+                onPressed: () {
+                  Navigator.of(ctx).pop();
+                  _navigateBack();
+                  context.push('/people/${existing.person.id}');
+                },
+                child: const Text('Open Ledger'),
+              ),
+            ],
+          ),
+        );
+        return;
+      }
+
+      if (mounted) {
         _nameController.text = contact.name;
         if (contact.phone != null && contact.phone!.isNotEmpty) {
           _phoneController.text = contact.phone!;
@@ -106,14 +160,64 @@ class _AddEditPersonScreenState extends ConsumerState<AddEditPersonScreen> {
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
 
+    final inputName = _nameController.text.trim();
+    final inputPhone = _phoneController.text.trim();
+    final normPhone = inputPhone.isNotEmpty ? _normalizePhone(inputPhone) : '';
+
+    final allPersons = await ref.read(allPersonSummariesProvider.future);
+    final existingPerson = allPersons.where((s) {
+      if (isEditing && s.person.id == widget.personToEdit!.id) return false;
+
+      final sameName = s.person.name.trim().toLowerCase() == inputName.toLowerCase();
+      bool samePhone = false;
+      if (normPhone.isNotEmpty && s.person.phone != null && s.person.phone!.trim().isNotEmpty) {
+        final existingNorm = _normalizePhone(s.person.phone!);
+        samePhone = existingNorm.isNotEmpty && existingNorm == normPhone;
+      }
+      return sameName || samePhone;
+    }).firstOrNull;
+
+    if (existingPerson != null && mounted) {
+      final isSamePhone = normPhone.isNotEmpty &&
+          existingPerson.person.phone != null &&
+          _normalizePhone(existingPerson.person.phone!) == normPhone;
+
+      final message = isSamePhone
+          ? 'A contact with phone number "${existingPerson.person.phone}" already exists in your ledger (${existingPerson.person.name}).'
+          : 'A contact named "${existingPerson.person.name}" already exists in your ledger.';
+
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Duplicate Contact Found'),
+          content: Text('$message\n\nWould you like to open their ledger instead?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () {
+                Navigator.of(ctx).pop();
+                _navigateBack();
+                context.push('/people/${existingPerson.person.id}');
+              },
+              child: const Text('Open Ledger'),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
     setState(() => _isSaving = true);
     final now = DateTime.now();
 
     try {
       if (isEditing) {
         final updated = widget.personToEdit!.copyWith(
-          name: _nameController.text.trim(),
-          phone: _phoneController.text.trim().isEmpty ? null : _phoneController.text.trim(),
+          name: inputName,
+          phone: inputPhone.isEmpty ? null : inputPhone,
           email: _emailController.text.trim().isEmpty ? null : _emailController.text.trim(),
           notes: _notesController.text.trim().isEmpty ? null : _notesController.text.trim(),
           updatedAt: now,
@@ -122,8 +226,8 @@ class _AddEditPersonScreenState extends ConsumerState<AddEditPersonScreen> {
       } else {
         final newPerson = Person(
           id: const Uuid().v4(),
-          name: _nameController.text.trim(),
-          phone: _phoneController.text.trim().isEmpty ? null : _phoneController.text.trim(),
+          name: inputName,
+          phone: inputPhone.isEmpty ? null : inputPhone,
           email: _emailController.text.trim().isEmpty ? null : _emailController.text.trim(),
           notes: _notesController.text.trim().isEmpty ? null : _notesController.text.trim(),
           createdAt: now,
