@@ -88,55 +88,106 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> with SingleTicker
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
     final currencySymbol = ref.watch(currencySymbolProvider);
     final allTxsAsync = ref.watch(allTransactionsProvider);
     final allSummariesAsync = ref.watch(allPersonSummariesProvider);
     final personsMap = ref.watch(personsMapProvider);
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Transactions'),
-        actions: [
-          IconButton(
-            tooltip: 'Share Report',
-            icon: const Icon(Icons.share_outlined),
-            onPressed: () {
-              final txs = allTxsAsync.value ?? [];
-              final filteredTxs = txs.where((t) => _isDateInRange(t.transactionDate)).toList();
-              final filterName = switch (_dateFilter) {
-                ReportDateFilter.allTime => 'All Time',
-                ReportDateFilter.thisMonth => 'This Month',
-                ReportDateFilter.lastMonth => 'Last Month',
-                ReportDateFilter.thisYear => 'This Year',
-                ReportDateFilter.custom => 'Custom Range',
-              };
+    final allTxs = allTxsAsync.value ?? [];
+    final filteredTxs = allTxs.where((t) => _isDateInRange(t.transactionDate)).toList();
 
-              ExportOptionsSheet.show(
-                context: context,
-                title: 'Share Activity Report ($filterName)',
-                onSharePdf: () => PdfExporter.exportAndShareAllTransactions(
-                  transactions: filteredTxs,
-                  personsMap: personsMap,
-                  currencySymbol: currencySymbol,
-                  filterTitle: filterName,
+    double totalGiven = 0;
+    double totalReceived = 0;
+    for (final tx in filteredTxs) {
+      if (tx.type == TransactionType.moneyGiven) {
+        totalGiven += tx.amount;
+      } else {
+        totalReceived += tx.amount;
+      }
+    }
+    final netBalance = totalGiven - totalReceived;
+    final totalVolume = totalGiven + totalReceived;
+
+    return Scaffold(
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(112),
+        child: SafeArea(
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            'Transactions',
+                            style: GoogleFonts.dmSans(
+                              fontSize: 22,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: -0.4,
+                              color: isDark ? Colors.white : const Color(0xFF131438),
+                            ),
+                          ),
+                          Text(
+                            '${filteredTxs.length} Transactions • ${CurrencyFormatter.formatCompact(totalVolume, symbol: currencySymbol)} Volume',
+                            style: GoogleFonts.inter(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                              color: cs.onSurfaceVariant,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    IconButton.filledTonal(
+                      tooltip: 'Share Report',
+                      icon: const Icon(Icons.share_outlined, size: 18),
+                      onPressed: () {
+                        final filterName = switch (_dateFilter) {
+                          ReportDateFilter.allTime => 'All Time',
+                          ReportDateFilter.thisMonth => 'This Month',
+                          ReportDateFilter.lastMonth => 'Last Month',
+                          ReportDateFilter.thisYear => 'This Year',
+                          ReportDateFilter.custom => 'Custom Range',
+                        };
+
+                        ExportOptionsSheet.show(
+                          context: context,
+                          title: 'Share Activity Report ($filterName)',
+                          onSharePdf: () => PdfExporter.exportAndShareAllTransactions(
+                            transactions: filteredTxs,
+                            personsMap: personsMap,
+                            currencySymbol: currencySymbol,
+                            filterTitle: filterName,
+                          ),
+                          onShareCsv: () => CsvExporter.exportAndShareAllTransactions(
+                            transactions: filteredTxs,
+                            personsMap: personsMap,
+                            currencySymbol: currencySymbol,
+                          ),
+                        );
+                      },
+                    ),
+                  ],
                 ),
-                onShareCsv: () => CsvExporter.exportAndShareAllTransactions(
-                  transactions: filteredTxs,
-                  personsMap: personsMap,
-                  currencySymbol: currencySymbol,
-                ),
-              );
-            },
+              ),
+              TabBar(
+                controller: _tabController,
+                indicatorSize: TabBarIndicatorSize.tab,
+                labelStyle: GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 13),
+                unselectedLabelStyle: GoogleFonts.inter(fontWeight: FontWeight.w500, fontSize: 13),
+                tabs: const [
+                  Tab(text: 'Activity Feed'),
+                  Tab(text: 'By Person'),
+                ],
+              ),
+            ],
           ),
-          const SizedBox(width: 4),
-        ],
-        bottom: TabBar(
-          controller: _tabController,
-          indicatorSize: TabBarIndicatorSize.tab,
-          tabs: const [
-            Tab(text: 'Overview'),
-            Tab(text: 'Activity'),
-          ],
         ),
       ),
       body: Column(
@@ -168,22 +219,70 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> with SingleTicker
             ),
           ),
 
+          // Cashflow Overview Card
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+            child: Container(
+              padding: const EdgeInsets.all(18),
+              decoration: BoxDecoration(
+                color: cs.surfaceContainerLow,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: cs.outlineVariant),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: isDark ? 0.15 : 0.03),
+                    blurRadius: 10,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
+              ),
+              child: Column(
+                children: [
+                  Row(
+                    children: [
+                      _statBox('TOTAL GIVEN', totalGiven, cs.error, cs.surfaceContainer, currencySymbol, context),
+                      const SizedBox(width: 12),
+                      _statBox('TOTAL RECEIVED', totalReceived, const Color(0xFF10B981), cs.surfaceContainer, currencySymbol, context),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                  Divider(height: 1, color: cs.outlineVariant.withValues(alpha: 0.6)),
+                  const SizedBox(height: 10),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Net Difference',
+                        style: GoogleFonts.inter(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: cs.onSurfaceVariant,
+                        ),
+                      ),
+                      Text(
+                        CurrencyFormatter.format(netBalance, symbol: currencySymbol),
+                        style: GoogleFonts.dmSans(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w800,
+                          color: netBalance > 0
+                              ? cs.error
+                              : netBalance < 0
+                                  ? const Color(0xFF10B981)
+                                  : cs.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 8),
+
           Expanded(
             child: allTxsAsync.when(
-              data: (allTxs) {
-                final filteredTxs = allTxs.where((t) => _isDateInRange(t.transactionDate)).toList();
-
-                double given = 0;
-                double received = 0;
-                for (final tx in filteredTxs) {
-                  if (tx.type == TransactionType.moneyGiven) {
-                    given += tx.amount;
-                  } else {
-                    received += tx.amount;
-                  }
-                }
-                final net = given - received;
-
+              data: (_) {
                 // Group filtered transactions by personId to update breakdown as per filters
                 final Map<String, ({double given, double received, LedgerTransaction? lastTx, int count})> personStats = {};
                 for (final tx in filteredTxs) {
@@ -215,7 +314,6 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> with SingleTicker
                   }
                 }
 
-                // In "All Time" mode, also include remaining persons from directory
                 if (_dateFilter == ReportDateFilter.allTime) {
                   final allSummaries = allSummariesAsync.value ?? [];
                   for (final s in allSummaries) {
@@ -225,7 +323,6 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> with SingleTicker
                   }
                 }
 
-                // Sort by highest activity volume, then name
                 filteredPersonSummaries.sort((a, b) {
                   final volumeA = a.totalGiven + a.totalReceived;
                   final volumeB = b.totalGiven + b.totalReceived;
@@ -237,181 +334,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> with SingleTicker
                 return TabBarView(
                   controller: _tabController,
                   children: [
-                    // Tab 1: Overview
-                    SingleChildScrollView(
-                      padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // Stats Card
-                          Container(
-                            padding: const EdgeInsets.all(20),
-                            decoration: BoxDecoration(
-                              color: cs.surfaceContainerLow,
-                              borderRadius: BorderRadius.circular(22),
-                              border: Border.all(color: cs.outlineVariant),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withValues(alpha: theme.brightness == Brightness.dark ? 0.15 : 0.03),
-                                  blurRadius: 10,
-                                  offset: const Offset(0, 3),
-                                ),
-                              ],
-                            ),
-                            child: Column(
-                              children: [
-                                Row(
-                                  children: [
-                                    _statBox('GIVEN', given, cs.error, cs.surfaceContainer, currencySymbol, context),
-                                    const SizedBox(width: 12),
-                                    _statBox('RECEIVED', received, cs.primary, cs.surfaceContainer, currencySymbol, context),
-                                  ],
-                                ),
-                                const SizedBox(height: 18),
-                                Divider(height: 1, color: cs.outlineVariant),
-                                const SizedBox(height: 14),
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Text(
-                                      'Net Difference',
-                                      style: theme.textTheme.bodyMedium?.copyWith(
-                                        color: cs.onSurfaceVariant,
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                    ),
-                                    AnimatedSwitcher(
-                                      duration: const Duration(milliseconds: 300),
-                                      transitionBuilder: (child, anim) => FadeTransition(
-                                        opacity: anim,
-                                        child: SlideTransition(
-                                          position: Tween<Offset>(
-                                            begin: const Offset(0.0, 0.2),
-                                            end: Offset.zero,
-                                          ).animate(anim),
-                                          child: child,
-                                        ),
-                                      ),
-                                      child: Text(
-                                        CurrencyFormatter.format(net, symbol: currencySymbol),
-                                        key: ValueKey('net-$net'),
-                                        style: GoogleFonts.inter(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.w800,
-                                          color: net > 0
-                                              ? cs.error
-                                              : net < 0
-                                                  ? cs.primary
-                                                  : cs.onSurfaceVariant,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(height: 28),
-
-                          // Breakdown by Person
-                          Text(
-                            'By Person',
-                            style: theme.textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.w700,
-                              letterSpacing: -0.2,
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-
-                          if (filteredPersonSummaries.isEmpty)
-                            Container(
-                              padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 20),
-                              decoration: BoxDecoration(
-                                color: cs.surfaceContainerLow,
-                                borderRadius: BorderRadius.circular(20),
-                                border: Border.all(color: cs.outlineVariant),
-                              ),
-                              child: Center(
-                                child: Column(
-                                  children: [
-                                    Icon(
-                                      Icons.people_outline_rounded,
-                                      size: 32,
-                                      color: cs.onSurfaceVariant.withValues(alpha: 0.6),
-                                    ),
-                                    const SizedBox(height: 8),
-                                    Text(
-                                      'No person activity in this period',
-                                      style: GoogleFonts.inter(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w600,
-                                        color: cs.onSurfaceVariant,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      'Try selecting another date filter above.',
-                                      style: GoogleFonts.inter(
-                                        fontSize: 12,
-                                        color: cs.outline,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            )
-                          else
-                            Container(
-                              decoration: BoxDecoration(
-                                color: cs.surfaceContainerLow,
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                              child: ListView.separated(
-                                shrinkWrap: true,
-                                physics: const NeverScrollableScrollPhysics(),
-                                padding: const EdgeInsets.symmetric(vertical: 6),
-                                itemCount: filteredPersonSummaries.length,
-                                separatorBuilder: (ctx, i) => Divider(
-                                  height: 1,
-                                  indent: 68,
-                                  endIndent: 16,
-                                  color: cs.outlineVariant,
-                                ),
-                                itemBuilder: (ctx, index) {
-                                  final s = filteredPersonSummaries[index];
-                                  return ListTile(
-                                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                                    leading: AvatarWidget(name: s.person.name, radius: 20),
-                                    title: Text(
-                                      s.person.name,
-                                      style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
-                                    ),
-                                    subtitle: Text(
-                                      'Given: ${CurrencyFormatter.formatCompact(s.totalGiven, symbol: currencySymbol)} • Received: ${CurrencyFormatter.formatCompact(s.totalReceived, symbol: currencySymbol)}',
-                                      style: theme.textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
-                                    ),
-                                    trailing: Text(
-                                      CurrencyFormatter.format(s.balance, symbol: currencySymbol),
-                                      style: GoogleFonts.inter(
-                                        fontWeight: FontWeight.w800,
-                                        fontSize: 14,
-                                        color: s.balance > 0.001
-                                            ? cs.error
-                                            : s.balance < -0.001
-                                                ? cs.tertiary
-                                                : cs.primary,
-                                      ),
-                                    ),
-                                    onTap: () => context.push('/people/${s.person.id}'),
-                                  );
-                                },
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
-
-                    // Tab 2: Activity List
+                    // Tab 1: Activity Timeline
                     filteredTxs.isEmpty
                         ? const EmptyStateWidget(
                             icon: Icons.filter_list_off_rounded,
@@ -419,19 +342,20 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> with SingleTicker
                             description: 'Try changing the date range filter above.',
                           )
                         : Container(
-                            margin: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+                            margin: const EdgeInsets.fromLTRB(20, 4, 20, 140),
                             decoration: BoxDecoration(
                               color: cs.surfaceContainerLow,
                               borderRadius: BorderRadius.circular(20),
+                              border: Border.all(color: cs.outlineVariant),
                             ),
                             child: ListView.separated(
                               padding: const EdgeInsets.symmetric(vertical: 6),
                               itemCount: filteredTxs.length,
-                              separatorBuilder: (ctx, i) => Divider(
+                              separatorBuilder: (_, _) => Divider(
                                 height: 1,
                                 indent: 68,
                                 endIndent: 16,
-                                color: cs.outlineVariant,
+                                color: cs.outlineVariant.withValues(alpha: 0.6),
                               ),
                               itemBuilder: (ctx, index) {
                                 final tx = filteredTxs[index];
@@ -447,6 +371,60 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> with SingleTicker
                                       person: person,
                                     );
                                   },
+                                );
+                              },
+                            ),
+                          ),
+
+                    // Tab 2: By Person Breakdown
+                    filteredPersonSummaries.isEmpty
+                        ? const EmptyStateWidget(
+                            icon: Icons.people_outline_rounded,
+                            title: 'No contact activity in this period',
+                            description: 'Try selecting another date filter above.',
+                          )
+                        : Container(
+                            margin: const EdgeInsets.fromLTRB(20, 4, 20, 140),
+                            decoration: BoxDecoration(
+                              color: cs.surfaceContainerLow,
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(color: cs.outlineVariant),
+                            ),
+                            child: ListView.separated(
+                              padding: const EdgeInsets.symmetric(vertical: 6),
+                              itemCount: filteredPersonSummaries.length,
+                              separatorBuilder: (_, _) => Divider(
+                                height: 1,
+                                indent: 68,
+                                endIndent: 16,
+                                color: cs.outlineVariant.withValues(alpha: 0.6),
+                              ),
+                              itemBuilder: (ctx, index) {
+                                final s = filteredPersonSummaries[index];
+                                return ListTile(
+                                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                                  leading: AvatarWidget(name: s.person.name, radius: 20),
+                                  title: Text(
+                                    s.person.name,
+                                    style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+                                  ),
+                                  subtitle: Text(
+                                    'Given: ${CurrencyFormatter.formatCompact(s.totalGiven, symbol: currencySymbol)} • Received: ${CurrencyFormatter.formatCompact(s.totalReceived, symbol: currencySymbol)}',
+                                    style: theme.textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+                                  ),
+                                  trailing: Text(
+                                    CurrencyFormatter.format(s.balance, symbol: currencySymbol),
+                                    style: GoogleFonts.inter(
+                                      fontWeight: FontWeight.w800,
+                                      fontSize: 14,
+                                      color: s.balance > 0.001
+                                          ? cs.error
+                                          : s.balance < -0.001
+                                              ? const Color(0xFF10B981)
+                                              : cs.primary,
+                                    ),
+                                  ),
+                                  onTap: () => context.push('/people/${s.person.id}'),
                                 );
                               },
                             ),
@@ -475,10 +453,10 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> with SingleTicker
     final theme = Theme.of(context);
     return Expanded(
       child: Container(
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
           color: bg,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(14),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -488,30 +466,16 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> with SingleTicker
               style: theme.textTheme.labelSmall?.copyWith(
                 color: accent,
                 fontWeight: FontWeight.w700,
-                letterSpacing: 0.6,
+                letterSpacing: 0.5,
               ),
             ),
-            const SizedBox(height: 6),
-            AnimatedSwitcher(
-              duration: const Duration(milliseconds: 300),
-              transitionBuilder: (child, anim) => FadeTransition(
-                opacity: anim,
-                child: SlideTransition(
-                  position: Tween<Offset>(
-                    begin: const Offset(0.0, 0.2),
-                    end: Offset.zero,
-                  ).animate(anim),
-                  child: child,
-                ),
-              ),
-              child: Text(
-                CurrencyFormatter.format(amount, symbol: symbol),
-                key: ValueKey('$label-$amount'),
-                style: GoogleFonts.inter(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w800,
-                  color: accent,
-                ),
+            const SizedBox(height: 4),
+            Text(
+              CurrencyFormatter.format(amount, symbol: symbol),
+              style: GoogleFonts.dmSans(
+                fontSize: 17,
+                fontWeight: FontWeight.w800,
+                color: accent,
               ),
             ),
           ],
