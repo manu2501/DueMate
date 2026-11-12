@@ -121,9 +121,7 @@ class DashboardQuickActionSheet extends StatelessWidget {
           subtitle: const Text('Create a new contact in your ledger'),
           onTap: () {
             Navigator.of(context).pop();
-            Navigator.of(context).push(
-              MaterialPageRoute(builder: (c) => const AddEditPersonScreen()),
-            );
+            AddEditPersonScreen.show(context);
           },
         ),
       ],

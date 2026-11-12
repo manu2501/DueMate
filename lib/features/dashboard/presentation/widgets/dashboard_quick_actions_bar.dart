@@ -46,11 +46,7 @@ class DashboardQuickActionsBar extends StatelessWidget {
               label: 'Add Person',
               icon: Icons.person_add_outlined,
               color: const Color(0xFFF59E0B),
-              onTap: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const AddEditPersonScreen()),
-                );
-              },
+              onTap: () => AddEditPersonScreen.show(context),
             ),
           ),
         ],

@@ -29,7 +29,7 @@ class AddEditEmiScreen extends ConsumerStatefulWidget {
   });
 
   static Future<bool?> show(BuildContext context, {String? personId, CreditCardEmi? emi}) {
-    return Navigator.of(context).push<bool>(
+    return Navigator.of(context, rootNavigator: true).push<bool>(
       MaterialPageRoute(
         builder: (_) => AddEditEmiScreen(
           initialPersonId: personId,

@@ -231,11 +231,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                         ),
                         const SizedBox(height: 12),
                         InkWell(
-                          onTap: () {
-                            Navigator.of(context).push(
-                              MaterialPageRoute(builder: (ctx) => const AddEditPersonScreen()),
-                            );
-                          },
+                          onTap: () => AddEditPersonScreen.show(context),
                           child: Row(
                             children: [
                               Text(

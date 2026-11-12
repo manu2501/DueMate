@@ -86,11 +86,7 @@ class PersonInfoSheet extends StatelessWidget {
                 IconButton.filledTonal(
                   onPressed: () {
                     Navigator.of(context).pop();
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => AddEditPersonScreen(personToEdit: person),
-                      ),
-                    );
+                    AddEditPersonScreen.show(context, personToEdit: person);
                   },
                   icon: const Icon(Icons.edit_outlined, size: 18),
                   tooltip: 'Edit Contact Details',

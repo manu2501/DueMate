@@ -244,11 +244,7 @@ class PersonDetailsScreen extends ConsumerWidget {
                             currencySymbol: currencySymbol,
                           );
                         } else if (value == 'edit') {
-                          Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (ctx) => AddEditPersonScreen(personToEdit: person),
-                            ),
-                          );
+                          AddEditPersonScreen.show(context, personToEdit: person);
                         } else if (value == 'add_emi') {
                           AddEditEmiScreen.show(context, personId: personId);
                         } else if (value == 'archive') {

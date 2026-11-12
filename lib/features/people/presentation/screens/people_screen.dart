@@ -194,11 +194,7 @@ class _PeopleScreenState extends ConsumerState<PeopleScreen> {
       floatingActionButton: Padding(
         padding: const EdgeInsets.only(bottom: 80),
         child: FloatingActionButton.extended(
-          onPressed: () {
-            Navigator.of(context).push(
-              MaterialPageRoute(builder: (ctx) => const AddEditPersonScreen()),
-            );
-          },
+          onPressed: () => AddEditPersonScreen.show(context),
           icon: const Icon(Icons.person_add_rounded, size: 20),
           label: Text('Add Person', style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
         ),
@@ -270,11 +266,7 @@ class _PeopleScreenState extends ConsumerState<PeopleScreen> {
                           ? 'Try searching with another name or phone number.'
                           : 'Add someone to track balances and payments.',
                       actionLabel: _searchController.text.isNotEmpty ? null : 'Add Person',
-                      onActionPressed: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(builder: (ctx) => const AddEditPersonScreen()),
-                        );
-                      },
+                      onActionPressed: () => AddEditPersonScreen.show(context),
                     )
                   : ListView.separated(
                       key: ValueKey('list_${currentFilter.name}'),

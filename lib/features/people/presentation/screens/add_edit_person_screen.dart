@@ -12,6 +12,14 @@ class AddEditPersonScreen extends ConsumerStatefulWidget {
 
   const AddEditPersonScreen({super.key, this.personToEdit});
 
+  static Future<bool?> show(BuildContext context, {Person? personToEdit}) {
+    return Navigator.of(context, rootNavigator: true).push<bool>(
+      MaterialPageRoute(
+        builder: (_) => AddEditPersonScreen(personToEdit: personToEdit),
+      ),
+    );
+  }
+
   @override
   ConsumerState<AddEditPersonScreen> createState() => _AddEditPersonScreenState();
 }
