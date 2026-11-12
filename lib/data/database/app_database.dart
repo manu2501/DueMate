@@ -10,7 +10,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? e]) : super(e ?? driftDatabase(name: 'duemate_db'));
 
   @override
-  int get schemaVersion => 7;
+  int get schemaVersion => 8;
 
   /// Deletes every person, transaction, EMI and expense, in one transaction.
   /// The user's own "self" row is kept: EMIs and expenses added afterwards
@@ -58,6 +58,9 @@ class AppDatabase extends _$AppDatabase {
           "lower(card_name) LIKE '%cash%' OR lower(card_name) LIKE '%transfer%' OR "
           "lower(coalesce(notes, '')) LIKE '%loan%'",
         );
+      }
+      if (from < 8) {
+        await m.addColumn(persons, persons.upiId);
       }
     },
     beforeOpen: (details) async {

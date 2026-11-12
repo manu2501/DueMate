@@ -49,7 +49,8 @@ What's done, what's known to be missing, and what's next.
 
 ### Money in and out
 - [ ] **Floating Rate & Repo Rate Adjustment:** Mark floating rate bank loans linked to repo rate (RLLR / EBLR). When repo rate increases or decreases, auto-recalculate new monthly EMI or adjust remaining tenure across all linked loans seamlessly.
-- [ ] **UPI QR and deep links:** show a UPI QR on the Receive sheet (`qr_flutter`), and open UPI apps pre-filled (`upi://pay?...`).
+- [x] **UPI QR and deep links:** UPI QR on the Receive sheet (shareable as an image), "Pay with UPI app" on Give for people with a saved UPI ID (schema v8), your UPI ID in reminders.
+- [ ] **UPI payment confirmation:** UPI apps don't report back to an app opened via a link, so a Give is still recorded by hand. Consider asking "Did it go through?" when DueMate comes back to the front after "Pay with UPI app".
 - [ ] **Receipt attachments:** attach payment screenshots or receipts to entries, expenses and EMIs (`image_picker`), with a full-screen viewer.
 - [ ] **Credit card bills:** statement date, total and minimum due, with reminders before the due date.
 - [ ] **Loan prepayment:** remaining principal vs interest, and a close-early calculator.
@@ -67,5 +68,5 @@ What's done, what's known to be missing, and what's next.
 
 ## 📌 Technical notes
 - Android only. `compileSdk` 37; min / target SDK follow Flutter's defaults.
-- Clean architecture with Riverpod 3 and Drift (SQLite, schema v7, WAL).
+- Clean architecture with Riverpod 3 and Drift (SQLite, schema v8, WAL).
 - Design rules and the screenshot workflow are documented in `CLAUDE.md`.

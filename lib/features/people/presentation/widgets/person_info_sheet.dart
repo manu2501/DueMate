@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:duemate/data/providers/app_providers.dart';
 import 'package:duemate/core/utils/date_formatter.dart';
 import 'package:duemate/core/utils/whatsapp_helper.dart';
 import 'package:duemate/core/widgets/avatar_widget.dart';
@@ -129,7 +131,9 @@ class PersonInfoSheet extends StatelessWidget {
                     onTap: (person.phone != null && person.phone!.isNotEmpty)
                         ? () {
                             Navigator.of(context).pop();
-                            final msg = WhatsAppHelper.generateLedgerReminderMessage(summary, currencySymbol: currencySymbol);
+                            final upiId = ProviderScope.containerOf(context, listen: false).read(upiIdForRemindersProvider);
+                            final msg = WhatsAppHelper.generateLedgerReminderMessage(summary,
+                                currencySymbol: currencySymbol, upiId: upiId);
                             WhatsAppHelper.sendWhatsAppMessage(
                               phoneNumber: person.phone,
                               message: msg,
@@ -151,6 +155,21 @@ class PersonInfoSheet extends StatelessWidget {
                       ),
                       title: const Text('Email Address'),
                       subtitle: Text(person.email!),
+                    ),
+                  ],
+                  if (person.upiId != null && person.upiId!.isNotEmpty) ...[
+                    Divider(height: 1, indent: 56, color: cs.outlineVariant),
+                    ListTile(
+                      leading: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: cs.primary.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Icon(Icons.account_balance_wallet_outlined, size: 18, color: cs.primary),
+                      ),
+                      title: const Text('UPI ID'),
+                      subtitle: SelectableText(person.upiId!),
                     ),
                   ],
                   if (person.notes != null && person.notes!.isNotEmpty) ...[

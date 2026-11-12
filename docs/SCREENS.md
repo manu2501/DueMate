@@ -122,7 +122,7 @@ month, each editable.
   <img src="screenshots/06_settings_dark.png" width="260" alt="Settings, dark" />
 </p>
 
-Theme, hide amounts and currency; monthly budget; App Lock and how soon it locks after you leave
+Theme, hide amounts and currency; monthly budget and your UPI ID (₹ only); App Lock and how soon it locks after you leave
 the app; notifications (permission and a test notification); backup, CSV export, and erase all data
 (asks first). About at the bottom.
 
@@ -153,6 +153,18 @@ phone's screen lock is removed, App Lock turns itself off rather than locking yo
 
 Choose a person (their balance shows, with a one-tap *settle full balance* / *pay back all* when
 it applies), the amount with quick adds, payment method, date and note.
+
+**UPI** (only when the currency is ₹). Giving to someone whose UPI ID is saved shows **Pay with
+UPI app**: it opens your UPI app with their ID and the amount filled in; once the payment goes
+through, tap **Give** to record it. Receiving shows **Show UPI QR**: a QR with your UPI ID and the
+amount that any UPI app can scan, which you can also **Share** as an image. The first time, it asks
+for your UPI ID (also in Settings › Money). WhatsApp reminders include your UPI ID when it's set.
+
+<p>
+  <img src="screenshots/17_give_upi.png" width="260" alt="Give with Pay with UPI app, light" />
+  <img src="screenshots/18_upi_qr.png" width="260" alt="UPI QR, light" />
+  <img src="screenshots/18_upi_qr_dark.png" width="260" alt="UPI QR, dark" />
+</p>
 
 ### Add expense
 
@@ -208,5 +220,5 @@ One ledger entry: amount, person, date, time, method and note, with edit and del
   <img src="screenshots/12_add_person_dark.png" width="260" alt="Add person, dark" />
 </p>
 
-Pick from contacts or type a name; phone (needed for WhatsApp reminders), email and notes are
-optional. Adding someone who's already in the ledger offers to open their ledger instead.
+Pick from contacts or type a name; phone (needed for WhatsApp reminders), UPI ID (to pay them from
+a UPI app), email and notes are optional. Adding someone who's already in the ledger offers to open their ledger instead.

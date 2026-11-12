@@ -163,7 +163,8 @@ class _PeopleScreenState extends ConsumerState<PeopleScreen> {
                   Navigator.of(ctx).pop();
                   WhatsAppHelper.sendWhatsAppMessage(
                     phoneNumber: p.phone,
-                    message: WhatsAppHelper.generateLedgerReminderMessage(s, currencySymbol: symbol),
+                    message: WhatsAppHelper.generateLedgerReminderMessage(s,
+                        currencySymbol: symbol, upiId: ref.read(upiIdForRemindersProvider)),
                     context: context,
                   );
                 },

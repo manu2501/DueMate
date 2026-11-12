@@ -25,6 +25,7 @@ class BackupHelper {
                 'phone': p.phone,
                 'email': p.email,
                 'notes': p.notes,
+                'upiId': p.upiId,
                 'avatarPath': p.avatarPath,
                 'createdAt': p.createdAt.toIso8601String(),
                 'updatedAt': p.updatedAt.toIso8601String(),
@@ -117,6 +118,7 @@ class BackupHelper {
         final phone = p['phone'] as String?;
         final email = p['email'] as String?;
         final notes = p['notes'] as String?;
+        final upiId = p['upiId'] as String?;
         final avatarPath = p['avatarPath'] as String?;
         final createdAt = DateTime.parse(p['createdAt'] as String);
         final updatedAt = DateTime.parse(p['updatedAt'] as String);
@@ -129,6 +131,7 @@ class BackupHelper {
                 phone: Value(phone),
                 email: Value(email),
                 notes: Value(notes),
+                upiId: Value(upiId),
                 avatarPath: Value(avatarPath),
                 createdAt: Value(createdAt),
                 updatedAt: Value(updatedAt),

@@ -159,7 +159,8 @@ class _PersonLedger extends ConsumerWidget {
 
     void remind() => WhatsAppHelper.sendWhatsAppMessage(
           phoneNumber: person.phone,
-          message: WhatsAppHelper.generateLedgerReminderMessage(summary, currencySymbol: symbol),
+          message: WhatsAppHelper.generateLedgerReminderMessage(summary,
+              currencySymbol: symbol, upiId: ref.read(upiIdForRemindersProvider)),
           context: context,
         );
 
@@ -181,7 +182,7 @@ class _PersonLedger extends ConsumerWidget {
             ),
           );
         case _MenuAction.shareText:
-          ReminderHelper.shareReminder(summary, currencySymbol: symbol);
+          ReminderHelper.shareReminder(summary, currencySymbol: symbol, upiId: ref.read(upiIdForRemindersProvider));
         case _MenuAction.details:
           PersonInfoSheet.show(context, person: person, summary: summary, currencySymbol: symbol);
         case _MenuAction.edit:

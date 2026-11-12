@@ -31,6 +31,8 @@ class Persons extends Table {
   TextColumn get phone => text().nullable()();
   TextColumn get email => text().nullable()();
   TextColumn get notes => text().nullable()();
+  /// Their UPI ID (VPA), to pay them from a UPI app. Since schema v8.
+  TextColumn get upiId => text().nullable()();
   TextColumn get avatarPath => text().nullable()();
   DateTimeColumn get createdAt => dateTime()();
   DateTimeColumn get updatedAt => dateTime()();

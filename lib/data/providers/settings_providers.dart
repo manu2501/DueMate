@@ -94,3 +94,65 @@ class ThemeModeNotifier extends Notifier<ThemeMode> {
 }
 
 final themeModeProvider = NotifierProvider<ThemeModeNotifier, ThemeMode>(ThemeModeNotifier.new);
+
+/// Your UPI ID and the name payers see, for UPI QR codes and reminders.
+@immutable
+class UpiProfile {
+  final String? id;
+  final String? name;
+
+  const UpiProfile({this.id, this.name});
+
+  bool get isSet => id != null && id!.isNotEmpty;
+
+  @override
+  bool operator ==(Object other) => other is UpiProfile && other.id == id && other.name == name;
+
+  @override
+  int get hashCode => Object.hash(id, name);
+}
+
+class UpiProfileNotifier extends Notifier<UpiProfile> {
+  static const idKey = 'duemate_upi_id';
+  static const nameKey = 'duemate_upi_name';
+
+  @override
+  UpiProfile build() {
+    _load();
+    return const UpiProfile();
+  }
+
+  Future<void> _load() async {
+    final prefs = await SharedPreferences.getInstance();
+    state = UpiProfile(id: prefs.getString(idKey), name: prefs.getString(nameKey));
+  }
+
+  /// Saves the profile; empty values clear it.
+  Future<void> set({required String? id, required String? name}) async {
+    final cleanId = (id ?? '').trim().toLowerCase();
+    final cleanName = (name ?? '').trim();
+    state = UpiProfile(id: cleanId.isEmpty ? null : cleanId, name: cleanName.isEmpty ? null : cleanName);
+    final prefs = await SharedPreferences.getInstance();
+    if (cleanId.isEmpty) {
+      await prefs.remove(idKey);
+    } else {
+      await prefs.setString(idKey, cleanId);
+    }
+    if (cleanName.isEmpty) {
+      await prefs.remove(nameKey);
+    } else {
+      await prefs.setString(nameKey, cleanName);
+    }
+  }
+}
+
+final upiProfileProvider = NotifierProvider<UpiProfileNotifier, UpiProfile>(UpiProfileNotifier.new);
+
+/// UPI features only make sense when amounts are in rupees.
+final upiAvailableProvider = Provider<bool>((ref) => ref.watch(currencySymbolProvider) == '₹');
+
+/// Your UPI ID for messages asking to be paid, or null when not set or the
+/// currency isn't rupees.
+final upiIdForRemindersProvider = Provider<String?>(
+  (ref) => ref.watch(upiAvailableProvider) ? ref.watch(upiProfileProvider).id : null,
+);

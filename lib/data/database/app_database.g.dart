@@ -57,6 +57,15 @@ class $PersonsTable extends Persons with TableInfo<$PersonsTable, Person> {
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _upiIdMeta = const VerificationMeta('upiId');
+  @override
+  late final GeneratedColumn<String> upiId = GeneratedColumn<String>(
+    'upi_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _avatarPathMeta = const VerificationMeta(
     'avatarPath',
   );
@@ -108,6 +117,7 @@ class $PersonsTable extends Persons with TableInfo<$PersonsTable, Person> {
     phone,
     email,
     notes,
+    upiId,
     avatarPath,
     createdAt,
     updatedAt,
@@ -154,6 +164,12 @@ class $PersonsTable extends Persons with TableInfo<$PersonsTable, Person> {
       context.handle(
         _notesMeta,
         notes.isAcceptableOrUnknown(data['notes']!, _notesMeta),
+      );
+    }
+    if (data.containsKey('upi_id')) {
+      context.handle(
+        _upiIdMeta,
+        upiId.isAcceptableOrUnknown(data['upi_id']!, _upiIdMeta),
       );
     }
     if (data.containsKey('avatar_path')) {
@@ -213,6 +229,10 @@ class $PersonsTable extends Persons with TableInfo<$PersonsTable, Person> {
         DriftSqlType.string,
         data['${effectivePrefix}notes'],
       ),
+      upiId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}upi_id'],
+      ),
       avatarPath: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}avatar_path'],
@@ -244,6 +264,9 @@ class Person extends DataClass implements Insertable<Person> {
   final String? phone;
   final String? email;
   final String? notes;
+
+  /// Their UPI ID (VPA), to pay them from a UPI app. Since schema v8.
+  final String? upiId;
   final String? avatarPath;
   final DateTime createdAt;
   final DateTime updatedAt;
@@ -254,6 +277,7 @@ class Person extends DataClass implements Insertable<Person> {
     this.phone,
     this.email,
     this.notes,
+    this.upiId,
     this.avatarPath,
     required this.createdAt,
     required this.updatedAt,
@@ -272,6 +296,9 @@ class Person extends DataClass implements Insertable<Person> {
     }
     if (!nullToAbsent || notes != null) {
       map['notes'] = Variable<String>(notes);
+    }
+    if (!nullToAbsent || upiId != null) {
+      map['upi_id'] = Variable<String>(upiId);
     }
     if (!nullToAbsent || avatarPath != null) {
       map['avatar_path'] = Variable<String>(avatarPath);
@@ -297,6 +324,9 @@ class Person extends DataClass implements Insertable<Person> {
       notes: notes == null && nullToAbsent
           ? const Value.absent()
           : Value(notes),
+      upiId: upiId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(upiId),
       avatarPath: avatarPath == null && nullToAbsent
           ? const Value.absent()
           : Value(avatarPath),
@@ -319,6 +349,7 @@ class Person extends DataClass implements Insertable<Person> {
       phone: serializer.fromJson<String?>(json['phone']),
       email: serializer.fromJson<String?>(json['email']),
       notes: serializer.fromJson<String?>(json['notes']),
+      upiId: serializer.fromJson<String?>(json['upiId']),
       avatarPath: serializer.fromJson<String?>(json['avatarPath']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
@@ -334,6 +365,7 @@ class Person extends DataClass implements Insertable<Person> {
       'phone': serializer.toJson<String?>(phone),
       'email': serializer.toJson<String?>(email),
       'notes': serializer.toJson<String?>(notes),
+      'upiId': serializer.toJson<String?>(upiId),
       'avatarPath': serializer.toJson<String?>(avatarPath),
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
@@ -347,6 +379,7 @@ class Person extends DataClass implements Insertable<Person> {
     Value<String?> phone = const Value.absent(),
     Value<String?> email = const Value.absent(),
     Value<String?> notes = const Value.absent(),
+    Value<String?> upiId = const Value.absent(),
     Value<String?> avatarPath = const Value.absent(),
     DateTime? createdAt,
     DateTime? updatedAt,
@@ -357,6 +390,7 @@ class Person extends DataClass implements Insertable<Person> {
     phone: phone.present ? phone.value : this.phone,
     email: email.present ? email.value : this.email,
     notes: notes.present ? notes.value : this.notes,
+    upiId: upiId.present ? upiId.value : this.upiId,
     avatarPath: avatarPath.present ? avatarPath.value : this.avatarPath,
     createdAt: createdAt ?? this.createdAt,
     updatedAt: updatedAt ?? this.updatedAt,
@@ -369,6 +403,7 @@ class Person extends DataClass implements Insertable<Person> {
       phone: data.phone.present ? data.phone.value : this.phone,
       email: data.email.present ? data.email.value : this.email,
       notes: data.notes.present ? data.notes.value : this.notes,
+      upiId: data.upiId.present ? data.upiId.value : this.upiId,
       avatarPath: data.avatarPath.present
           ? data.avatarPath.value
           : this.avatarPath,
@@ -388,6 +423,7 @@ class Person extends DataClass implements Insertable<Person> {
           ..write('phone: $phone, ')
           ..write('email: $email, ')
           ..write('notes: $notes, ')
+          ..write('upiId: $upiId, ')
           ..write('avatarPath: $avatarPath, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
@@ -403,6 +439,7 @@ class Person extends DataClass implements Insertable<Person> {
     phone,
     email,
     notes,
+    upiId,
     avatarPath,
     createdAt,
     updatedAt,
@@ -417,6 +454,7 @@ class Person extends DataClass implements Insertable<Person> {
           other.phone == this.phone &&
           other.email == this.email &&
           other.notes == this.notes &&
+          other.upiId == this.upiId &&
           other.avatarPath == this.avatarPath &&
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt &&
@@ -429,6 +467,7 @@ class PersonsCompanion extends UpdateCompanion<Person> {
   final Value<String?> phone;
   final Value<String?> email;
   final Value<String?> notes;
+  final Value<String?> upiId;
   final Value<String?> avatarPath;
   final Value<DateTime> createdAt;
   final Value<DateTime> updatedAt;
@@ -440,6 +479,7 @@ class PersonsCompanion extends UpdateCompanion<Person> {
     this.phone = const Value.absent(),
     this.email = const Value.absent(),
     this.notes = const Value.absent(),
+    this.upiId = const Value.absent(),
     this.avatarPath = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
@@ -452,6 +492,7 @@ class PersonsCompanion extends UpdateCompanion<Person> {
     this.phone = const Value.absent(),
     this.email = const Value.absent(),
     this.notes = const Value.absent(),
+    this.upiId = const Value.absent(),
     this.avatarPath = const Value.absent(),
     required DateTime createdAt,
     required DateTime updatedAt,
@@ -467,6 +508,7 @@ class PersonsCompanion extends UpdateCompanion<Person> {
     Expression<String>? phone,
     Expression<String>? email,
     Expression<String>? notes,
+    Expression<String>? upiId,
     Expression<String>? avatarPath,
     Expression<DateTime>? createdAt,
     Expression<DateTime>? updatedAt,
@@ -479,6 +521,7 @@ class PersonsCompanion extends UpdateCompanion<Person> {
       if (phone != null) 'phone': phone,
       if (email != null) 'email': email,
       if (notes != null) 'notes': notes,
+      if (upiId != null) 'upi_id': upiId,
       if (avatarPath != null) 'avatar_path': avatarPath,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
@@ -493,6 +536,7 @@ class PersonsCompanion extends UpdateCompanion<Person> {
     Value<String?>? phone,
     Value<String?>? email,
     Value<String?>? notes,
+    Value<String?>? upiId,
     Value<String?>? avatarPath,
     Value<DateTime>? createdAt,
     Value<DateTime>? updatedAt,
@@ -505,6 +549,7 @@ class PersonsCompanion extends UpdateCompanion<Person> {
       phone: phone ?? this.phone,
       email: email ?? this.email,
       notes: notes ?? this.notes,
+      upiId: upiId ?? this.upiId,
       avatarPath: avatarPath ?? this.avatarPath,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
@@ -530,6 +575,9 @@ class PersonsCompanion extends UpdateCompanion<Person> {
     }
     if (notes.present) {
       map['notes'] = Variable<String>(notes.value);
+    }
+    if (upiId.present) {
+      map['upi_id'] = Variable<String>(upiId.value);
     }
     if (avatarPath.present) {
       map['avatar_path'] = Variable<String>(avatarPath.value);
@@ -557,6 +605,7 @@ class PersonsCompanion extends UpdateCompanion<Person> {
           ..write('phone: $phone, ')
           ..write('email: $email, ')
           ..write('notes: $notes, ')
+          ..write('upiId: $upiId, ')
           ..write('avatarPath: $avatarPath, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
@@ -3206,6 +3255,7 @@ typedef $$PersonsTableCreateCompanionBuilder = PersonsCompanion Function({
   Value<String?> phone,
   Value<String?> email,
   Value<String?> notes,
+  Value<String?> upiId,
   Value<String?> avatarPath,
   required DateTime createdAt,
   required DateTime updatedAt,
@@ -3218,6 +3268,7 @@ typedef $$PersonsTableUpdateCompanionBuilder = PersonsCompanion Function({
   Value<String?> phone,
   Value<String?> email,
   Value<String?> notes,
+  Value<String?> upiId,
   Value<String?> avatarPath,
   Value<DateTime> createdAt,
   Value<DateTime> updatedAt,
@@ -3297,6 +3348,11 @@ class $$PersonsTableFilterComposer
 
   ColumnFilters<String> get notes => $composableBuilder(
     column: $table.notes,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get upiId => $composableBuilder(
+    column: $table.upiId,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -3405,6 +3461,11 @@ class $$PersonsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get upiId => $composableBuilder(
+    column: $table.upiId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get avatarPath => $composableBuilder(
     column: $table.avatarPath,
     builder: (column) => ColumnOrderings(column),
@@ -3449,6 +3510,9 @@ class $$PersonsTableAnnotationComposer
 
   GeneratedColumn<String> get notes =>
       $composableBuilder(column: $table.notes, builder: (column) => column);
+
+  GeneratedColumn<String> get upiId =>
+      $composableBuilder(column: $table.upiId, builder: (column) => column);
 
   GeneratedColumn<String> get avatarPath => $composableBuilder(
     column: $table.avatarPath,
@@ -3553,6 +3617,7 @@ class $$PersonsTableTableManager
                 Value<String?> phone = const Value.absent(),
                 Value<String?> email = const Value.absent(),
                 Value<String?> notes = const Value.absent(),
+                Value<String?> upiId = const Value.absent(),
                 Value<String?> avatarPath = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
@@ -3564,6 +3629,7 @@ class $$PersonsTableTableManager
                 phone: phone,
                 email: email,
                 notes: notes,
+                upiId: upiId,
                 avatarPath: avatarPath,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
@@ -3577,6 +3643,7 @@ class $$PersonsTableTableManager
                 Value<String?> phone = const Value.absent(),
                 Value<String?> email = const Value.absent(),
                 Value<String?> notes = const Value.absent(),
+                Value<String?> upiId = const Value.absent(),
                 Value<String?> avatarPath = const Value.absent(),
                 required DateTime createdAt,
                 required DateTime updatedAt,
@@ -3588,6 +3655,7 @@ class $$PersonsTableTableManager
                 phone: phone,
                 email: email,
                 notes: notes,
+                upiId: upiId,
                 avatarPath: avatarPath,
                 createdAt: createdAt,
                 updatedAt: updatedAt,

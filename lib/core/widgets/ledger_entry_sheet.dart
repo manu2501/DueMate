@@ -9,6 +9,7 @@ import 'package:duemate/core/utils/display_money.dart';
 import 'package:duemate/core/widgets/amount_field.dart';
 import 'package:duemate/core/widgets/avatar_widget.dart';
 import 'package:duemate/core/widgets/person_picker_sheet.dart';
+import 'package:duemate/core/widgets/upi_widgets.dart';
 import 'package:duemate/data/database/tables.dart';
 import 'package:duemate/data/providers/app_providers.dart';
 import 'package:duemate/domain/entities/ledger_transaction.dart';
@@ -109,6 +110,27 @@ class _LedgerEntrySheetState extends ConsumerState<LedgerEntrySheet> {
     if (picked != null) setState(() => _date = picked);
   }
 
+  String? get _note {
+    final n = _noteController.text.trim();
+    return n.isEmpty ? null : n;
+  }
+
+  Future<void> _showUpiQr() async {
+    _focusNode.unfocus();
+    setState(() => _paymentMethod = PaymentMethod.upi);
+    await UpiQrSheet.show(context, ref, amount: _amount, note: _note);
+  }
+
+  Future<void> _payWithUpi(String name, String upiId) async {
+    if (_amount <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Enter an amount first')));
+      return;
+    }
+    _focusNode.unfocus();
+    setState(() => _paymentMethod = PaymentMethod.upi);
+    await payWithUpiApp(context, payeeId: upiId, payeeName: name, amount: _amount, note: _note);
+  }
+
   Future<void> _save() async {
     final amount = _amount;
     final messenger = ScaffoldMessenger.of(context);
@@ -172,6 +194,28 @@ class _LedgerEntrySheetState extends ConsumerState<LedgerEntrySheet> {
     final PersonSummary? selected = _selectedPersonId == null
         ? null
         : summaries?.where((s) => s.person.id == _selectedPersonId).firstOrNull;
+
+    // UPI: show your QR when receiving; open a UPI app when giving to
+    // someone whose UPI ID is saved. Rupees only.
+    final upiOn = ref.watch(upiAvailableProvider);
+    final payeeUpi = selected?.person.upiId;
+    final Widget? upiAction = !upiOn
+        ? null
+        : !_isGive
+            ? OutlinedButton.icon(
+                onPressed: _showUpiQr,
+                icon: const Icon(Icons.qr_code_2_rounded),
+                label: Text(_amount > 0 ? 'Show UPI QR for ${CurrencyFormatter.format(_amount, symbol: symbol)}' : 'Show UPI QR'),
+              )
+            : (payeeUpi == null || payeeUpi.isEmpty)
+                ? null
+                : OutlinedButton.icon(
+                    onPressed: () => _payWithUpi(selected!.person.name, payeeUpi),
+                    icon: const Icon(Icons.open_in_new_rounded),
+                    label: Text(_amount > 0
+                        ? 'Pay ${CurrencyFormatter.format(_amount, symbol: symbol)} with UPI app'
+                        : 'Pay with UPI app'),
+                  );
 
     return Padding(
       padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
@@ -272,6 +316,10 @@ class _LedgerEntrySheetState extends ConsumerState<LedgerEntrySheet> {
                       ],
                     ),
                     const SizedBox(height: 24),
+                    if (upiAction != null) ...[
+                      upiAction,
+                      const SizedBox(height: AppSpace.md),
+                    ],
                     SizedBox(
                       height: 52,
                       child: FilledButton.icon(

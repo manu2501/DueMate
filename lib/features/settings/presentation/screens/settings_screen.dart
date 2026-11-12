@@ -10,6 +10,7 @@ import 'package:duemate/core/utils/permission_manager.dart';
 import 'package:duemate/core/widgets/app_logo.dart';
 import 'package:duemate/core/widgets/confirm_dialog.dart';
 import 'package:duemate/core/widgets/hide_amounts_toggle.dart';
+import 'package:duemate/core/widgets/upi_widgets.dart';
 import 'package:duemate/core/widgets/ui_kit.dart';
 import 'package:duemate/data/providers/app_providers.dart';
 import 'package:duemate/features/expenses/presentation/widgets/budget_dialog.dart';
@@ -154,6 +155,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final symbol = ref.watch(currencySymbolProvider);
     final budget = ref.watch(monthlyBudgetLimitProvider);
     final lockSettings = ref.watch(appLockSettingsProvider);
+    final upi = ref.watch(upiProfileProvider);
     final currency = AppConstants.supportedCurrencies.where((c) => c.symbol == symbol).firstOrNull;
 
     return Scaffold(
@@ -211,6 +213,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 trailing: Text(ref.watch(displayMoneyProvider)(budget), style: theme.textTheme.titleSmall),
                 onTap: () => editMonthlyBudget(context, ref),
               ),
+              if (ref.watch(upiAvailableProvider))
+                ListTile(
+                  title: const Text('Your UPI ID'),
+                  subtitle: Text(upi.id ?? 'For UPI QR codes and payment reminders'),
+                  trailing: const Icon(Icons.chevron_right_rounded),
+                  onTap: () => editUpiProfile(context, ref),
+                ),
             ],
           ),
 

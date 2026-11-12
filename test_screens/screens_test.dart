@@ -63,7 +63,14 @@ Future<void> _seed(AppDatabase db) async {
   DateTime ago(int days) => now.subtract(Duration(days: days));
 
   Person p(String id, String name, String? phone, int days) =>
-      Person(id: id, name: name, phone: phone, createdAt: ago(days), updatedAt: ago(days));
+      Person(
+        id: id,
+        name: name,
+        phone: phone,
+        upiId: id == 'rahul' ? 'rahul.sharma@okhdfcbank' : null,
+        createdAt: ago(days),
+        updatedAt: ago(days),
+      );
   for (final person in [
     p('rahul', 'Rahul Sharma', '+91 98765 43210', 90),
     p('priya', 'Priya Nair', '+91 91234 56780', 60),
@@ -161,6 +168,8 @@ void main() {
       SharedPreferences.setMockInitialValues({
         'duemate_last_run_version': AppConstants.appVersionString,
         'duemate_theme_mode': dark ? 'dark' : 'light',
+        'duemate_upi_id': 'arjun.mehta@oksbi',
+        'duemate_upi_name': 'Arjun Mehta',
       });
       // Same logical size (≈411×891 dp) either way; docs mode halves the pixels.
       tester.view.physicalSize = _docs ? const Size(540, 1170) : const Size(1080, 2340);
@@ -253,6 +262,24 @@ void main() {
       final container = ProviderScope.containerOf(tester.element(find.byType(DueMateApp)));
       await tester.runAsync(() => container.read(hideBalancesProvider.notifier).set(false));
       await settle();
+
+      // UPI: Give to someone with a UPI ID, then your QR from Receive.
+      await go('/people/rahul');
+      await tester.tap(find.text('Give').first);
+      await settle();
+      await tester.enterText(find.byType(TextField).first, '2000');
+      await shot('17_give_upi');
+      await home();
+      await go('/people/rahul');
+      await tester.tap(find.text('Receive').first);
+      await settle();
+      await tester.enterText(find.byType(TextField).first, '2500');
+      await settle();
+      final qrButton = find.textContaining('Show UPI QR');
+      await tester.ensureVisible(qrButton);
+      await tester.tap(qrButton);
+      await shot('18_upi_qr');
+      await home();
 
       // App Lock: turned on directly (the switch would prompt), then locked.
       await tester.runAsync(() => container.read(appLockSettingsProvider.notifier).setEnabled(true));

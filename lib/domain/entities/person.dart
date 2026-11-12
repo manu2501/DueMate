@@ -4,6 +4,9 @@ class Person {
   final String? phone;
   final String? email;
   final String? notes;
+
+  /// UPI ID (VPA) for paying them from a UPI app.
+  final String? upiId;
   final String? avatarPath;
   final DateTime createdAt;
   final DateTime updatedAt;
@@ -15,6 +18,7 @@ class Person {
     this.phone,
     this.email,
     this.notes,
+    this.upiId,
     this.avatarPath,
     required this.createdAt,
     required this.updatedAt,
@@ -29,6 +33,8 @@ class Person {
     String? phone,
     String? email,
     String? notes,
+    String? upiId,
+    bool clearUpiId = false,
     String? avatarPath,
     DateTime? createdAt,
     DateTime? updatedAt,
@@ -41,6 +47,7 @@ class Person {
       phone: phone ?? this.phone,
       email: email ?? this.email,
       notes: notes ?? this.notes,
+      upiId: clearUpiId ? null : (upiId ?? this.upiId),
       avatarPath: avatarPath ?? this.avatarPath,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,

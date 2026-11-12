@@ -92,6 +92,7 @@ class WhatsAppHelper {
   static String generateLedgerReminderMessage(
     PersonSummary summary, {
     String currencySymbol = '₹',
+    String? upiId,
   }) {
     final personName = summary.person.name;
     final balanceText = CurrencyFormatter.format(summary.balance.abs(), symbol: currencySymbol);
@@ -107,6 +108,7 @@ class WhatsAppHelper {
           '• Total Given: ${CurrencyFormatter.format(summary.totalGiven, symbol: currencySymbol)}\n'
           '• Total Received: ${CurrencyFormatter.format(summary.totalReceived, symbol: currencySymbol)}\n'
           '• Pending Balance: *$balanceText*\n\n'
+          '${upiId == null ? '' : '💳 Pay by UPI: *$upiId*\n\n'}'
           'Please let me know once transferred! Thank you 🙏';
     } else if (summary.isOverpaid) {
       return 'Hi $personName 👋,\n\n'
