@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:duemate/core/utils/csv_exporter.dart';
 import 'package:duemate/core/utils/pdf_exporter.dart';
 import 'package:duemate/core/utils/reminder_helper.dart';
@@ -79,7 +78,7 @@ class PersonDetailsScreen extends ConsumerWidget {
       builder: (ctx) => AlertDialog(
         title: Text('Delete $name?', style: TextStyle(color: cs.error)),
         content: Text(
-          'Are you sure you want to permanently delete $name and all associated transactions? This cannot be undone.',
+          'This permanently deletes $name along with every transaction and EMI recorded with them. This can\'t be undone.\n\nIf you only want them out of your list, archive them instead.',
         ),
         actions: [
           TextButton(
@@ -94,7 +93,7 @@ class PersonDetailsScreen extends ConsumerWidget {
               if (context.mounted) {
                 _navigateBack(context);
                 ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('$name deleted')),
+                  SnackBar(content: Text('$name and their records were deleted')),
                 );
               }
             },
@@ -258,9 +257,9 @@ class PersonDetailsScreen extends ConsumerWidget {
                           value: 'pdf',
                           child: Row(
                             children: [
-                              Icon(Icons.picture_as_pdf_outlined, size: 20, color: Colors.red),
+                              Icon(Icons.picture_as_pdf_outlined, size: 20),
                               SizedBox(width: 12),
-                              Text('Share PDF Statement'),
+                              Text('Share PDF statement'),
                             ],
                           ),
                         ),
@@ -268,20 +267,20 @@ class PersonDetailsScreen extends ConsumerWidget {
                           value: 'csv',
                           child: Row(
                             children: [
-                              Icon(Icons.table_chart_outlined, size: 20, color: Colors.green),
+                              Icon(Icons.table_chart_outlined, size: 20),
                               SizedBox(width: 12),
-                              Text('Export CSV Statement'),
+                              Text('Export CSV statement'),
                             ],
                           ),
                         ),
                         const PopupMenuDivider(),
-                        const PopupMenuItem(
+                        PopupMenuItem(
                           value: 'add_emi',
                           child: Row(
                             children: [
-                              Icon(Icons.event_repeat_rounded, size: 20, color: Colors.purple),
+                              Icon(Icons.event_repeat_rounded, size: 20, color: Theme.of(context).colorScheme.secondary),
                               SizedBox(width: 12),
-                              Text('Add EMI / Loan'),
+                              Text('Add EMI or loan'),
                             ],
                           ),
                         ),
@@ -291,7 +290,7 @@ class PersonDetailsScreen extends ConsumerWidget {
                             children: [
                               Icon(Icons.edit_outlined, size: 20),
                               SizedBox(width: 12),
-                              Text('Edit Details'),
+                              Text('Edit details'),
                             ],
                           ),
                         ),
@@ -311,7 +310,7 @@ class PersonDetailsScreen extends ConsumerWidget {
                             children: [
                               Icon(Icons.delete_outline, size: 20, color: cs.error),
                               SizedBox(width: 12),
-                              Text('Delete Person', style: TextStyle(color: cs.error)),
+                              Text('Delete person', style: TextStyle(color: cs.error)),
                             ],
                           ),
                         ),
@@ -381,16 +380,16 @@ class PersonDetailsScreen extends ConsumerWidget {
                     children: [
                       Text(
                         'Transaction History',
-                        style: GoogleFonts.dmSans(
+                        style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.w700,
                           letterSpacing: -0.2,
-                          color: isDark ? Colors.white : const Color(0xFF131438),
+                          color: Theme.of(context).colorScheme.onSurface,
                         ),
                       ),
                       Text(
                         '${transactions.length} entries',
-                        style: GoogleFonts.inter(
+                        style: TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w500,
                           color: cs.onSurfaceVariant,
@@ -409,8 +408,8 @@ class PersonDetailsScreen extends ConsumerWidget {
                     child: EmptyStateWidget(
                       icon: Icons.receipt_long_outlined,
                       title: 'No transactions yet',
-                      description: 'Tap Give Money or Repayment above to record your first transaction with ${person.name}.',
-                      actionLabel: 'Give Money',
+                      description: 'Record what you give or receive to start ${person.name}\'s ledger.',
+                      actionLabel: 'Give money',
                       onActionPressed: () => QuickGiveSheet.show(context, personId: personId),
                     ),
                   )
@@ -482,7 +481,7 @@ class PersonDetailsScreen extends ConsumerWidget {
               onPressed: () => _navigateBack(context),
             ),
           ),
-          body: Center(child: Text('Error: $err')),
+          body: const Center(child: Text("Couldn't load this. Please try again.")),
         ),
       ),
     );

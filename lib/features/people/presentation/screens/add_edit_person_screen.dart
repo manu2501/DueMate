@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:uuid/uuid.dart';
 import 'package:duemate/core/utils/contacts_helper.dart';
 import 'package:duemate/core/widgets/avatar_widget.dart';
@@ -114,7 +113,7 @@ class _AddEditPersonScreenState extends ConsumerState<AddEditPersonScreen> {
                   _navigateBack();
                   context.push('/people/${existing.person.id}');
                 },
-                child: const Text('Open Ledger'),
+                child: const Text('Open ledger'),
               ),
             ],
           ),
@@ -134,14 +133,14 @@ class _AddEditPersonScreenState extends ConsumerState<AddEditPersonScreen> {
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Imported ${contact.name} from contacts'),
+            content: Text('Filled in details for ${contact.name}'),
           ),
         );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Could not read contact: $e')),
+          const SnackBar(content: Text("Couldn't read that contact.")),
         );
       }
     } finally {
@@ -170,13 +169,15 @@ class _AddEditPersonScreenState extends ConsumerState<AddEditPersonScreen> {
     final existingPerson = allPersons.where((s) {
       if (isEditing && s.person.id == widget.personToEdit!.id) return false;
 
-      final sameName = s.person.name.trim().toLowerCase() == inputName.toLowerCase();
-      bool samePhone = false;
-      if (normPhone.isNotEmpty && s.person.phone != null && s.person.phone!.trim().isNotEmpty) {
-        final existingNorm = _normalizePhone(s.person.phone!);
-        samePhone = existingNorm.isNotEmpty && existingNorm == normPhone;
+      // Two phone numbers decide it. Names only count when one side has no
+      // number to compare, so two different "Rahul"s can both be added.
+      final existingNorm = (s.person.phone ?? '').trim().isNotEmpty
+          ? _normalizePhone(s.person.phone!)
+          : '';
+      if (normPhone.isNotEmpty && existingNorm.isNotEmpty) {
+        return existingNorm == normPhone;
       }
-      return sameName || samePhone;
+      return s.person.name.trim().toLowerCase() == inputName.toLowerCase();
     }).firstOrNull;
 
     if (existingPerson != null && mounted) {
@@ -185,14 +186,14 @@ class _AddEditPersonScreenState extends ConsumerState<AddEditPersonScreen> {
           _normalizePhone(existingPerson.person.phone!) == normPhone;
 
       final message = isSamePhone
-          ? 'A contact with phone number "${existingPerson.person.phone}" already exists in your ledger (${existingPerson.person.name}).'
-          : 'A contact named "${existingPerson.person.name}" already exists in your ledger.';
+          ? '${existingPerson.person.name} already has the number ${existingPerson.person.phone}.'
+          : '${existingPerson.person.name} is already in your ledger.';
 
       showDialog(
         context: context,
         builder: (ctx) => AlertDialog(
-          title: const Text('Duplicate Contact Found'),
-          content: Text('$message\n\nWould you like to open their ledger instead?'),
+          title: const Text('Already in your ledger'),
+          content: Text(message),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(ctx).pop(),
@@ -204,7 +205,7 @@ class _AddEditPersonScreenState extends ConsumerState<AddEditPersonScreen> {
                 _navigateBack();
                 context.push('/people/${existingPerson.person.id}');
               },
-              child: const Text('Open Ledger'),
+              child: const Text('Open ledger'),
             ),
           ],
         ),
@@ -242,14 +243,14 @@ class _AddEditPersonScreenState extends ConsumerState<AddEditPersonScreen> {
         _navigateBack();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(isEditing ? 'Details updated' : 'Added to ledger'),
+            content: Text(isEditing ? 'Changes saved' : 'Person added'),
           ),
         );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error saving: $e')),
+          const SnackBar(content: Text("Couldn't save. Please try again.")),
         );
       }
     } finally {
@@ -261,7 +262,6 @@ class _AddEditPersonScreenState extends ConsumerState<AddEditPersonScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
-    final isDark = theme.brightness == Brightness.dark;
 
     final displayName = _nameController.text.trim().isEmpty
         ? (isEditing ? widget.personToEdit!.name : 'New Contact')
@@ -298,15 +298,15 @@ class _AddEditPersonScreenState extends ConsumerState<AddEditPersonScreen> {
                       const SizedBox(height: 10),
                       Text(
                         displayName,
-                        style: GoogleFonts.dmSans(
+                        style: TextStyle(
                           fontSize: 20,
-                          fontWeight: FontWeight.w800,
-                          color: isDark ? Colors.white : const Color(0xFF131438),
+                          fontWeight: FontWeight.w600,
+                          color: Theme.of(context).colorScheme.onSurface,
                         ),
                       ),
                       Text(
                         'Live Contact Preview',
-                        style: GoogleFonts.inter(
+                        style: TextStyle(
                           fontSize: 12,
                           color: cs.onSurfaceVariant,
                         ),
@@ -350,7 +350,7 @@ class _AddEditPersonScreenState extends ConsumerState<AddEditPersonScreen> {
                             children: [
                               Text(
                                 'Import from Phone Contacts',
-                                style: GoogleFonts.inter(
+                                style: TextStyle(
                                   fontSize: 14,
                                   fontWeight: FontWeight.w700,
                                   color: cs.primary,
@@ -359,7 +359,7 @@ class _AddEditPersonScreenState extends ConsumerState<AddEditPersonScreen> {
                               const SizedBox(height: 2),
                               Text(
                                 'Auto-fill contact name & phone in one tap',
-                                style: GoogleFonts.inter(
+                                style: TextStyle(
                                   fontSize: 12,
                                   color: cs.onSurfaceVariant,
                                 ),
@@ -388,7 +388,7 @@ class _AddEditPersonScreenState extends ConsumerState<AddEditPersonScreen> {
                       TextFormField(
                         controller: _nameController,
                         decoration: const InputDecoration(
-                          labelText: 'Full Name *',
+                          labelText: 'Name',
                           hintText: 'e.g. Rahul Kumar',
                           prefixIcon: Icon(Icons.person_outline_rounded, size: 20),
                         ),
@@ -404,7 +404,7 @@ class _AddEditPersonScreenState extends ConsumerState<AddEditPersonScreen> {
                       TextFormField(
                         controller: _phoneController,
                         decoration: const InputDecoration(
-                          labelText: 'Phone Number (Optional)',
+                          labelText: 'Phone (optional)',
                           hintText: 'e.g. +91 98765 43210',
                           prefixIcon: Icon(Icons.phone_outlined, size: 20),
                         ),
@@ -430,7 +430,7 @@ class _AddEditPersonScreenState extends ConsumerState<AddEditPersonScreen> {
                       TextFormField(
                         controller: _emailController,
                         decoration: const InputDecoration(
-                          labelText: 'Email Address (Optional)',
+                          labelText: 'Email (optional)',
                           hintText: 'e.g. rahul@example.com',
                           prefixIcon: Icon(Icons.email_outlined, size: 20),
                         ),
@@ -440,7 +440,7 @@ class _AddEditPersonScreenState extends ConsumerState<AddEditPersonScreen> {
                       TextFormField(
                         controller: _notesController,
                         decoration: const InputDecoration(
-                          labelText: 'Notes & Relationship (Optional)',
+                          labelText: 'Notes (optional)',
                           hintText: 'e.g. Roommate, colleague, friend',
                           prefixIcon: Icon(Icons.notes_rounded, size: 20),
                         ),
@@ -450,7 +450,7 @@ class _AddEditPersonScreenState extends ConsumerState<AddEditPersonScreen> {
 
                       Text(
                         'Quick Relationship Tags:',
-                        style: GoogleFonts.inter(
+                        style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
                           color: cs.onSurfaceVariant,
@@ -501,7 +501,7 @@ class _AddEditPersonScreenState extends ConsumerState<AddEditPersonScreen> {
                             )
                           : Text(
                               isEditing ? 'Save Changes' : 'Create Person',
-                              style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w700),
+                              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
                             ),
                     ),
                   ),

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:duemate/core/utils/currency_formatter.dart';
 import 'package:duemate/core/widgets/animated_currency_text.dart';
 import 'package:duemate/core/widgets/empty_state_widget.dart';
@@ -67,7 +66,7 @@ class _ExpenseChartsScreenState extends ConsumerState<ExpenseChartsScreen> {
       appBar: AppBar(
         title: Text(
           'Expense Analytics & Charts',
-          style: GoogleFonts.dmSans(fontWeight: FontWeight.w700),
+          style: TextStyle(fontWeight: FontWeight.w700),
         ),
         actions: [
           PopupMenuButton<int>(
@@ -79,7 +78,7 @@ class _ExpenseChartsScreenState extends ConsumerState<ExpenseChartsScreen> {
                 children: [
                   Text(
                     '$_selectedYear',
-                    style: GoogleFonts.inter(
+                    style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w700,
                       color: cs.primary,
@@ -142,7 +141,7 @@ class _ExpenseChartsScreenState extends ConsumerState<ExpenseChartsScreen> {
                             children: [
                               Text(
                                 'Monthly Spending Trend',
-                                style: GoogleFonts.inter(
+                                style: TextStyle(
                                   fontSize: 14,
                                   fontWeight: FontWeight.w700,
                                   color: cs.onSurface,
@@ -150,7 +149,7 @@ class _ExpenseChartsScreenState extends ConsumerState<ExpenseChartsScreen> {
                               ),
                               Text(
                                 'Year $_selectedYear • Tap any month bar',
-                                style: GoogleFonts.inter(
+                                style: TextStyle(
                                   fontSize: 11,
                                   color: cs.onSurfaceVariant,
                                 ),
@@ -192,9 +191,9 @@ class _ExpenseChartsScreenState extends ConsumerState<ExpenseChartsScreen> {
                                   FittedBox(
                                     child: Text(
                                       CurrencyFormatter.formatCompact(mTotal, symbol: currencySymbol),
-                                      style: GoogleFonts.inter(
+                                      style: TextStyle(
                                         fontSize: 9,
-                                        fontWeight: isSelected ? FontWeight.w800 : FontWeight.w500,
+                                        fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
                                         color: isSelected ? cs.primary : cs.onSurfaceVariant,
                                       ),
                                     ),
@@ -224,9 +223,9 @@ class _ExpenseChartsScreenState extends ConsumerState<ExpenseChartsScreen> {
 
                                 Text(
                                   _monthNames[index],
-                                  style: GoogleFonts.inter(
+                                  style: TextStyle(
                                     fontSize: 10.5,
-                                    fontWeight: isSelected ? FontWeight.w800 : FontWeight.w500,
+                                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
                                     color: isSelected ? cs.primary : cs.onSurfaceVariant,
                                   ),
                                 ),
@@ -259,10 +258,10 @@ class _ExpenseChartsScreenState extends ConsumerState<ExpenseChartsScreen> {
                     children: [
                       Text(
                         '${_fullMonthNames[_selectedMonth - 1]} $_selectedYear Summary',
-                        style: GoogleFonts.dmSans(
+                        style: TextStyle(
                           fontSize: 16,
-                          fontWeight: FontWeight.w800,
-                          color: isDark ? Colors.white : const Color(0xFF131438),
+                          fontWeight: FontWeight.w600,
+                          color: Theme.of(context).colorScheme.onSurface,
                         ),
                       ),
                       Container(
@@ -273,7 +272,7 @@ class _ExpenseChartsScreenState extends ConsumerState<ExpenseChartsScreen> {
                         ),
                         child: Text(
                           '${selectedMonthExpenses.length} Outflows',
-                          style: GoogleFonts.inter(
+                          style: TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.w700,
                             color: cs.primary,
@@ -292,7 +291,7 @@ class _ExpenseChartsScreenState extends ConsumerState<ExpenseChartsScreen> {
                         children: [
                           Text(
                             'Total Outflow Spent',
-                            style: GoogleFonts.inter(
+                            style: TextStyle(
                               fontSize: 11.5,
                               color: cs.onSurfaceVariant,
                             ),
@@ -301,9 +300,9 @@ class _ExpenseChartsScreenState extends ConsumerState<ExpenseChartsScreen> {
                           AnimatedCurrencyText(
                             amount: selectedMonthTotal,
                             currencySymbol: currencySymbol,
-                            style: GoogleFonts.dmSans(
+                            style: TextStyle(
                               fontSize: 22,
-                              fontWeight: FontWeight.w800,
+                              fontWeight: FontWeight.w600,
                               color: cs.error,
                             ),
                           ),
@@ -314,7 +313,7 @@ class _ExpenseChartsScreenState extends ConsumerState<ExpenseChartsScreen> {
                         children: [
                           Text(
                             'Daily Average',
-                            style: GoogleFonts.inter(
+                            style: TextStyle(
                               fontSize: 11.5,
                               color: cs.onSurfaceVariant,
                             ),
@@ -322,7 +321,7 @@ class _ExpenseChartsScreenState extends ConsumerState<ExpenseChartsScreen> {
                           const SizedBox(height: 2),
                           Text(
                             '${CurrencyFormatter.format(dailyAvg, symbol: currencySymbol)}/day',
-                            style: GoogleFonts.dmSans(
+                            style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w700,
                               color: cs.onSurface,
@@ -342,14 +341,14 @@ class _ExpenseChartsScreenState extends ConsumerState<ExpenseChartsScreen> {
                       children: [
                         Text(
                           'Versus Budget Cap (${CurrencyFormatter.formatCompact(budgetLimit, symbol: currencySymbol)}):',
-                          style: GoogleFonts.inter(
+                          style: TextStyle(
                             fontSize: 12,
                             color: cs.onSurfaceVariant,
                           ),
                         ),
                         Text(
                           '${capPercent.toStringAsFixed(1)}% Used',
-                          style: GoogleFonts.inter(
+                          style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w700,
                             color: capPercent >= 100

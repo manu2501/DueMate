@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:duemate/core/constants/app_constants.dart';
 import 'package:duemate/data/providers/app_providers.dart';
 
@@ -150,7 +149,7 @@ class CurrencySettingsCard extends ConsumerWidget {
                           ),
                           child: Text(
                             c.symbol,
-                            style: GoogleFonts.inter(
+                            style: TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.w700,
                               color: isSelected ? cs.onPrimary : cs.onSurface,

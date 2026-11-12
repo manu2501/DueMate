@@ -81,20 +81,20 @@ class TransactionTile extends StatelessWidget {
                           margin: const EdgeInsets.only(right: 6),
                           padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
                           decoration: BoxDecoration(
-                            color: Colors.purple.withValues(alpha: 0.12),
+                            color: Theme.of(context).colorScheme.secondary.withValues(alpha: 0.12),
                             borderRadius: BorderRadius.circular(4),
                           ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Icon(Icons.credit_card_rounded, size: 10, color: Colors.purple),
+                              Icon(Icons.credit_card_rounded, size: 10, color: Theme.of(context).colorScheme.secondary),
                               const SizedBox(width: 3),
                               Text(
                                 'EMI',
                                 style: theme.textTheme.labelSmall?.copyWith(
                                   fontSize: 9.5,
                                   fontWeight: FontWeight.w700,
-                                  color: Colors.purple,
+                                  color: Theme.of(context).colorScheme.secondary,
                                 ),
                               ),
                             ],
@@ -146,7 +146,7 @@ class TransactionTile extends StatelessWidget {
               '${isReceived ? '+' : '-'}${CurrencyFormatter.format(transaction.amount, symbol: currencySymbol)}',
               style: theme.textTheme.titleSmall?.copyWith(
                 color: accentColor,
-                fontWeight: FontWeight.w800,
+                fontWeight: FontWeight.w600,
               ),
             ),
           ],

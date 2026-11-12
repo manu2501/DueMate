@@ -1,64 +1,54 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
-import 'package:duemate/core/widgets/pressable_scale.dart';
+import 'package:duemate/core/theme/app_theme.dart';
 import 'package:duemate/core/widgets/quick_give_sheet.dart';
 import 'package:duemate/core/widgets/quick_receive_sheet.dart';
 import 'package:duemate/features/emis/presentation/screens/add_edit_emi_screen.dart';
 import 'package:duemate/features/expenses/presentation/widgets/add_edit_expense_sheet.dart';
 import 'package:duemate/features/people/presentation/screens/add_edit_person_screen.dart';
 
+/// Five shortcuts in one neutral style. Colour is reserved for money
+/// direction (give/receive), not decoration.
 class DashboardQuickActionsBar extends StatelessWidget {
   const DashboardQuickActionsBar({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final ledger = LedgerColors.of(context);
+    final cs = Theme.of(context).colorScheme;
+
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
+      padding: const EdgeInsets.symmetric(horizontal: AppSpace.screenGutter),
       child: Row(
         children: [
-          Expanded(
-            child: _QuickActionTile(
-              label: 'Give',
-              icon: Icons.north_east_rounded,
-              color: const Color(0xFFEF4444),
-              onTap: () => QuickGiveSheet.show(context),
-            ),
+          _Action(
+            label: 'Give',
+            icon: Icons.north_east_rounded,
+            color: ledger.cashOut,
+            onTap: () => QuickGiveSheet.show(context),
           ),
-          const SizedBox(width: 6),
-          Expanded(
-            child: _QuickActionTile(
-              label: 'Receive',
-              icon: Icons.south_west_rounded,
-              color: const Color(0xFF10B981),
-              onTap: () => QuickReceiveSheet.show(context),
-            ),
+          _Action(
+            label: 'Receive',
+            icon: Icons.south_west_rounded,
+            color: ledger.cashIn,
+            onTap: () => QuickReceiveSheet.show(context),
           ),
-          const SizedBox(width: 6),
-          Expanded(
-            child: _QuickActionTile(
-              label: 'Expense',
-              icon: Icons.receipt_rounded,
-              color: const Color(0xFFF59E0B),
-              onTap: () => AddEditExpenseSheet.show(context),
-            ),
+          _Action(
+            label: 'Expense',
+            icon: Icons.receipt_long_outlined,
+            color: cs.onSurfaceVariant,
+            onTap: () => AddEditExpenseSheet.show(context),
           ),
-          const SizedBox(width: 6),
-          Expanded(
-            child: _QuickActionTile(
-              label: 'Add EMI',
-              icon: Icons.event_repeat_rounded,
-              color: Colors.purple,
-              onTap: () => AddEditEmiScreen.show(context),
-            ),
+          _Action(
+            label: 'Add EMI',
+            icon: Icons.event_repeat_outlined,
+            color: cs.onSurfaceVariant,
+            onTap: () => AddEditEmiScreen.show(context),
           ),
-          const SizedBox(width: 6),
-          Expanded(
-            child: _QuickActionTile(
-              label: 'Person',
-              icon: Icons.person_add_outlined,
-              color: const Color(0xFF4F46E5),
-              onTap: () => AddEditPersonScreen.show(context),
-            ),
+          _Action(
+            label: 'Person',
+            icon: Icons.person_add_alt_outlined,
+            color: cs.onSurfaceVariant,
+            onTap: () => AddEditPersonScreen.show(context),
           ),
         ],
       ),
@@ -66,13 +56,13 @@ class DashboardQuickActionsBar extends StatelessWidget {
   }
 }
 
-class _QuickActionTile extends StatelessWidget {
+class _Action extends StatelessWidget {
   final String label;
   final IconData icon;
   final Color color;
   final VoidCallback onTap;
 
-  const _QuickActionTile({
+  const _Action({
     required this.label,
     required this.icon,
     required this.color,
@@ -82,56 +72,36 @@ class _QuickActionTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final cs = theme.colorScheme;
-
-    return PressableScale(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 6),
-        decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: color.withValues(alpha: 0.25),
-            width: 1,
+    return Expanded(
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: AppSpace.sm),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.surfaceContainer,
+                  borderRadius: BorderRadius.circular(AppRadius.md),
+                ),
+                child: Icon(icon, size: 22, color: color),
+              ),
+              const SizedBox(height: AppSpace.xs + 2),
+              Text(
+                label,
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: theme.colorScheme.onSurface,
+                  letterSpacing: 0,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
           ),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: color,
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: color.withValues(alpha: 0.3),
-                    blurRadius: 6,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: Icon(
-                icon,
-                size: 16,
-                color: Colors.white,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              label,
-              style: GoogleFonts.inter(
-                fontSize: 11.5,
-                fontWeight: FontWeight.w700,
-                color: cs.onSurface,
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              textAlign: TextAlign.center,
-            ),
-          ],
         ),
       ),
     );

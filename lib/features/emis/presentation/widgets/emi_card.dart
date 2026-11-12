@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:duemate/core/constants/app_constants.dart';
 import 'package:duemate/core/utils/currency_formatter.dart';
 import 'package:duemate/core/utils/date_formatter.dart';
@@ -38,7 +37,7 @@ class EmiCard extends StatelessWidget {
 
     final accentColor = isCompleted
         ? cs.primary
-        : (isLoan ? const Color(0xFF0D9488) : Colors.purple);
+        : (isLoan ? const Color(0xFF0D9488) : Theme.of(context).colorScheme.secondary);
 
     return RepaintBoundary(
       child: InkWell(
@@ -90,10 +89,10 @@ class EmiCard extends StatelessWidget {
                     children: [
                       Text(
                         emi.itemName,
-                        style: GoogleFonts.dmSans(
+                        style: TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.w700,
-                          color: isDark ? Colors.white : const Color(0xFF131438),
+                          color: Theme.of(context).colorScheme.onSurface,
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -104,7 +103,7 @@ class EmiCard extends StatelessWidget {
                           Flexible(
                             child: Text(
                               emi.cardName,
-                              style: GoogleFonts.inter(
+                              style: TextStyle(
                                 fontSize: 12,
                                 color: cs.onSurfaceVariant,
                               ),
@@ -120,7 +119,7 @@ class EmiCard extends StatelessWidget {
                             Flexible(
                               child: Text(
                                 person!.name,
-                                style: GoogleFonts.inter(
+                                style: TextStyle(
                                   fontSize: 12,
                                   fontWeight: FontWeight.w500,
                                   color: cs.onSurfaceVariant,
@@ -141,9 +140,9 @@ class EmiCard extends StatelessWidget {
                   children: [
                     Text(
                       CurrencyFormatter.format(emi.monthlyInstallment, symbol: currencySymbol),
-                      style: GoogleFonts.dmSans(
+                      style: TextStyle(
                         fontSize: 16,
-                        fontWeight: FontWeight.w800,
+                        fontWeight: FontWeight.w600,
                         color: isCompleted
                             ? cs.onSurfaceVariant
                             : (emi.isPaidByMe ? cs.primary : cs.error),
@@ -151,7 +150,7 @@ class EmiCard extends StatelessWidget {
                     ),
                     Text(
                       '/ month',
-                      style: GoogleFonts.inter(
+                      style: TextStyle(
                         fontSize: 10.5,
                         color: cs.onSurfaceVariant,
                       ),
@@ -201,7 +200,7 @@ class EmiCard extends StatelessWidget {
                                 : (emi.isPaidByMe
                                     ? '${person?.name ?? 'Contact'} owes'
                                     : 'You owe ${person?.name ?? 'Contact'}')),
-                        style: GoogleFonts.inter(
+                        style: TextStyle(
                           fontSize: 10.5,
                           fontWeight: FontWeight.w700,
                           color: emi.isForSelf
@@ -213,7 +212,7 @@ class EmiCard extends StatelessWidget {
                     const SizedBox(width: 8),
                     Text(
                       '${emi.installmentsPaid}/${emi.totalTenureMonths} mo',
-                      style: GoogleFonts.inter(
+                      style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
                         color: cs.onSurfaceVariant,
@@ -227,7 +226,7 @@ class EmiCard extends StatelessWidget {
                       : nextDate != null
                           ? 'Next: ${DateFormatter.formatShortDate(nextDate)}'
                           : 'Due: ${emi.dueDayOfMonth}th',
-                  style: GoogleFonts.inter(
+                  style: TextStyle(
                     fontSize: 11.5,
                     fontWeight: FontWeight.w500,
                     color: isCompleted ? cs.primary : cs.onSurfaceVariant,

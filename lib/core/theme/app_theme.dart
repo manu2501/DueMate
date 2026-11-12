@@ -1,49 +1,148 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+
+/// Corner radii. Use these instead of literal numbers.
+class AppRadius {
+  AppRadius._();
+  static const double sm = 8; // chips, small badges, inputs' inner elements
+  static const double md = 14; // buttons, inputs, list tiles, small cards
+  static const double lg = 20; // cards
+  static const double xl = 28; // sheets, dialogs
+}
+
+/// Spacing scale (dp).
+class AppSpace {
+  AppSpace._();
+  static const double xs = 4;
+  static const double sm = 8;
+  static const double md = 12;
+  static const double lg = 16;
+  static const double xl = 24;
+  static const double xxl = 32;
+  static const double screenGutter = 20;
+}
+
+/// Money semantics. Positive-for-you is green, negative-for-you is red;
+/// the colour is never the only signal (amounts also carry +/− or wording).
+@immutable
+class LedgerColors extends ThemeExtension<LedgerColors> {
+  const LedgerColors({
+    required this.owedToYou,
+    required this.youOwe,
+    required this.cashIn,
+    required this.cashOut,
+    required this.settled,
+    required this.overpaid,
+  });
+
+  /// Someone owes you (an asset).
+  final Color owedToYou;
+
+  /// You owe someone.
+  final Color youOwe;
+
+  /// Payment received (cash in).
+  final Color cashIn;
+
+  /// Money given / paid out (cash out).
+  final Color cashOut;
+  final Color settled;
+  final Color overpaid;
+
+  static const light = LedgerColors(
+    owedToYou: Color(0xFF15803D),
+    youOwe: Color(0xFFB91C1C),
+    cashIn: Color(0xFF15803D),
+    cashOut: Color(0xFFB45309),
+    settled: Color(0xFF0F766E),
+    overpaid: Color(0xFF6D28D9),
+  );
+
+  static const dark = LedgerColors(
+    owedToYou: Color(0xFF4ADE80),
+    youOwe: Color(0xFFF87171),
+    cashIn: Color(0xFF4ADE80),
+    cashOut: Color(0xFFFBBF24),
+    settled: Color(0xFF2DD4BF),
+    overpaid: Color(0xFFA78BFA),
+  );
+
+  static LedgerColors of(BuildContext context) =>
+      Theme.of(context).extension<LedgerColors>() ?? light;
+
+  @override
+  LedgerColors copyWith({
+    Color? owedToYou,
+    Color? youOwe,
+    Color? cashIn,
+    Color? cashOut,
+    Color? settled,
+    Color? overpaid,
+  }) {
+    return LedgerColors(
+      owedToYou: owedToYou ?? this.owedToYou,
+      youOwe: youOwe ?? this.youOwe,
+      cashIn: cashIn ?? this.cashIn,
+      cashOut: cashOut ?? this.cashOut,
+      settled: settled ?? this.settled,
+      overpaid: overpaid ?? this.overpaid,
+    );
+  }
+
+  @override
+  LedgerColors lerp(ThemeExtension<LedgerColors>? other, double t) {
+    if (other is! LedgerColors) return this;
+    return LedgerColors(
+      owedToYou: Color.lerp(owedToYou, other.owedToYou, t)!,
+      youOwe: Color.lerp(youOwe, other.youOwe, t)!,
+      cashIn: Color.lerp(cashIn, other.cashIn, t)!,
+      cashOut: Color.lerp(cashOut, other.cashOut, t)!,
+      settled: Color.lerp(settled, other.settled, t)!,
+      overpaid: Color.lerp(overpaid, other.overpaid, t)!,
+    );
+  }
+}
 
 class AppTheme {
   AppTheme._();
 
-  // ── Hand-picked palette ──────────────────────────────────────────────
-  static const Color _indigo = Color(0xFF4F46E5);
-  static const Color _indigoLight = Color(0xFF818CF8);
-  static const Color _amber = Color(0xFFF59E0B);
-  static const Color _rose = Color(0xFFEF4444);
-  static const Color _emerald = Color(0xFF10B981);
-  static const Color _violet = Color(0xFF8B5CF6);
+  // ── Palette: one accent (teal) on neutral surfaces ───────────────────
+  static const Color _accent = Color(0xFF0F766E);
+  static const Color _accentLight = Color(0xFF2DD4BF);
+  static const Color _danger = Color(0xFFB91C1C);
 
-  // Semantic ledger colours (used throughout the app)
-  static const Color givenColor = _rose;
-  static const Color receivedColor = _emerald;
-  static const Color settledColor = _indigo;
-  static const Color overpaidColor = _violet;
+  // Legacy static colours, kept so existing call sites compile. Prefer
+  // LedgerColors.of(context) in new code.
+  static const Color givenColor = Color(0xFFB45309);
+  static const Color receivedColor = Color(0xFF15803D);
+  static const Color settledColor = _accent;
+  static const Color overpaidColor = Color(0xFF6D28D9);
 
-  // Screenshot inspired styling tokens
-  static const Color darkBannerBackground = Color(0xFF131438);
-  static const Color darkBannerSubtitle = Color(0xFFB4B3D4);
-  static const Color peachAccent = Color(0xFFFDECE7);
+  // Legacy banner/peach tokens, now neutralised.
+  static const Color darkBannerBackground = Color(0xFF0F1F1D);
+  static const Color darkBannerSubtitle = Color(0xFFB7C7C4);
+  static const Color peachAccent = Color(0xFFFEF2F2);
   static const Color peachAccentText = Color(0xFF7F1D1D);
-  static const Color peachBadge = Color(0xFFFCE3DC);
-  static const Color peachBadgeText = Color(0xFFDC2626);
-  static const Color cardBorderColor = Color(0xFFECECF6);
-  static const Color mutedLabel = Color(0xFF8C8CA8);
+  static const Color peachBadge = Color(0xFFFEE2E2);
+  static const Color peachBadgeText = Color(0xFFB91C1C);
+  static const Color cardBorderColor = Color(0xFFE6E6E1);
+  static const Color mutedLabel = Color(0xFF62656B);
 
   // ── Typography ───────────────────────────────────────────────────────
   static TextTheme _buildTextTheme(Brightness brightness) {
     final Color base =
         brightness == Brightness.light ? const Color(0xFF1C1917) : const Color(0xFFFAFAF9);
 
-    final headlineStyle = GoogleFonts.dmSans(color: base);
-    final bodyStyle = GoogleFonts.inter(color: base);
+    final headlineStyle = TextStyle(color: base);
+    final bodyStyle = TextStyle(color: base);
 
     return TextTheme(
-      displayLarge: headlineStyle.copyWith(fontSize: 57, fontWeight: FontWeight.w800, letterSpacing: -1.5),
-      displayMedium: headlineStyle.copyWith(fontSize: 45, fontWeight: FontWeight.w800, letterSpacing: -1.0),
+      displayLarge: headlineStyle.copyWith(fontSize: 57, fontWeight: FontWeight.w600, letterSpacing: -1.5),
+      displayMedium: headlineStyle.copyWith(fontSize: 45, fontWeight: FontWeight.w600, letterSpacing: -1.0),
       displaySmall: headlineStyle.copyWith(fontSize: 36, fontWeight: FontWeight.w700, letterSpacing: -0.5),
       headlineLarge: headlineStyle.copyWith(fontSize: 32, fontWeight: FontWeight.w700, letterSpacing: -0.5),
       headlineMedium: headlineStyle.copyWith(fontSize: 28, fontWeight: FontWeight.w700, letterSpacing: -0.3),
       headlineSmall: headlineStyle.copyWith(fontSize: 24, fontWeight: FontWeight.w600),
-      titleLarge: bodyStyle.copyWith(fontSize: 22, fontWeight: FontWeight.w700, letterSpacing: -0.2),
+      titleLarge: bodyStyle.copyWith(fontSize: 20, fontWeight: FontWeight.w600),
       titleMedium: bodyStyle.copyWith(fontSize: 16, fontWeight: FontWeight.w600),
       titleSmall: bodyStyle.copyWith(fontSize: 14, fontWeight: FontWeight.w600),
       bodyLarge: bodyStyle.copyWith(fontSize: 16, fontWeight: FontWeight.w400),
@@ -59,32 +158,32 @@ class AppTheme {
   static ThemeData light() {
     const colorScheme = ColorScheme(
       brightness: Brightness.light,
-      primary: _indigo,
+      primary: _accent,
       onPrimary: Colors.white,
-      primaryContainer: Color(0xFFEEF2FF),
-      onPrimaryContainer: Color(0xFF312E81),
-      secondary: _amber,
-      onSecondary: Color(0xFF1C1917),
-      secondaryContainer: Color(0xFFFEF3C7),
-      onSecondaryContainer: Color(0xFF78350F),
-      tertiary: _violet,
+      primaryContainer: Color(0xFFD7F0EC),
+      onPrimaryContainer: Color(0xFF053D38),
+      secondary: Color(0xFF475569),
+      onSecondary: Colors.white,
+      secondaryContainer: Color(0xFFE8ECF1),
+      onSecondaryContainer: Color(0xFF1E293B),
+      tertiary: Color(0xFFB45309),
       onTertiary: Colors.white,
-      tertiaryContainer: Color(0xFFF3E8FF),
-      onTertiaryContainer: Color(0xFF581C87),
-      error: _rose,
+      tertiaryContainer: Color(0xFFFEF3C7),
+      onTertiaryContainer: Color(0xFF78350F),
+      error: _danger,
       onError: Colors.white,
-      errorContainer: Color(0xFFFEF2F2),
-      onErrorContainer: Color(0xFF991B1B),
-      surface: Color(0xFFF6F7FB),
-      onSurface: Color(0xFF111227),
-      onSurfaceVariant: Color(0xFF74758C),
-      outline: Color(0xFFE2E4F0),
-      outlineVariant: Color(0xFFECECF6),
+      errorContainer: Color(0xFFFEE2E2),
+      onErrorContainer: Color(0xFF7F1D1D),
+      surface: Color(0xFFF7F7F4),
+      onSurface: Color(0xFF16181D),
+      onSurfaceVariant: Color(0xFF62656B),
+      outline: Color(0xFFCFCFC8),
+      outlineVariant: Color(0xFFE6E6E1),
       surfaceContainerLowest: Colors.white,
       surfaceContainerLow: Colors.white,
-      surfaceContainer: Color(0xFFEFF1FA),
-      surfaceContainerHigh: Color(0xFFE5E7F4),
-      surfaceContainerHighest: Color(0xFFDCDFEF),
+      surfaceContainer: Color(0xFFF0F0EC),
+      surfaceContainerHigh: Color(0xFFE8E8E3),
+      surfaceContainerHighest: Color(0xFFDFDFD9),
     );
 
     return _buildTheme(colorScheme, Brightness.light);
@@ -94,18 +193,18 @@ class AppTheme {
   static ThemeData dark() {
     const colorScheme = ColorScheme(
       brightness: Brightness.dark,
-      primary: _indigoLight,
-      onPrimary: Color(0xFF1E1B4B),
-      primaryContainer: Color(0xFF312E81),
-      onPrimaryContainer: Color(0xFFC7D2FE),
-      secondary: Color(0xFFFBBF24),
-      onSecondary: Color(0xFF1C1917),
-      secondaryContainer: Color(0xFF78350F),
-      onSecondaryContainer: Color(0xFFFDE68A),
-      tertiary: Color(0xFFA78BFA),
-      onTertiary: Color(0xFF1E1B4B),
-      tertiaryContainer: Color(0xFF4C1D95),
-      onTertiaryContainer: Color(0xFFDDD6FE),
+      primary: _accentLight,
+      onPrimary: Color(0xFF042F2B),
+      primaryContainer: Color(0xFF0B4A44),
+      onPrimaryContainer: Color(0xFFB5F0E8),
+      secondary: Color(0xFFA8B3C2),
+      onSecondary: Color(0xFF16181D),
+      secondaryContainer: Color(0xFF2B323C),
+      onSecondaryContainer: Color(0xFFDCE3EC),
+      tertiary: Color(0xFFFBBF24),
+      onTertiary: Color(0xFF1C1917),
+      tertiaryContainer: Color(0xFF78350F),
+      onTertiaryContainer: Color(0xFFFDE68A),
       error: Color(0xFFFB7185),
       onError: Color(0xFF1C1917),
       errorContainer: Color(0xFF7F1D1D),
@@ -135,6 +234,7 @@ class AppTheme {
       colorScheme: cs,
       textTheme: textTheme,
       scaffoldBackgroundColor: cs.surface,
+      extensions: [brightness == Brightness.dark ? LedgerColors.dark : LedgerColors.light],
 
       // App bar
       appBarTheme: AppBarTheme(
@@ -149,7 +249,10 @@ class AppTheme {
       cardTheme: CardThemeData(
         elevation: 0,
         color: cs.surfaceContainerLow,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppRadius.md),
+          side: BorderSide(color: cs.outlineVariant),
+        ),
         margin: EdgeInsets.zero,
       ),
 
@@ -167,7 +270,7 @@ class AppTheme {
           return IconThemeData(color: cs.onSurfaceVariant, size: 24);
         }),
         labelTextStyle: WidgetStateProperty.resolveWith((states) {
-          final style = GoogleFonts.inter(fontSize: 12);
+          final style = TextStyle(fontSize: 12);
           if (states.contains(WidgetState.selected)) {
             return style.copyWith(fontWeight: FontWeight.w700, color: cs.primary);
           }
@@ -177,11 +280,11 @@ class AppTheme {
 
       // FAB
       floatingActionButtonTheme: FloatingActionButtonThemeData(
-        elevation: 4,
-        highlightElevation: 8,
+        elevation: 1,
+        highlightElevation: 2,
         backgroundColor: cs.primary,
         foregroundColor: cs.onPrimary,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppRadius.md)),
       ),
 
       // Inputs
@@ -218,7 +321,7 @@ class AppTheme {
         modalBackgroundColor: cs.surfaceContainerLow,
         dragHandleColor: cs.outline,
         shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.xl)),
         ),
       ),
 
@@ -244,14 +347,14 @@ class AppTheme {
         style: FilledButton.styleFrom(
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-          textStyle: GoogleFonts.inter(fontSize: 15, fontWeight: FontWeight.w700),
+          textStyle: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
         ),
       ),
 
       // Text Button
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
-          textStyle: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600),
+          textStyle: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
         ),
       ),
     );

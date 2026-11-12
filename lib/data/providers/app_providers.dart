@@ -195,7 +195,9 @@ final topDebtorsProvider = Provider<List<PersonSummary>>((ref) {
   final summariesAsync = ref.watch(allPersonSummariesProvider);
   return summariesAsync.maybeWhen(
     data: (list) {
-      final owing = list.where((s) => !s.person.isArchived && s.owesMoney).toList();
+      final owing = list
+          .where((s) => s.person.id != AppConstants.selfPersonId && !s.person.isArchived && s.owesMoney)
+          .toList();
       owing.sort((a, b) => b.balance.compareTo(a.balance));
       return owing;
     },
@@ -245,6 +247,8 @@ final dashboardTotalsProvider = Provider<DashboardTotals>((ref) {
       int userOwesCount = 0;
 
       for (final s in list) {
+        // The "self" row only holds the user's own EMIs/expenses, never money owed by/to others.
+        if (s.person.id == AppConstants.selfPersonId) continue;
         if (!s.person.isArchived) {
           if (s.balance > 0.0001) {
             theyOwe += s.balance;
@@ -277,7 +281,10 @@ final topPeopleByBalanceProvider = Provider<List<PersonSummary>>((ref) {
   final summariesAsync = ref.watch(allPersonSummariesProvider);
   return summariesAsync.maybeWhen(
     data: (list) {
-      final active = list.where((s) => !s.person.isArchived && s.balance.abs() > 0.0001).toList();
+      final active = list
+          .where((s) =>
+              s.person.id != AppConstants.selfPersonId && !s.person.isArchived && s.balance.abs() > 0.0001)
+          .toList();
       active.sort((a, b) => b.balance.abs().compareTo(a.balance.abs()));
       return active.take(5).toList();
     },

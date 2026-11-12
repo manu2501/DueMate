@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:duemate/core/utils/currency_formatter.dart';
 import 'package:duemate/core/widgets/animated_currency_text.dart';
 import 'package:duemate/data/providers/app_providers.dart';
@@ -26,7 +25,7 @@ class MonthlyBudgetCard extends ConsumerWidget {
               child: Icon(Icons.tune_rounded, color: Theme.of(context).colorScheme.primary, size: 20),
             ),
             const SizedBox(width: 10),
-            const Text('Set Monthly Budget Cap'),
+            const Text('Monthly budget'),
           ],
         ),
         content: Column(
@@ -41,10 +40,10 @@ class MonthlyBudgetCard extends ConsumerWidget {
             TextField(
               controller: controller,
               keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              decoration: const InputDecoration(
-                labelText: 'Monthly Budget Limit',
+              decoration: InputDecoration(
+                labelText: 'Limit per month',
                 hintText: 'e.g. 25000',
-                prefixText: '₹ ',
+                prefixText: '${ref.read(currencySymbolProvider)} ',
               ),
             ),
           ],
@@ -61,11 +60,11 @@ class MonthlyBudgetCard extends ConsumerWidget {
                 ref.read(monthlyBudgetLimitProvider.notifier).setBudget(newCap);
                 Navigator.of(ctx).pop();
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Monthly budget cap updated')),
+                  const SnackBar(content: Text('Budget updated')),
                 );
               }
             },
-            child: const Text('Save Limit'),
+            child: const Text('Save'),
           ),
         ],
       ),
@@ -134,7 +133,7 @@ class MonthlyBudgetCard extends ConsumerWidget {
                   children: [
                     Text(
                       'Personal Expenses & Budget',
-                      style: GoogleFonts.inter(
+                      style: TextStyle(
                         fontSize: 13.5,
                         fontWeight: FontWeight.w700,
                         color: cs.onSurface,
@@ -142,7 +141,7 @@ class MonthlyBudgetCard extends ConsumerWidget {
                     ),
                     Text(
                       statusMessage,
-                      style: GoogleFonts.inter(
+                      style: TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.w600,
                         color: statusColor,
@@ -163,15 +162,15 @@ class MonthlyBudgetCard extends ConsumerWidget {
                     AnimatedCurrencyText(
                       amount: totalSpent,
                       currencySymbol: currencySymbol,
-                      style: GoogleFonts.dmSans(
+                      style: TextStyle(
                         fontSize: 24,
-                        fontWeight: FontWeight.w800,
+                        fontWeight: FontWeight.w600,
                         color: statusColor,
                       ),
                     ),
                     Text(
                       ' spent',
-                      style: GoogleFonts.inter(
+                      style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w500,
                         color: cs.onSurfaceVariant,
@@ -196,7 +195,7 @@ class MonthlyBudgetCard extends ConsumerWidget {
                       children: [
                         Text(
                           'Cap: ${CurrencyFormatter.formatCompact(budgetLimit, symbol: currencySymbol)}',
-                          style: GoogleFonts.inter(
+                          style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w700,
                             color: cs.primary,
@@ -228,7 +227,7 @@ class MonthlyBudgetCard extends ConsumerWidget {
               children: [
                 Text(
                   '${CurrencyFormatter.formatCompact(remaining, symbol: currencySymbol)} remaining ($percentUsed% used)',
-                  style: GoogleFonts.inter(
+                  style: TextStyle(
                     fontSize: 11.5,
                     fontWeight: FontWeight.w600,
                     color: cs.onSurfaceVariant,
@@ -243,7 +242,7 @@ class MonthlyBudgetCard extends ConsumerWidget {
                       const SizedBox(width: 2),
                       Text(
                         'Log Expense',
-                        style: GoogleFonts.inter(
+                        style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w700,
                           color: cs.primary,

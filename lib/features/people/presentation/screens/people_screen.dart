@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:uuid/uuid.dart';
 import 'package:duemate/core/utils/contacts_helper.dart';
 import 'package:duemate/core/widgets/empty_state_widget.dart';
@@ -42,10 +41,7 @@ class _PeopleScreenState extends ConsumerState<PeopleScreen> {
     setState(() => _isImporting = true);
     try {
       final contact = await ContactsHelper.pickContact();
-      if (contact == null) {
-        setState(() => _isImporting = false);
-        return;
-      }
+      if (contact == null) return;
 
       final allPersons = await ref.read(allPersonSummariesProvider.future);
       final contactName = contact.name.trim();
@@ -53,13 +49,15 @@ class _PeopleScreenState extends ConsumerState<PeopleScreen> {
       final normPhone = contactPhone.isNotEmpty ? _normalizePhone(contactPhone) : '';
 
       final existing = allPersons.where((s) {
-        final sameName = s.person.name.trim().toLowerCase() == contactName.toLowerCase();
-        bool samePhone = false;
-        if (normPhone.isNotEmpty && s.person.phone != null && s.person.phone!.trim().isNotEmpty) {
-          final existingNorm = _normalizePhone(s.person.phone!);
-          samePhone = existingNorm.isNotEmpty && existingNorm == normPhone;
+        // Phone numbers decide it when both sides have one; otherwise fall
+        // back to the name, so different people sharing a name can coexist.
+        final existingNorm = (s.person.phone ?? '').trim().isNotEmpty
+            ? _normalizePhone(s.person.phone!)
+            : '';
+        if (normPhone.isNotEmpty && existingNorm.isNotEmpty) {
+          return existingNorm == normPhone;
         }
-        return sameName || samePhone;
+        return s.person.name.trim().toLowerCase() == contactName.toLowerCase();
       }).firstOrNull;
 
       if (existing != null) {
@@ -67,9 +65,11 @@ class _PeopleScreenState extends ConsumerState<PeopleScreen> {
           showDialog(
             context: context,
             builder: (ctx) => AlertDialog(
-              title: const Text('Contact Already Exists'),
+              title: const Text('Already in your ledger'),
               content: Text(
-                '${existing.person.name} (${existing.person.phone ?? 'No phone'}) is already in your ledger.',
+                existing.person.phone == null || existing.person.phone!.isEmpty
+                    ? '${existing.person.name} is already in your ledger.'
+                    : '${existing.person.name} (${existing.person.phone}) is already in your ledger.',
               ),
               actions: [
                 TextButton(
@@ -81,7 +81,7 @@ class _PeopleScreenState extends ConsumerState<PeopleScreen> {
                     Navigator.of(ctx).pop();
                     context.push('/people/${existing.person.id}');
                   },
-                  child: const Text('Open Ledger'),
+                  child: const Text('Open ledger'),
                 ),
               ],
             ),
@@ -96,7 +96,6 @@ class _PeopleScreenState extends ConsumerState<PeopleScreen> {
         name: contact.name,
         phone: contact.phone,
         email: contact.email,
-        notes: 'Imported from phone contacts',
         createdAt: now,
         updatedAt: now,
       );
@@ -106,7 +105,7 @@ class _PeopleScreenState extends ConsumerState<PeopleScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Added ${newPerson.name} to ledger'),
+            content: Text('${newPerson.name} added'),
           ),
         );
         context.push('/people/${newPerson.id}');
@@ -114,7 +113,7 @@ class _PeopleScreenState extends ConsumerState<PeopleScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Could not read contact: $e')),
+          const SnackBar(content: Text("Couldn't read that contact.")),
         );
       }
     } finally {
@@ -141,14 +140,14 @@ class _PeopleScreenState extends ConsumerState<PeopleScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Sort People',
+                'Sort by',
                 style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
               ),
               const SizedBox(height: 14),
-              _sortItem('Highest Outstanding', PeopleSort.highestOutstanding, currentSort, Icons.trending_up_rounded, cs),
-              _sortItem('Recently Active', PeopleSort.recentlyActive, currentSort, Icons.history_rounded, cs),
-              _sortItem('Alphabetical (A - Z)', PeopleSort.alphabetical, currentSort, Icons.sort_by_alpha_rounded, cs),
-              _sortItem('Recently Added', PeopleSort.recentlyAdded, currentSort, Icons.schedule_rounded, cs),
+              _sortItem('Largest balance', PeopleSort.highestOutstanding, currentSort, Icons.trending_up_rounded, cs),
+              _sortItem('Recent activity', PeopleSort.recentlyActive, currentSort, Icons.history_rounded, cs),
+              _sortItem('Name (A–Z)', PeopleSort.alphabetical, currentSort, Icons.sort_by_alpha_rounded, cs),
+              _sortItem('Recently added', PeopleSort.recentlyAdded, currentSort, Icons.schedule_rounded, cs),
             ],
           ),
         ),
@@ -211,17 +210,17 @@ class _PeopleScreenState extends ConsumerState<PeopleScreen> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Text(
-                        'Directory',
-                        style: GoogleFonts.dmSans(
+                        'People',
+                        style: TextStyle(
                           fontSize: 22,
-                          fontWeight: FontWeight.w800,
+                          fontWeight: FontWeight.w600,
                           letterSpacing: -0.4,
-                          color: theme.brightness == Brightness.dark ? Colors.white : const Color(0xFF131438),
+                          color: Theme.of(context).colorScheme.onSurface,
                         ),
                       ),
                       Text(
                         '$totalCount Contacts • $activeDuesCount Active Dues',
-                        style: GoogleFonts.inter(
+                        style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w500,
                           color: cs.onSurfaceVariant,
@@ -256,11 +255,11 @@ class _PeopleScreenState extends ConsumerState<PeopleScreen> {
         ),
       ),
       floatingActionButton: Padding(
-        padding: const EdgeInsets.only(bottom: 84),
+        padding: const EdgeInsets.only(bottom: 88),
         child: FloatingActionButton.extended(
           onPressed: () => AddEditPersonScreen.show(context),
           icon: const Icon(Icons.person_add_rounded, size: 20),
-          label: Text('Add Person', style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
+          label: Text('Add person', style: TextStyle(fontWeight: FontWeight.w700)),
         ),
       ),
       body: Column(
@@ -278,7 +277,7 @@ class _PeopleScreenState extends ConsumerState<PeopleScreen> {
                   side: BorderSide(color: cs.outlineVariant),
                 ),
               ),
-              hintText: 'Search people or notes...',
+              hintText: 'Search by name, phone or notes',
               hintStyle: WidgetStatePropertyAll(
                 TextStyle(color: cs.onSurfaceVariant, fontSize: 14),
               ),

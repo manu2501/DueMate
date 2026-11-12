@@ -124,7 +124,7 @@ class NotificationService {
       await _notificationsPlugin.show(
         id: 9999,
         title: '🔔 DueMate Notification Test',
-        body: 'Smart due date notifications are working perfectly!',
+        body: 'Notifications are working.',
         notificationDetails: details,
       );
       return true;

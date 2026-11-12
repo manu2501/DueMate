@@ -54,8 +54,8 @@ class DashboardQuickActionSheet extends StatelessWidget {
             ),
             child: Icon(Icons.north_east_rounded, color: cs.error),
           ),
-          title: const Text('Give Money (Loan / Advance)'),
-          subtitle: const Text('Record money you gave to someone'),
+          title: const Text('Give money'),
+          subtitle: const Text('A loan or advance to someone'),
           onTap: () {
             Navigator.of(context).pop();
             QuickGiveSheet.show(context);
@@ -75,8 +75,8 @@ class DashboardQuickActionSheet extends StatelessWidget {
             ),
             child: Icon(Icons.south_west_rounded, color: cs.primary),
           ),
-          title: const Text('Receive Money (Repayment)'),
-          subtitle: const Text('Record a repayment collected from someone'),
+          title: const Text('Receive money'),
+          subtitle: const Text('A repayment from someone'),
           onTap: () {
             Navigator.of(context).pop();
             QuickReceiveSheet.show(context);
@@ -91,13 +91,13 @@ class DashboardQuickActionSheet extends StatelessWidget {
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: Colors.purple.withValues(alpha: 0.12),
+              color: Theme.of(context).colorScheme.secondary.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: const Icon(Icons.event_repeat_rounded, color: Colors.purple),
+            child: Icon(Icons.event_repeat_rounded, color: Theme.of(context).colorScheme.secondary),
           ),
-          title: const Text('Add EMI or Monthly Loan'),
-          subtitle: const Text('Track monthly installments for cards & loans'),
+          title: const Text('Add EMI or loan'),
+          subtitle: const Text('Track monthly installments'),
           onTap: () {
             Navigator.of(context).pop();
             AddEditEmiScreen.show(context);
@@ -117,8 +117,8 @@ class DashboardQuickActionSheet extends StatelessWidget {
             ),
             child: Icon(Icons.person_add_outlined, color: cs.secondary),
           ),
-          title: const Text('Add Person'),
-          subtitle: const Text('Create a new contact in your ledger'),
+          title: const Text('Add person'),
+          subtitle: const Text('Start a ledger for someone new'),
           onTap: () {
             Navigator.of(context).pop();
             AddEditPersonScreen.show(context);

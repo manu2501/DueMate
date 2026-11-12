@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:duemate/core/utils/csv_exporter.dart';
 import 'package:duemate/core/utils/pdf_exporter.dart';
 import 'package:duemate/core/utils/currency_formatter.dart';
@@ -217,17 +216,17 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> with SingleTicker
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Text(
-                            'Transactions & Outflows',
-                            style: GoogleFonts.dmSans(
+                            'Activity',
+                            style: TextStyle(
                               fontSize: 22,
-                              fontWeight: FontWeight.w800,
+                              fontWeight: FontWeight.w600,
                               letterSpacing: -0.4,
-                              color: isDark ? Colors.white : const Color(0xFF131438),
+                              color: Theme.of(context).colorScheme.onSurface,
                             ),
                           ),
                           Text(
                             '${activityTimeline.length} Items • ${CurrencyFormatter.formatCompact(totalVolume, symbol: currencySymbol)} Total Volume',
-                            style: GoogleFonts.inter(
+                            style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w500,
                               color: cs.onSurfaceVariant,
@@ -271,8 +270,8 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> with SingleTicker
               TabBar(
                 controller: _tabController,
                 indicatorSize: TabBarIndicatorSize.tab,
-                labelStyle: GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 13),
-                unselectedLabelStyle: GoogleFonts.inter(fontWeight: FontWeight.w500, fontSize: 13),
+                labelStyle: TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+                unselectedLabelStyle: TextStyle(fontWeight: FontWeight.w500, fontSize: 13),
                 tabs: const [
                   Tab(text: 'Activity Feed'),
                   Tab(text: 'By Person'),
@@ -297,7 +296,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> with SingleTicker
                   side: BorderSide(color: cs.outlineVariant),
                 ),
               ),
-              hintText: 'Search title, contact, or notes...',
+              hintText: 'Search by title, person or note',
               hintStyle: WidgetStatePropertyAll(
                 TextStyle(color: cs.onSurfaceVariant, fontSize: 13.5),
               ),
@@ -324,19 +323,19 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> with SingleTicker
               children: [
                 // Type Filter Chips
                 ChoiceChip(
-                  label: const Text('All Types'),
+                  label: const Text('All'),
                   selected: _typeFilter == ActivityTypeFilter.all,
                   onSelected: (_) => setState(() => _typeFilter = ActivityTypeFilter.all),
                 ),
                 const SizedBox(width: 6),
                 ChoiceChip(
-                  label: const Text('Ledger Dues'),
+                  label: const Text('Lending'),
                   selected: _typeFilter == ActivityTypeFilter.ledger,
                   onSelected: (_) => setState(() => _typeFilter = ActivityTypeFilter.ledger),
                 ),
                 const SizedBox(width: 6),
                 ChoiceChip(
-                  label: const Text('Personal Expenses'),
+                  label: const Text('Expenses'),
                   selected: _typeFilter == ActivityTypeFilter.expenses,
                   onSelected: (_) => setState(() => _typeFilter = ActivityTypeFilter.expenses),
                 ),
@@ -368,7 +367,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> with SingleTicker
 
                 // Payment Mode Filter Chips
                 ChoiceChip(
-                  label: const Text('All Modes'),
+                  label: const Text('Any method'),
                   selected: _paymentMethodFilter == null,
                   onSelected: (_) => setState(() => _paymentMethodFilter = null),
                 ),
@@ -392,7 +391,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> with SingleTicker
                 ),
                 const SizedBox(width: 6),
                 ChoiceChip(
-                  label: const Text('Bank Transfer'),
+                  label: const Text('Bank'),
                   selected: _paymentMethodFilter == PaymentMethod.bankTransfer,
                   onSelected: (_) => setState(() => _paymentMethodFilter = PaymentMethod.bankTransfer),
                 ),
@@ -489,11 +488,11 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> with SingleTicker
                     activityTimeline.isEmpty
                         ? const EmptyStateWidget(
                             icon: Icons.filter_list_off_rounded,
-                            title: 'No activity matching filters',
-                            description: 'Try adjusting your search query, type, or date filters above.',
+                            title: 'Nothing matches these filters',
+                            description: 'Try a different search, type or date range.',
                           )
                         : Container(
-                            margin: const EdgeInsets.fromLTRB(20, 4, 20, 140),
+                            margin: const EdgeInsets.fromLTRB(20, 4, 20, 24),
                             decoration: BoxDecoration(
                               color: cs.surfaceContainerLow,
                               borderRadius: BorderRadius.circular(20),
@@ -547,10 +546,10 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> with SingleTicker
                                       ),
                                       title: Text(
                                         expense.title,
-                                        style: GoogleFonts.inter(
+                                        style: TextStyle(
                                           fontSize: 14.5,
                                           fontWeight: FontWeight.w700,
-                                          color: isDark ? Colors.white : const Color(0xFF131438),
+                                          color: Theme.of(context).colorScheme.onSurface,
                                         ),
                                       ),
                                       subtitle: Text(
@@ -559,9 +558,9 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> with SingleTicker
                                       ),
                                       trailing: Text(
                                         '-${CurrencyFormatter.format(expense.amount, symbol: currencySymbol)}',
-                                        style: GoogleFonts.dmSans(
+                                        style: TextStyle(
                                           fontSize: 15,
-                                          fontWeight: FontWeight.w800,
+                                          fontWeight: FontWeight.w600,
                                           color: cs.error,
                                         ),
                                       ),
@@ -577,11 +576,11 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> with SingleTicker
                     filteredPersonSummaries.isEmpty
                         ? const EmptyStateWidget(
                             icon: Icons.people_outline_rounded,
-                            title: 'No contact activity matching filters',
-                            description: 'Try adjusting your search query or filters above.',
+                            title: 'Nothing matches these filters',
+                            description: 'Try a different search or filter.',
                           )
                         : Container(
-                            margin: const EdgeInsets.fromLTRB(20, 4, 20, 140),
+                            margin: const EdgeInsets.fromLTRB(20, 4, 20, 24),
                             decoration: BoxDecoration(
                               color: cs.surfaceContainerLow,
                               borderRadius: BorderRadius.circular(20),
@@ -611,8 +610,8 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> with SingleTicker
                                   ),
                                   trailing: Text(
                                     CurrencyFormatter.format(s.balance, symbol: currencySymbol),
-                                    style: GoogleFonts.inter(
-                                      fontWeight: FontWeight.w800,
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w600,
                                       fontSize: 14,
                                       color: s.balance > 0.001
                                           ? cs.error
@@ -630,7 +629,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> with SingleTicker
                 );
               },
               loading: () => const Center(child: CircularProgressIndicator()),
-              error: (err, _) => Center(child: Text('Error: $err')),
+              error: (err, _) => const Center(child: Text("Couldn't load this. Please try again.")),
             ),
           ),
         ],
@@ -672,9 +671,9 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> with SingleTicker
             const SizedBox(height: 4),
             Text(
               CurrencyFormatter.formatCompact(amount, symbol: symbol),
-              style: GoogleFonts.dmSans(
+              style: TextStyle(
                 fontSize: 15,
-                fontWeight: FontWeight.w800,
+                fontWeight: FontWeight.w600,
                 color: accent,
               ),
             ),

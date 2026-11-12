@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:uuid/uuid.dart';
 import 'package:duemate/core/utils/contacts_helper.dart';
 import 'package:duemate/core/utils/currency_formatter.dart';
@@ -97,7 +96,7 @@ class _PersonPickerSheetState extends ConsumerState<PersonPickerSheet> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Could not read contact: $e')),
+          const SnackBar(content: Text("Couldn't read that contact.")),
         );
       }
     } finally {
@@ -267,7 +266,7 @@ class _PersonPickerSheetState extends ConsumerState<PersonPickerSheet> {
                 );
               },
               loading: () => const Center(child: CircularProgressIndicator()),
-              error: (e, _) => Center(child: Text('Error loading people: $e')),
+              error: (e, _) => const Center(child: Text("Couldn't load people.")),
             ),
           ),
         ],
@@ -339,9 +338,9 @@ class _PersonPickerItem extends StatelessWidget {
             ),
             Text(
               badgeText,
-              style: GoogleFonts.inter(
+              style: TextStyle(
                 fontSize: 13,
-                fontWeight: FontWeight.w800,
+                fontWeight: FontWeight.w600,
                 color: badgeColor,
               ),
             ),

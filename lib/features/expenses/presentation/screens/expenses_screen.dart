@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:duemate/core/utils/currency_formatter.dart';
 import 'package:duemate/core/utils/date_formatter.dart';
 import 'package:duemate/core/widgets/empty_state_widget.dart';
@@ -91,8 +90,8 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> with SingleTick
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Delete Expense?'),
-        content: Text('Are you sure you want to delete "${expense.title}"?'),
+        title: const Text('Delete this expense?'),
+        content: Text('"${expense.title}" will be removed from your expenses.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
@@ -123,7 +122,6 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> with SingleTick
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
-    final isDark = theme.brightness == Brightness.dark;
 
     final currencySymbol = ref.watch(currencySymbolProvider);
     final monthlyExpensesAsync = ref.watch(monthlyExpensesProvider);
@@ -152,17 +150,17 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> with SingleTick
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Text(
-                            'My Expenses & Outflows',
-                            style: GoogleFonts.dmSans(
+                            'Expenses',
+                            style: TextStyle(
                               fontSize: 22,
-                              fontWeight: FontWeight.w800,
+                              fontWeight: FontWeight.w600,
                               letterSpacing: -0.4,
-                              color: isDark ? Colors.white : const Color(0xFF131438),
+                              color: Theme.of(context).colorScheme.onSurface,
                             ),
                           ),
                           Text(
                             '${monthlyExpenses.length} Outflows • ${CurrencyFormatter.format(totalSpent, symbol: currencySymbol)} Spent This Month',
-                            style: GoogleFonts.inter(
+                            style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w500,
                               color: cs.onSurfaceVariant,
@@ -182,8 +180,8 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> with SingleTick
               TabBar(
                 controller: _tabController,
                 indicatorSize: TabBarIndicatorSize.tab,
-                labelStyle: GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 13),
-                unselectedLabelStyle: GoogleFonts.inter(fontWeight: FontWeight.w500, fontSize: 13),
+                labelStyle: TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+                unselectedLabelStyle: TextStyle(fontWeight: FontWeight.w500, fontSize: 13),
                 tabs: const [
                   Tab(text: 'Personal Outflows'),
                   Tab(text: 'EMIs & Bank Loans'),
@@ -194,11 +192,11 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> with SingleTick
         ),
       ),
       floatingActionButton: Padding(
-        padding: const EdgeInsets.only(bottom: 84),
+        padding: const EdgeInsets.only(bottom: 88),
         child: FloatingActionButton.extended(
           onPressed: () => AddEditExpenseSheet.show(context),
           icon: const Icon(Icons.add_rounded, size: 20),
-          label: Text('Log Expense', style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
+          label: Text('Add expense', style: TextStyle(fontWeight: FontWeight.w700)),
         ),
       ),
       body: Column(
@@ -215,9 +213,9 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> with SingleTick
                 monthlyExpenses.isEmpty
                     ? EmptyStateWidget(
                         icon: Icons.receipt_long_outlined,
-                        title: 'No personal expenses logged this month',
-                        description: 'Tap Log Expense below to record your daily outflows.',
-                        actionLabel: 'Log Expense',
+                        title: 'No expenses this month',
+                        description: 'Add what you spend and it shows up here.',
+                        actionLabel: 'Add expense',
                         onActionPressed: () => AddEditExpenseSheet.show(context),
                       )
                     : ListView(
@@ -252,7 +250,7 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> with SingleTick
                                         children: [
                                           Text(
                                             'View Expense Analytics & Charts',
-                                            style: GoogleFonts.inter(
+                                            style: TextStyle(
                                               fontSize: 14,
                                               fontWeight: FontWeight.w700,
                                               color: cs.primary,
@@ -260,7 +258,7 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> with SingleTick
                                           ),
                                           Text(
                                             'Month-over-month trends & category usage',
-                                            style: GoogleFonts.inter(
+                                            style: TextStyle(
                                               fontSize: 11.5,
                                               color: cs.onSurfaceVariant,
                                             ),
@@ -312,10 +310,10 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> with SingleTick
                                     ),
                                     title: Text(
                                       expense.title,
-                                      style: GoogleFonts.inter(
+                                      style: TextStyle(
                                         fontSize: 14.5,
                                         fontWeight: FontWeight.w700,
-                                        color: isDark ? Colors.white : const Color(0xFF131438),
+                                        color: Theme.of(context).colorScheme.onSurface,
                                       ),
                                     ),
                                     subtitle: Text(
@@ -327,9 +325,9 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> with SingleTick
                                       children: [
                                         Text(
                                           CurrencyFormatter.format(expense.amount, symbol: currencySymbol),
-                                          style: GoogleFonts.dmSans(
+                                          style: TextStyle(
                                             fontSize: 15,
-                                            fontWeight: FontWeight.w800,
+                                            fontWeight: FontWeight.w600,
                                             color: cs.error,
                                           ),
                                         ),
@@ -360,13 +358,13 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> with SingleTick
                           child: Row(
                             children: [
                               ChoiceChip(
-                                label: const Text('For Myself'),
+                                label: const Text('Mine'),
                                 selected: _emiOwnershipFilter == 0,
                                 onSelected: (_) => setState(() => _emiOwnershipFilter = 0),
                               ),
                               const SizedBox(width: 8),
                               ChoiceChip(
-                                label: const Text('For Others'),
+                                label: const Text('For others'),
                                 selected: _emiOwnershipFilter == 1,
                                 onSelected: (_) => setState(() => _emiOwnershipFilter = 1),
                               ),
@@ -413,7 +411,7 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> with SingleTick
                     );
                   },
                   loading: () => const Center(child: CircularProgressIndicator()),
-                  error: (err, _) => Center(child: Text('Error: $err')),
+                  error: (err, _) => const Center(child: Text("Couldn't load this. Please try again.")),
                 ),
               ],
             ),

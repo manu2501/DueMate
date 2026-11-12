@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:duemate/core/utils/currency_formatter.dart';
 
 class EmiBreakdownCard extends StatelessWidget {
@@ -26,7 +25,7 @@ class EmiBreakdownCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
-    final accentColor = isLoan ? const Color(0xFF0D9488) : Colors.purple;
+    final accentColor = isLoan ? const Color(0xFF0D9488) : Theme.of(context).colorScheme.secondary;
 
     return Container(
       padding: const EdgeInsets.all(14),
@@ -44,11 +43,11 @@ class EmiBreakdownCard extends StatelessWidget {
             children: [
               Text(
                 isLoan ? 'Principal Loan:' : 'Base Amount:',
-                style: GoogleFonts.inter(fontSize: 12.5, color: cs.onSurfaceVariant),
+                style: TextStyle(fontSize: 12.5, color: cs.onSurfaceVariant),
               ),
               Text(
                 CurrencyFormatter.format(baseAmount, symbol: currencySymbol),
-                style: GoogleFonts.dmSans(fontSize: 13, fontWeight: FontWeight.w600),
+                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
               ),
             ],
           ),
@@ -59,11 +58,11 @@ class EmiBreakdownCard extends StatelessWidget {
               children: [
                 Text(
                   isLoan ? 'Interest / Extra Charges:' : 'Additional Charges:',
-                  style: GoogleFonts.inter(fontSize: 12.5, color: cs.onSurfaceVariant),
+                  style: TextStyle(fontSize: 12.5, color: cs.onSurfaceVariant),
                 ),
                 Text(
                   '+ ${CurrencyFormatter.format(charges, symbol: currencySymbol)}',
-                  style: GoogleFonts.dmSans(
+                  style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
                     color: cs.error,
@@ -81,7 +80,7 @@ class EmiBreakdownCard extends StatelessWidget {
             children: [
               Text(
                 'Total Payable Amount:',
-                style: GoogleFonts.inter(
+                style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w700,
                   color: cs.onSurface,
@@ -89,9 +88,9 @@ class EmiBreakdownCard extends StatelessWidget {
               ),
               Text(
                 CurrencyFormatter.format(totalPayable, symbol: currencySymbol),
-                style: GoogleFonts.dmSans(
+                style: TextStyle(
                   fontSize: 15,
-                  fontWeight: FontWeight.w800,
+                  fontWeight: FontWeight.w600,
                   color: accentColor,
                 ),
               ),
@@ -103,7 +102,7 @@ class EmiBreakdownCard extends StatelessWidget {
             children: [
               Text(
                 'Monthly Installment:',
-                style: GoogleFonts.inter(
+                style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w700,
                   color: cs.onSurface,
@@ -111,9 +110,9 @@ class EmiBreakdownCard extends StatelessWidget {
               ),
               Text(
                 '${CurrencyFormatter.format(monthlyInstallment, symbol: currencySymbol)} / mo',
-                style: GoogleFonts.dmSans(
+                style: TextStyle(
                   fontSize: 15,
-                  fontWeight: FontWeight.w800,
+                  fontWeight: FontWeight.w600,
                   color: cs.primary,
                 ),
               ),

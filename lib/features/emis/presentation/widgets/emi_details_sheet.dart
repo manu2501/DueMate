@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:duemate/core/constants/app_constants.dart';
 import 'package:duemate/core/widgets/whatsapp_icon.dart';
 import 'package:duemate/core/utils/currency_formatter.dart';
@@ -40,19 +39,19 @@ class EmiDetailsSheet extends ConsumerWidget {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text('Edit Month $installmentNum Amount'),
+        title: Text('Month $installmentNum amount'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Customize the specific installment amount for month $installmentNum of ${emi.itemName}.'),
+            Text('Change what you pay for ${emi.itemName} in month $installmentNum. Other months are unchanged.'),
             const SizedBox(height: 14),
             TextField(
               controller: controller,
               keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              decoration: const InputDecoration(
-                labelText: 'Installment Amount',
-                prefixText: '₹ ',
+              decoration: InputDecoration(
+                labelText: 'Amount',
+                prefixText: '${ref.read(currencySymbolProvider)} ',
               ),
             ),
           ],
@@ -84,11 +83,11 @@ class EmiDetailsSheet extends ConsumerWidget {
 
               if (context.mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Month $installmentNum installment updated to ₹${newAmount.toStringAsFixed(0)}')),
+                  SnackBar(content: Text('Month $installmentNum set to ${CurrencyFormatter.format(newAmount, symbol: ref.read(currencySymbolProvider))}')),
                 );
               }
             },
-            child: const Text('Save Amount'),
+            child: const Text('Save'),
           ),
         ],
       ),
@@ -99,9 +98,9 @@ class EmiDetailsSheet extends ConsumerWidget {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Delete this EMI / Loan tracking?'),
+        title: const Text('Delete this schedule?'),
         content: const Text(
-          'This will remove this schedule. Any past installments already recorded in the ledger will remain intact.',
+          'The schedule is removed. Installments already posted to the ledger stay there, so balances don\'t change.',
         ),
         actions: [
           TextButton(
@@ -134,7 +133,6 @@ class EmiDetailsSheet extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
-    final isDark = theme.brightness == Brightness.dark;
     final currencySymbol = ref.watch(currencySymbolProvider);
 
     final isCompleted = emi.isCompleted;
@@ -148,7 +146,7 @@ class EmiDetailsSheet extends ConsumerWidget {
 
     final accentColor = isCompleted
         ? cs.primary
-        : (isLoan ? const Color(0xFF0D9488) : Colors.purple);
+        : (isLoan ? const Color(0xFF0D9488) : Theme.of(context).colorScheme.secondary);
 
     final bottomPadding = MediaQuery.of(context).padding.bottom;
 
@@ -202,16 +200,16 @@ class EmiDetailsSheet extends ConsumerWidget {
                         children: [
                           Text(
                             emi.itemName,
-                            style: GoogleFonts.dmSans(
+                            style: TextStyle(
                               fontSize: 18,
-                              fontWeight: FontWeight.w800,
-                              color: isDark ? Colors.white : const Color(0xFF131438),
+                              fontWeight: FontWeight.w600,
+                              color: Theme.of(context).colorScheme.onSurface,
                             ),
                           ),
                           const SizedBox(height: 3),
                           Text(
                             '${emi.cardName} • With $personName',
-                            style: GoogleFonts.inter(
+                            style: TextStyle(
                               fontSize: 13,
                               color: cs.onSurfaceVariant,
                             ),
@@ -229,7 +227,7 @@ class EmiDetailsSheet extends ConsumerWidget {
                       ),
                       child: Text(
                         isCompleted ? 'COMPLETED' : (isLoan ? 'LOAN EMI' : 'CARD EMI'),
-                        style: GoogleFonts.inter(
+                        style: TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.w700,
                           color: isCompleted ? cs.primary : accentColor,
@@ -270,10 +268,10 @@ class EmiDetailsSheet extends ConsumerWidget {
                                   : (emi.isPaidByMe
                                       ? 'Shared EMI • $personName repays you in monthly installments'
                                       : "Shared EMI • You repay $personName in monthly installments")),
-                          style: GoogleFonts.inter(
+                          style: TextStyle(
                             fontSize: 12.5,
                             fontWeight: FontWeight.w600,
-                            color: isDark ? Colors.white : const Color(0xFF131438),
+                            color: Theme.of(context).colorScheme.onSurface,
                           ),
                         ),
                       ),
@@ -289,15 +287,15 @@ class EmiDetailsSheet extends ConsumerWidget {
                   children: [
                     Text(
                       '${emi.installmentsPaid} of ${emi.totalTenureMonths} installments paid',
-                      style: GoogleFonts.inter(
+                      style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w600,
-                        color: isDark ? Colors.white : const Color(0xFF131438),
+                        color: Theme.of(context).colorScheme.onSurface,
                       ),
                     ),
                     Text(
                       '${(emi.progress * 100).toInt()}%',
-                      style: GoogleFonts.dmSans(
+                      style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w700,
                         color: cs.primary,
@@ -361,15 +359,15 @@ class EmiDetailsSheet extends ConsumerWidget {
                   children: [
                     Text(
                       'Installment Schedule',
-                      style: GoogleFonts.dmSans(
+                      style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w700,
-                        color: isDark ? Colors.white : const Color(0xFF131438),
+                        color: Theme.of(context).colorScheme.onSurface,
                       ),
                     ),
                     Text(
                       'Due ${emi.dueDayOfMonth.toString().padLeft(2, '0')}th of month',
-                      style: GoogleFonts.inter(
+                      style: TextStyle(
                         fontSize: 12,
                         color: cs.onSurfaceVariant,
                       ),
@@ -436,7 +434,7 @@ class EmiDetailsSheet extends ConsumerWidget {
                                 children: [
                                   Text(
                                     'Installment $installmentNum of ${emi.totalTenureMonths}',
-                                    style: GoogleFonts.inter(
+                                    style: TextStyle(
                                       fontSize: 13,
                                       fontWeight: FontWeight.w600,
                                       color: isPaid ? cs.onSurface : cs.onSurfaceVariant,
@@ -444,7 +442,7 @@ class EmiDetailsSheet extends ConsumerWidget {
                                   ),
                                   Text(
                                     DateFormatter.formatDate(dueDate),
-                                    style: GoogleFonts.inter(
+                                    style: TextStyle(
                                       fontSize: 11.5,
                                       color: cs.onSurfaceVariant,
                                     ),
@@ -457,7 +455,7 @@ class EmiDetailsSheet extends ConsumerWidget {
                               children: [
                                 Text(
                                   CurrencyFormatter.format(emi.getMonthlyInstallmentFor(installmentNum), symbol: currencySymbol),
-                                  style: GoogleFonts.dmSans(
+                                  style: TextStyle(
                                     fontSize: 14,
                                     fontWeight: FontWeight.w700,
                                     color: isPaid ? cs.primary : cs.onSurface,
@@ -467,7 +465,7 @@ class EmiDetailsSheet extends ConsumerWidget {
                                 if (isPaid)
                                   Text(
                                     emi.isForSelf ? 'Paid to Bank' : 'Recorded in Ledger',
-                                    style: GoogleFonts.inter(
+                                    style: TextStyle(
                                       fontSize: 10.5,
                                       fontWeight: FontWeight.w600,
                                       color: cs.primary,
@@ -510,7 +508,7 @@ class EmiDetailsSheet extends ConsumerWidget {
                                 else
                                   Text(
                                     'Scheduled',
-                                    style: GoogleFonts.inter(
+                                    style: TextStyle(
                                       fontSize: 10.5,
                                       fontWeight: FontWeight.w600,
                                       color: cs.outline,
@@ -545,7 +543,7 @@ class EmiDetailsSheet extends ConsumerWidget {
                     icon: const WhatsAppIcon(size: 18),
                     label: Text(
                       'Remind $personName on WhatsApp',
-                      style: GoogleFonts.inter(fontWeight: FontWeight.w600, color: const Color(0xFF25D366)),
+                      style: TextStyle(fontWeight: FontWeight.w600, color: const Color(0xFF25D366)),
                     ),
                     style: OutlinedButton.styleFrom(
                       side: const BorderSide(color: Color(0xFF25D366)),
@@ -565,7 +563,7 @@ class EmiDetailsSheet extends ConsumerWidget {
                           AddEditEmiScreen.show(context, emi: emi);
                         },
                         icon: const Icon(Icons.edit_outlined, size: 16),
-                        label: const Text('Edit Details'),
+                        label: const Text('Edit'),
                         style: OutlinedButton.styleFrom(
                           padding: const EdgeInsets.symmetric(vertical: 12),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
@@ -600,7 +598,7 @@ class EmiDetailsSheet extends ConsumerWidget {
       children: [
         Text(
           label,
-          style: GoogleFonts.inter(
+          style: TextStyle(
             fontSize: 11,
             fontWeight: FontWeight.w500,
             color: Theme.of(context).colorScheme.onSurfaceVariant,
@@ -609,7 +607,7 @@ class EmiDetailsSheet extends ConsumerWidget {
         const SizedBox(height: 4),
         Text(
           value,
-          style: GoogleFonts.dmSans(
+          style: TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w700,
             color: color,

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:uuid/uuid.dart';
 import 'package:duemate/core/constants/app_constants.dart';
 import 'package:duemate/core/utils/currency_formatter.dart';
@@ -108,13 +107,13 @@ class _QuickGiveSheetState extends ConsumerState<QuickGiveSheet> {
     final amount = _currentAmount;
     if (_selectedPersonId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select a person')),
+        const SnackBar(content: Text('Choose a person first')),
       );
       return;
     }
     if (amount <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter an amount greater than 0')),
+        const SnackBar(content: Text('Enter an amount greater than 0')),
       );
       return;
     }
@@ -152,10 +151,8 @@ class _QuickGiveSheetState extends ConsumerState<QuickGiveSheet> {
         Navigator.of(context).pop();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            backgroundColor: Theme.of(context).colorScheme.error,
             content: Text(
               'Gave ${CurrencyFormatter.format(amount, symbol: currencySymbol)} to $personName',
-              style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
             ),
           ),
         );
@@ -163,7 +160,7 @@ class _QuickGiveSheetState extends ConsumerState<QuickGiveSheet> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error saving transaction: $e')),
+          const SnackBar(content: Text("Couldn't save. Please try again.")),
         );
       }
     } finally {
@@ -215,7 +212,7 @@ class _QuickGiveSheetState extends ConsumerState<QuickGiveSheet> {
                   ),
                   const SizedBox(width: 12),
                   Text(
-                    'Give Money',
+                    'Give money',
                     style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
                   ),
                   const Spacer(),
@@ -326,9 +323,9 @@ class _QuickGiveSheetState extends ConsumerState<QuickGiveSheet> {
                         children: [
                           Text(
                             currencySymbol,
-                            style: GoogleFonts.dmSans(
+                            style: TextStyle(
                               fontSize: 32,
-                              fontWeight: FontWeight.w800,
+                              fontWeight: FontWeight.w600,
                               color: cs.error,
                             ),
                           ),
@@ -338,15 +335,15 @@ class _QuickGiveSheetState extends ConsumerState<QuickGiveSheet> {
                               controller: _amountController,
                               focusNode: _focusNode,
                               keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                              style: GoogleFonts.dmSans(
-                                fontWeight: FontWeight.w800,
+                              style: TextStyle(
+                                fontWeight: FontWeight.w600,
                                 fontSize: 32,
                                 letterSpacing: -0.5,
                               ),
                               decoration: InputDecoration(
                                 hintText: '0',
                                 hintStyle: TextStyle(
-                                  fontWeight: FontWeight.w800,
+                                  fontWeight: FontWeight.w600,
                                   fontSize: 32,
                                   color: cs.outline,
                                 ),

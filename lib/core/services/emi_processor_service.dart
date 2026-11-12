@@ -37,7 +37,12 @@ class EmiProcessorService {
     for (final emi in activeEmis) {
       int newlyGeneratedForEmi = 0;
 
-      for (int k = 1; k <= emi.totalTenureMonths; k++) {
+      // Installments the user declared as already paid have no ledger rows.
+      // Treat them as a baseline so they are never re-posted.
+      final postedBefore = await countPostedInstallments(emi.id);
+      final prepaid = (emi.installmentsPaid - postedBefore).clamp(0, emi.totalTenureMonths);
+
+      for (int k = prepaid + 1; k <= emi.totalTenureMonths; k++) {
         final dueDate = emi.getDueDateForInstallment(k);
 
         // Check if installment is due as of the reference date
@@ -67,7 +72,7 @@ class EmiProcessorService {
       }
 
       // Re-query total posted installments to update emi status accurately
-      final totalPosted = await countPostedInstallments(emi.id);
+      final totalPosted = prepaid + await countPostedInstallments(emi.id);
       final isNowCompleted = totalPosted >= emi.totalTenureMonths;
 
       if (totalPosted != emi.installmentsPaid || isNowCompleted || newlyGeneratedForEmi > 0) {
@@ -93,6 +98,7 @@ class EmiProcessorService {
       return false;
     }
 
+    final postedBefore = await countPostedInstallments(emi.id);
     final nextNumber = emi.installmentsPaid + 1;
     final alreadyPosted = await _isInstallmentPosted(emi.id, nextNumber);
     if (alreadyPosted) return false;
@@ -115,7 +121,8 @@ class EmiProcessorService {
 
     await transactionRepository.addTransaction(tx);
 
-    final totalPosted = await countPostedInstallments(emi.id);
+    final prepaid = (emi.installmentsPaid - postedBefore).clamp(0, emi.totalTenureMonths);
+    final totalPosted = prepaid + await countPostedInstallments(emi.id);
     final updated = emi.copyWith(
       installmentsPaid: totalPosted,
       status: totalPosted >= emi.totalTenureMonths ? 'completed' : emi.status,

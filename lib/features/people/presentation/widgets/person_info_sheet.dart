@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:duemate/core/utils/date_formatter.dart';
 import 'package:duemate/core/utils/whatsapp_helper.dart';
 import 'package:duemate/core/widgets/avatar_widget.dart';
@@ -44,7 +43,6 @@ class PersonInfoSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
-    final isDark = theme.brightness == Brightness.dark;
 
     return SafeArea(
       child: Padding(
@@ -66,16 +64,16 @@ class PersonInfoSheet extends StatelessWidget {
                     children: [
                       Text(
                         person.name,
-                        style: GoogleFonts.dmSans(
+                        style: TextStyle(
                           fontSize: 18,
-                          fontWeight: FontWeight.w800,
-                          color: isDark ? Colors.white : const Color(0xFF131438),
+                          fontWeight: FontWeight.w600,
+                          color: Theme.of(context).colorScheme.onSurface,
                         ),
                       ),
                       if (person.phone != null && person.phone!.isNotEmpty)
                         Text(
                           person.phone!,
-                          style: GoogleFonts.inter(
+                          style: TextStyle(
                             fontSize: 13,
                             color: cs.onSurfaceVariant,
                           ),
@@ -97,7 +95,7 @@ class PersonInfoSheet extends StatelessWidget {
 
             Text(
               'CONTACT INFORMATION',
-              style: GoogleFonts.inter(
+              style: TextStyle(
                 fontSize: 11,
                 fontWeight: FontWeight.w700,
                 letterSpacing: 0.8,

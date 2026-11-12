@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:uuid/uuid.dart';
 import 'package:duemate/core/utils/date_formatter.dart';
 import 'package:duemate/core/widgets/pressable_scale.dart';
@@ -106,7 +105,7 @@ class _AddEditExpenseSheetState extends ConsumerState<AddEditExpenseSheet> {
     final amount = double.tryParse(_amountController.text.trim());
     if (amount == null || amount <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter a valid amount')),
+        const SnackBar(content: Text('Enter an amount greater than 0')),
       );
       return;
     }
@@ -146,14 +145,14 @@ class _AddEditExpenseSheetState extends ConsumerState<AddEditExpenseSheet> {
         Navigator.of(context).pop();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(isEditing ? 'Expense updated' : 'Expense recorded'),
+            content: Text(isEditing ? 'Changes saved' : 'Expense added'),
           ),
         );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error saving expense: $e')),
+          const SnackBar(content: Text("Couldn't save. Please try again.")),
         );
       }
     } finally {
@@ -208,9 +207,9 @@ class _AddEditExpenseSheetState extends ConsumerState<AddEditExpenseSheet> {
                     const SizedBox(width: 12),
                     Text(
                       isEditing ? 'Edit Personal Expense' : 'Log Personal Expense',
-                      style: GoogleFonts.dmSans(
+                      style: TextStyle(
                         fontSize: 20,
-                        fontWeight: FontWeight.w800,
+                        fontWeight: FontWeight.w600,
                         letterSpacing: -0.3,
                       ),
                     ),
@@ -221,7 +220,7 @@ class _AddEditExpenseSheetState extends ConsumerState<AddEditExpenseSheet> {
                 // Category Chips
                 Text(
                   'Expense Category',
-                  style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w700, color: cs.onSurfaceVariant),
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: cs.onSurfaceVariant),
                 ),
                 const SizedBox(height: 8),
                 Wrap(
@@ -247,7 +246,7 @@ class _AddEditExpenseSheetState extends ConsumerState<AddEditExpenseSheet> {
                 TextFormField(
                   controller: _titleController,
                   decoration: const InputDecoration(
-                    labelText: 'Expense Title *',
+                    labelText: 'Title',
                     hintText: 'e.g. Grocery Shopping, Electricity Bill',
                     prefixIcon: Icon(Icons.shopping_bag_outlined, size: 20),
                   ),
@@ -260,7 +259,7 @@ class _AddEditExpenseSheetState extends ConsumerState<AddEditExpenseSheet> {
                 TextFormField(
                   controller: _amountController,
                   decoration: InputDecoration(
-                    labelText: 'Amount ($currencySymbol) *',
+                    labelText: 'Amount ($currencySymbol)',
                     hintText: '0',
                     prefixText: '$currencySymbol ',
                     prefixIcon: const Icon(Icons.payments_outlined, size: 20),
@@ -279,14 +278,14 @@ class _AddEditExpenseSheetState extends ConsumerState<AddEditExpenseSheet> {
                 DropdownButtonFormField<PaymentMethod>(
                   initialValue: _selectedPaymentMethod,
                   decoration: const InputDecoration(
-                    labelText: 'Payment Mode',
+                    labelText: 'Paid with',
                     prefixIcon: Icon(Icons.account_balance_wallet_outlined, size: 20),
                   ),
                   items: const [
-                    DropdownMenuItem(value: PaymentMethod.upi, child: Text('UPI / PhonePe / GPay')),
+                    DropdownMenuItem(value: PaymentMethod.upi, child: Text('UPI')),
                     DropdownMenuItem(value: PaymentMethod.cash, child: Text('Cash')),
-                    DropdownMenuItem(value: PaymentMethod.card, child: Text('Credit / Debit Card')),
-                    DropdownMenuItem(value: PaymentMethod.bankTransfer, child: Text('Net Banking')),
+                    DropdownMenuItem(value: PaymentMethod.card, child: Text('Card')),
+                    DropdownMenuItem(value: PaymentMethod.bankTransfer, child: Text('Bank transfer')),
                     DropdownMenuItem(value: PaymentMethod.other, child: Text('Other')),
                   ],
                   onChanged: (val) {
@@ -301,7 +300,7 @@ class _AddEditExpenseSheetState extends ConsumerState<AddEditExpenseSheet> {
                   borderRadius: BorderRadius.circular(16),
                   child: InputDecorator(
                     decoration: const InputDecoration(
-                      labelText: 'Expense Date',
+                      labelText: 'Date',
                       prefixIcon: Icon(Icons.calendar_today_rounded, size: 20),
                       suffixIcon: Icon(Icons.arrow_drop_down_rounded),
                     ),
@@ -316,7 +315,7 @@ class _AddEditExpenseSheetState extends ConsumerState<AddEditExpenseSheet> {
                 TextFormField(
                   controller: _notesController,
                   decoration: const InputDecoration(
-                    labelText: 'Notes (Optional)',
+                    labelText: 'Notes (optional)',
                     hintText: 'e.g. Monthly supermarket run',
                     prefixIcon: Icon(Icons.notes_rounded, size: 20),
                   ),
@@ -346,7 +345,7 @@ class _AddEditExpenseSheetState extends ConsumerState<AddEditExpenseSheet> {
                             )
                           : Text(
                               isEditing ? 'Save Changes' : 'Log Personal Expense',
-                              style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w700),
+                              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
                             ),
                     ),
                   ),

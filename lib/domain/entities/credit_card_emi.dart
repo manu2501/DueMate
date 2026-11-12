@@ -50,8 +50,21 @@ class CreditCardEmi {
   bool get isForSelf => personId == AppConstants.selfPersonId;
 
   int get remainingInstallments => (totalTenureMonths - installmentsPaid).clamp(0, totalTenureMonths);
-  double get paidAmount => (installmentsPaid * monthlyInstallment).clamp(0.0, totalAmount);
-  double get remainingAmount => (remainingInstallments * monthlyInstallment).clamp(0.0, totalAmount);
+  double get paidAmount {
+    double sum = 0;
+    for (int k = 1; k <= installmentsPaid && k <= totalTenureMonths; k++) {
+      sum += getMonthlyInstallmentFor(k);
+    }
+    return sum;
+  }
+
+  double get remainingAmount {
+    double sum = 0;
+    for (int k = installmentsPaid + 1; k <= totalTenureMonths; k++) {
+      sum += getMonthlyInstallmentFor(k);
+    }
+    return sum;
+  }
   double get progress => totalTenureMonths > 0 ? (installmentsPaid / totalTenureMonths).clamp(0.0, 1.0) : 1.0;
 
   /// Returns the specific customized installment figure for month [installmentNumber], or fallback to default
@@ -108,6 +121,7 @@ class CreditCardEmi {
     double? interestRate,
     String? interestType,
     String? customScheduleJson,
+    bool clearCustomSchedule = false,
     String? notes,
     DateTime? createdAt,
     DateTime? updatedAt,
@@ -128,7 +142,7 @@ class CreditCardEmi {
       status: status ?? this.status,
       interestRate: interestRate ?? this.interestRate,
       interestType: interestType ?? this.interestType,
-      customScheduleJson: customScheduleJson ?? this.customScheduleJson,
+      customScheduleJson: clearCustomSchedule ? null : (customScheduleJson ?? this.customScheduleJson),
       notes: notes ?? this.notes,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,

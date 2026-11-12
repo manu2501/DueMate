@@ -10,10 +10,12 @@ class BackupHelper {
   static Future<void> exportBackup(AppDatabase db) async {
     final persons = await db.select(db.persons).get();
     final transactions = await db.select(db.transactions).get();
+    final emis = await db.select(db.creditCardEmis).get();
+    final expenses = await db.select(db.expenses).get();
 
     final backupData = {
       'app': 'DueMate',
-      'version': 1,
+      'version': 2,
       'exportedAt': DateTime.now().toIso8601String(),
       'persons': persons
           .map((p) => {
@@ -37,8 +39,47 @@ class BackupHelper {
                 'transactionDate': t.transactionDate.toIso8601String(),
                 'paymentMethod': t.paymentMethod.index,
                 'note': t.note,
+                'emiId': t.emiId,
+                'installmentNumber': t.installmentNumber,
+                'isSettled': t.isSettled,
                 'createdAt': t.createdAt.toIso8601String(),
                 'updatedAt': t.updatedAt.toIso8601String(),
+              })
+          .toList(),
+      'creditCardEmis': emis
+          .map((e) => {
+                'id': e.id,
+                'personId': e.personId,
+                'itemName': e.itemName,
+                'cardName': e.cardName,
+                'totalAmount': e.totalAmount,
+                'monthlyInstallment': e.monthlyInstallment,
+                'totalTenureMonths': e.totalTenureMonths,
+                'installmentsPaid': e.installmentsPaid,
+                'startDate': e.startDate.toIso8601String(),
+                'dueDayOfMonth': e.dueDayOfMonth,
+                'isPaidByMe': e.isPaidByMe,
+                'status': e.status,
+                'interestRate': e.interestRate,
+                'interestType': e.interestType,
+                'customScheduleJson': e.customScheduleJson,
+                'notes': e.notes,
+                'createdAt': e.createdAt.toIso8601String(),
+                'updatedAt': e.updatedAt.toIso8601String(),
+                'lastProcessedDate': e.lastProcessedDate?.toIso8601String(),
+              })
+          .toList(),
+      'expenses': expenses
+          .map((x) => {
+                'id': x.id,
+                'title': x.title,
+                'amount': x.amount,
+                'category': x.category.index,
+                'expenseDate': x.expenseDate.toIso8601String(),
+                'paymentMethod': x.paymentMethod.index,
+                'notes': x.notes,
+                'createdAt': x.createdAt.toIso8601String(),
+                'updatedAt': x.updatedAt.toIso8601String(),
               })
           .toList(),
     };
@@ -61,6 +102,8 @@ class BackupHelper {
     final Map<String, dynamic> data = jsonDecode(jsonString);
     final personsJson = data['persons'] as List<dynamic>? ?? [];
     final transactionsJson = data['transactions'] as List<dynamic>? ?? [];
+    final emisJson = data['creditCardEmis'] as List<dynamic>? ?? [];
+    final expensesJson = data['expenses'] as List<dynamic>? ?? [];
 
     await db.transaction(() async {
       for (final p in personsJson) {
@@ -109,8 +152,56 @@ class BackupHelper {
                 transactionDate: Value(transactionDate),
                 paymentMethod: Value(paymentMethod),
                 note: Value(note),
+                emiId: Value(t['emiId'] as String?),
+                installmentNumber: Value(t['installmentNumber'] as int?),
+                isSettled: Value((t['isSettled'] as bool?) ?? false),
                 createdAt: Value(createdAt),
                 updatedAt: Value(updatedAt),
+              ),
+            );
+      }
+
+      // EMIs must be restored after persons (foreign key) — absent in v1 backups.
+      for (final e in emisJson) {
+        await db.into(db.creditCardEmis).insertOnConflictUpdate(
+              CreditCardEmisCompanion(
+                id: Value(e['id'] as String),
+                personId: Value(e['personId'] as String),
+                itemName: Value(e['itemName'] as String),
+                cardName: Value(e['cardName'] as String),
+                totalAmount: Value((e['totalAmount'] as num).toDouble()),
+                monthlyInstallment: Value((e['monthlyInstallment'] as num).toDouble()),
+                totalTenureMonths: Value(e['totalTenureMonths'] as int),
+                installmentsPaid: Value((e['installmentsPaid'] as int?) ?? 0),
+                startDate: Value(DateTime.parse(e['startDate'] as String)),
+                dueDayOfMonth: Value(e['dueDayOfMonth'] as int),
+                isPaidByMe: Value((e['isPaidByMe'] as bool?) ?? true),
+                status: Value((e['status'] as String?) ?? 'active'),
+                interestRate: Value(((e['interestRate'] as num?) ?? 0).toDouble()),
+                interestType: Value((e['interestType'] as String?) ?? 'reducing'),
+                customScheduleJson: Value(e['customScheduleJson'] as String?),
+                notes: Value(e['notes'] as String?),
+                createdAt: Value(DateTime.parse(e['createdAt'] as String)),
+                updatedAt: Value(DateTime.parse(e['updatedAt'] as String)),
+                lastProcessedDate: Value(
+                  e['lastProcessedDate'] != null ? DateTime.parse(e['lastProcessedDate'] as String) : null,
+                ),
+              ),
+            );
+      }
+
+      for (final x in expensesJson) {
+        await db.into(db.expenses).insertOnConflictUpdate(
+              ExpensesCompanion(
+                id: Value(x['id'] as String),
+                title: Value(x['title'] as String),
+                amount: Value((x['amount'] as num).toDouble()),
+                category: Value(ExpenseCategory.values[x['category'] as int]),
+                expenseDate: Value(DateTime.parse(x['expenseDate'] as String)),
+                paymentMethod: Value(PaymentMethod.values[x['paymentMethod'] as int]),
+                notes: Value(x['notes'] as String?),
+                createdAt: Value(DateTime.parse(x['createdAt'] as String)),
+                updatedAt: Value(DateTime.parse(x['updatedAt'] as String)),
               ),
             );
       }

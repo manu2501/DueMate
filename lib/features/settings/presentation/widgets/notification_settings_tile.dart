@@ -44,7 +44,7 @@ class _NotificationSettingsTileState extends State<NotificationSettingsTile> {
             style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
           ),
           subtitle: Text(
-            'Smart reminders for upcoming EMI payments',
+            'Reminders for upcoming EMI payments',
             style: theme.textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
           ),
           value: _enabled,

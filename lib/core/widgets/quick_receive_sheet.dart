@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:uuid/uuid.dart';
 import 'package:duemate/core/constants/app_constants.dart';
 import 'package:duemate/core/utils/currency_formatter.dart';
@@ -113,13 +112,13 @@ class _QuickReceiveSheetState extends ConsumerState<QuickReceiveSheet> {
     final amount = _currentAmount;
     if (_selectedPersonId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select a person')),
+        const SnackBar(content: Text('Choose a person first')),
       );
       return;
     }
     if (amount <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter an amount greater than 0')),
+        const SnackBar(content: Text('Enter an amount greater than 0')),
       );
       return;
     }
@@ -157,10 +156,8 @@ class _QuickReceiveSheetState extends ConsumerState<QuickReceiveSheet> {
         Navigator.of(context).pop();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            backgroundColor: Theme.of(context).colorScheme.primary,
             content: Text(
               'Received ${CurrencyFormatter.format(amount, symbol: currencySymbol)} from $personName',
-              style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
             ),
           ),
         );
@@ -168,7 +165,7 @@ class _QuickReceiveSheetState extends ConsumerState<QuickReceiveSheet> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error saving repayment: $e')),
+          const SnackBar(content: Text("Couldn't save. Please try again.")),
         );
       }
     } finally {
@@ -365,9 +362,9 @@ class _QuickReceiveSheetState extends ConsumerState<QuickReceiveSheet> {
                         children: [
                           Text(
                             currencySymbol,
-                            style: GoogleFonts.dmSans(
+                            style: TextStyle(
                               fontSize: 32,
-                              fontWeight: FontWeight.w800,
+                              fontWeight: FontWeight.w600,
                               color: cs.primary,
                             ),
                           ),
@@ -377,15 +374,15 @@ class _QuickReceiveSheetState extends ConsumerState<QuickReceiveSheet> {
                               controller: _amountController,
                               focusNode: _focusNode,
                               keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                              style: GoogleFonts.dmSans(
-                                fontWeight: FontWeight.w800,
+                              style: TextStyle(
+                                fontWeight: FontWeight.w600,
                                 fontSize: 32,
                                 letterSpacing: -0.5,
                               ),
                               decoration: InputDecoration(
                                 hintText: '0',
                                 hintStyle: TextStyle(
-                                  fontWeight: FontWeight.w800,
+                                  fontWeight: FontWeight.w600,
                                   fontSize: 32,
                                   color: cs.outline,
                                 ),
@@ -517,7 +514,7 @@ class _QuickReceiveSheetState extends ConsumerState<QuickReceiveSheet> {
                                   Text(
                                     _currentAmount > 0
                                         ? 'Receive ${CurrencyFormatter.format(_currentAmount, symbol: currencySymbol)}'
-                                        : 'Record Repayment',
+                                        : 'Record payment',
                                   ),
                                 ],
                               ),

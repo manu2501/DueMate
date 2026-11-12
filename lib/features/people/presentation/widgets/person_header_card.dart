@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:duemate/core/theme/app_theme.dart';
 import 'package:duemate/core/utils/currency_formatter.dart';
 import 'package:duemate/core/utils/reminder_helper.dart';
@@ -55,7 +54,7 @@ class PersonHeaderCard extends StatelessWidget {
                   children: [
                     Text(
                       'Active ledger',
-                      style: GoogleFonts.inter(
+                      style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w500,
                         color: AppTheme.mutedLabel,
@@ -63,11 +62,11 @@ class PersonHeaderCard extends StatelessWidget {
                     ),
                     Text(
                       person.name,
-                      style: GoogleFonts.dmSans(
+                      style: TextStyle(
                         fontSize: 24,
-                        fontWeight: FontWeight.w800,
+                        fontWeight: FontWeight.w600,
                         letterSpacing: -0.4,
-                        color: isDark ? Colors.white : const Color(0xFF131438),
+                        color: Theme.of(context).colorScheme.onSurface,
                       ),
                     ),
                   ],
@@ -82,7 +81,7 @@ class PersonHeaderCard extends StatelessWidget {
                   ),
                   child: Text(
                     'Archived',
-                    style: GoogleFonts.inter(
+                    style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
                       color: cs.onSurfaceVariant,
@@ -116,7 +115,7 @@ class PersonHeaderCard extends StatelessWidget {
                     children: [
                       Text(
                         owes ? 'Payment due' : 'Overpaid balance',
-                        style: GoogleFonts.dmSans(
+                        style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w700,
                           color: isDark ? const Color(0xFFFFB4AB) : AppTheme.peachAccentText,
@@ -124,10 +123,10 @@ class PersonHeaderCard extends StatelessWidget {
                       ),
                       Text(
                         CurrencyFormatter.format(balance.abs(), symbol: currencySymbol),
-                        style: GoogleFonts.dmSans(
+                        style: TextStyle(
                           fontSize: 20,
-                          fontWeight: FontWeight.w800,
-                          color: isDark ? Colors.white : const Color(0xFF131438),
+                          fontWeight: FontWeight.w600,
+                          color: Theme.of(context).colorScheme.onSurface,
                         ),
                       ),
                     ],
@@ -137,7 +136,7 @@ class PersonHeaderCard extends StatelessWidget {
                     owes
                         ? 'Outstanding debt in your ledger.'
                         : 'Borrower has paid more than the initial principal. Credit available in your ledger.',
-                    style: GoogleFonts.inter(
+                    style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w400,
                       color: isDark ? const Color(0xFFE5B5B5) : const Color(0xFF6B433C),
@@ -175,7 +174,7 @@ class PersonHeaderCard extends StatelessWidget {
                   children: [
                     Text(
                       'Paid',
-                      style: GoogleFonts.inter(
+                      style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w500,
                         color: AppTheme.mutedLabel,
@@ -183,10 +182,10 @@ class PersonHeaderCard extends StatelessWidget {
                     ),
                     Text(
                       '${CurrencyFormatter.format(summary.totalReceived, symbol: currencySymbol)} / ${CurrencyFormatter.format(summary.totalGiven, symbol: currencySymbol)}',
-                      style: GoogleFonts.dmSans(
+                      style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w700,
-                        color: isDark ? Colors.white : const Color(0xFF131438),
+                        color: Theme.of(context).colorScheme.onSurface,
                       ),
                     ),
                   ],
@@ -214,7 +213,7 @@ class PersonHeaderCard extends StatelessWidget {
                         children: [
                           Text(
                             'Status',
-                            style: GoogleFonts.inter(
+                            style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w500,
                               color: AppTheme.mutedLabel,
@@ -225,16 +224,16 @@ class PersonHeaderCard extends StatelessWidget {
                             balance == 0
                                 ? 'Settled'
                                 : (owes ? 'Owes Money' : 'Overpaid'),
-                            style: GoogleFonts.dmSans(
+                            style: TextStyle(
                               fontSize: 15,
-                              fontWeight: FontWeight.w800,
-                              color: isDark ? Colors.white : const Color(0xFF131438),
+                              fontWeight: FontWeight.w600,
+                              color: Theme.of(context).colorScheme.onSurface,
                             ),
                           ),
                           const SizedBox(height: 2),
                           Text(
                             'Send balance details via WhatsApp or SMS',
-                            style: GoogleFonts.inter(
+                            style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w400,
                               color: cs.onSurfaceVariant,

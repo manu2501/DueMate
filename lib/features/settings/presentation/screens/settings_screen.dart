@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:duemate/core/constants/app_constants.dart';
 import 'package:duemate/data/providers/app_providers.dart';
 import 'package:duemate/features/settings/presentation/widgets/data_management_tile.dart';
@@ -21,12 +20,11 @@ class SettingsScreen extends ConsumerWidget {
           children: [
             Icon(Icons.warning_amber_rounded, color: cs.error),
             const SizedBox(width: 8),
-            Text('Erase All Data?', style: TextStyle(color: cs.error, fontWeight: FontWeight.bold)),
+            Text('Erase all data?', style: TextStyle(color: cs.error, fontWeight: FontWeight.bold)),
           ],
         ),
         content: const Text(
-          'This action is irreversible.\n\n'
-          'All people, loan records, repayment transactions, and notes will be permanently deleted from this device.',
+          'Every person, transaction, EMI and expense on this device will be deleted. There is no backup unless you exported one, and this can\'t be undone.',
         ),
         actions: [
           TextButton(
@@ -39,7 +37,7 @@ class SettingsScreen extends ConsumerWidget {
               foregroundColor: cs.onError,
             ),
             onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text('Permanently Delete'),
+            child: const Text('Erase everything'),
           ),
         ],
       ),
@@ -118,7 +116,7 @@ class SettingsScreen extends ConsumerWidget {
                         Text(
                           AppConstants.appName,
                           style: theme.textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w800,
+                            fontWeight: FontWeight.w600,
                             letterSpacing: -0.3,
                           ),
                         ),
@@ -142,8 +140,8 @@ class SettingsScreen extends ConsumerWidget {
                               Icon(Icons.shield_outlined, size: 12, color: cs.primary),
                               const SizedBox(width: 4),
                               Text(
-                                '100% Offline Vault',
-                                style: GoogleFonts.inter(
+                                'Stored on device',
+                                style: TextStyle(
                                   fontSize: 10,
                                   fontWeight: FontWeight.w700,
                                   color: cs.primary,
@@ -209,7 +207,7 @@ class SettingsScreen extends ConsumerWidget {
                   child: Icon(Icons.delete_forever_rounded, color: cs.error, size: 20),
                 ),
                 title: Text(
-                  'Clear All Vault Data',
+                  'Clear all data',
                   style: theme.textTheme.titleSmall?.copyWith(
                     fontWeight: FontWeight.w700,
                     color: cs.error,
@@ -238,7 +236,7 @@ class SettingsScreen extends ConsumerWidget {
                   ),
                   const SizedBox(height: 2),
                   Text(
-                    '100% Private • Zero Analytics • Local SQLite Vault',
+                    'Data stays on this device. No analytics.',
                     style: theme.textTheme.labelSmall?.copyWith(
                       color: cs.outline,
                     ),

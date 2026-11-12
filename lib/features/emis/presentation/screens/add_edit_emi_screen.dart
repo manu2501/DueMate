@@ -2,7 +2,6 @@ import 'dart:convert';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:uuid/uuid.dart';
 import 'package:duemate/core/constants/app_constants.dart';
 import 'package:duemate/core/utils/currency_formatter.dart';
@@ -258,7 +257,7 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
 
     if (!_isForSelf && (targetPersonId == null || targetPersonId == AppConstants.selfPersonId)) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select a contact')),
+        const SnackBar(content: Text('Choose who this EMI is for')),
       );
       return;
     }
@@ -268,14 +267,14 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
 
     if (_tenureMonths <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter a valid tenure in months')),
+        const SnackBar(content: Text('Enter the number of months')),
       );
       return;
     }
 
     if (totalAmount <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter a valid amount')),
+        const SnackBar(content: Text('Enter the EMI amount')),
       );
       return;
     }
@@ -319,6 +318,7 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
           interestRate: _interestRate,
           interestType: _interestType,
           customScheduleJson: customScheduleStr,
+          clearCustomSchedule: customScheduleStr == null,
           notes: finalNotes,
           updatedAt: DateTime.now(),
         );
@@ -365,7 +365,7 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error saving EMI: $e')),
+          const SnackBar(content: Text("Couldn't save the EMI. Please try again.")),
         );
       }
     } finally {
@@ -500,7 +500,7 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
                     const SizedBox(width: 6),
                     Text(
                       'For Myself',
-                      style: GoogleFonts.inter(
+                      style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w700,
                         color: _isForSelf ? cs.onPrimary : cs.onSurfaceVariant,
@@ -540,7 +540,7 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
                     const SizedBox(width: 6),
                     Text(
                       'For Someone Else',
-                      style: GoogleFonts.inter(
+                      style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w700,
                         color: !_isForSelf ? cs.onPrimary : cs.onSurfaceVariant,
@@ -572,7 +572,7 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
           isEditing
               ? (isLoan ? 'Edit Loan EMI' : 'Edit Credit Card EMI')
               : (isLoan ? 'Add Loan EMI' : 'Add Credit Card EMI'),
-          style: GoogleFonts.dmSans(fontWeight: FontWeight.w700),
+          style: TextStyle(fontWeight: FontWeight.w700),
         ),
         actions: [
           TextButton(
@@ -618,7 +618,7 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
             if (!_isForSelf) ...[
               Text(
                 isLoan ? 'Loan Shared With' : 'Shared With',
-                style: GoogleFonts.inter(
+                style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
                   color: cs.onSurfaceVariant,
@@ -706,7 +706,7 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
             if (!_isForSelf) ...[
               Text(
                 isLoan ? 'Lending & Repayment Flow' : 'Card Ownership & Repayment Flow',
-                style: GoogleFonts.inter(
+                style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
                   color: cs.onSurfaceVariant,
@@ -747,7 +747,7 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
                             const SizedBox(height: 8),
                             Text(
                               isLoan ? 'I Lent Money' : 'My Card',
-                              style: GoogleFonts.dmSans(
+                              style: TextStyle(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w700,
                                 color: _isPaidByMe ? cs.primary : cs.onSurface,
@@ -756,7 +756,7 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
                             const SizedBox(height: 2),
                             Text(
                               isLoan ? 'Contact repays in installments' : 'Contact repays monthly installment',
-                              style: GoogleFonts.inter(
+                              style: TextStyle(
                                 fontSize: 11,
                                 color: cs.onSurfaceVariant,
                               ),
@@ -799,7 +799,7 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
                             const SizedBox(height: 8),
                             Text(
                               isLoan ? 'I Borrowed' : "Friend's Card",
-                              style: GoogleFonts.dmSans(
+                              style: TextStyle(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w700,
                                 color: !_isPaidByMe ? cs.error : cs.onSurface,
@@ -808,7 +808,7 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
                             const SizedBox(height: 2),
                             Text(
                               isLoan ? 'I repay in monthly installments' : 'I repay monthly installment',
-                              style: GoogleFonts.inter(
+                              style: TextStyle(
                                 fontSize: 11,
                                 color: cs.onSurfaceVariant,
                               ),
@@ -875,7 +875,7 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
                               const SizedBox(width: 6),
                               Text(
                                 'Suggestions matching "$itemQuery":',
-                                style: GoogleFonts.inter(
+                                style: TextStyle(
                                   fontSize: 11,
                                   fontWeight: FontWeight.w600,
                                   color: cs.onSurfaceVariant,
@@ -902,7 +902,7 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
                                 Expanded(
                                   child: Text(
                                     match.label,
-                                    style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w600),
+                                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
                                   ),
                                 ),
                                 Icon(Icons.north_west_rounded, size: 14, color: cs.onSurfaceVariant),
@@ -921,7 +921,7 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
                     const SizedBox(height: 8),
                     Text(
                       isLoan ? 'Quick Loan Suggestions:' : 'Quick Item Suggestions:',
-                      style: GoogleFonts.inter(
+                      style: TextStyle(
                         fontSize: 11.5,
                         fontWeight: FontWeight.w500,
                         color: cs.onSurfaceVariant,
@@ -1007,7 +1007,7 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
                               const SizedBox(width: 6),
                               Text(
                                 isLoan ? 'Matching loan sources:' : 'Matching banks & cards:',
-                                style: GoogleFonts.inter(
+                                style: TextStyle(
                                   fontSize: 11,
                                   fontWeight: FontWeight.w600,
                                   color: cs.onSurfaceVariant,
@@ -1038,7 +1038,7 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
                                 Expanded(
                                   child: Text(
                                     bank.fillValue,
-                                    style: GoogleFonts.inter(
+                                    style: TextStyle(
                                       fontSize: 13,
                                       fontWeight: FontWeight.w600,
                                       color: bank.color,
@@ -1061,7 +1061,7 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
                     const SizedBox(height: 8),
                     Text(
                       isLoan ? 'Common Loan Sources & Banks:' : 'Popular Banks & Cards:',
-                      style: GoogleFonts.inter(
+                      style: TextStyle(
                         fontSize: 11.5,
                         fontWeight: FontWeight.w500,
                         color: cs.onSurfaceVariant,
@@ -1108,7 +1108,7 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
             TextFormField(
               controller: _baseAmountController,
               keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              style: GoogleFonts.dmSans(fontSize: 20, fontWeight: FontWeight.w700),
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
               decoration: InputDecoration(
                 labelText: isLoan ? 'Loan Principal Amount *' : 'Purchase / Base Amount *',
                 hintText: '0',
@@ -1118,7 +1118,7 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
                     widthFactor: 0.0,
                     child: Text(
                       currencySymbol,
-                      style: GoogleFonts.dmSans(
+                      style: TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.w700,
                         color: cs.onSurface,
@@ -1230,7 +1230,7 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
                       const SizedBox(width: 8),
                       Text(
                         'Interest Rate & Calculation',
-                        style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w700, color: cs.onSurface),
+                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: cs.onSurface),
                       ),
                     ],
                   ),
@@ -1277,11 +1277,11 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
                       children: [
                         Text(
                           'Calculated Interest:',
-                          style: GoogleFonts.inter(fontSize: 11.5, color: cs.onSurfaceVariant),
+                          style: TextStyle(fontSize: 11.5, color: cs.onSurfaceVariant),
                         ),
                         Text(
                           '+${CurrencyFormatter.format(_calculatedInterest, symbol: currencySymbol)}',
-                          style: GoogleFonts.dmSans(fontSize: 13.5, fontWeight: FontWeight.w800, color: cs.error),
+                          style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600, color: cs.error),
                         ),
                       ],
                     ),
@@ -1315,7 +1315,7 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
                 _customScheduleMap.isNotEmpty
                     ? 'Edit Custom Monthly Amounts (${_customScheduleMap.length} customized)'
                     : 'Customize Per-Month Installment Amounts',
-                style: GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 13),
+                style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
               ),
               style: OutlinedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(vertical: 12),
@@ -1406,7 +1406,7 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
                           children: [
                             Text(
                               isLoan ? 'MONTHLY REPAYMENT' : 'MONTHLY INSTALLMENT',
-                              style: GoogleFonts.inter(
+                              style: TextStyle(
                                 fontSize: 11,
                                 fontWeight: FontWeight.w700,
                                 letterSpacing: 0.8,
@@ -1416,7 +1416,7 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
                             const SizedBox(height: 2),
                             Text(
                               'Auto-calculated based on tenure & charges',
-                              style: GoogleFonts.inter(
+                              style: TextStyle(
                                 fontSize: 11,
                                 color: cs.onSurfaceVariant,
                               ),
@@ -1438,7 +1438,7 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
                             const SizedBox(width: 4),
                             Text(
                               'Auto-Split',
-                              style: GoogleFonts.inter(
+                              style: TextStyle(
                                 fontSize: 10.5,
                                 fontWeight: FontWeight.w600,
                                 color: cs.onSurfaceVariant,
@@ -1456,9 +1456,9 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
                     children: [
                       Text(
                         CurrencyFormatter.format(_monthlyInstallment, symbol: currencySymbol),
-                        style: GoogleFonts.dmSans(
+                        style: TextStyle(
                           fontSize: 28,
-                          fontWeight: FontWeight.w800,
+                          fontWeight: FontWeight.w600,
                           color: isLoan ? const Color(0xFF0D9488) : cs.primary,
                           letterSpacing: -0.5,
                         ),
@@ -1466,7 +1466,7 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
                       const SizedBox(width: 6),
                       Text(
                         '/ month',
-                        style: GoogleFonts.inter(
+                        style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
                           color: cs.onSurfaceVariant,
@@ -1496,7 +1496,7 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
                             _totalPayable > 0
                                 ? '${CurrencyFormatter.format(_totalPayable, symbol: currencySymbol)} total ÷ $_tenureMonths months • Automatically added on day $_dueDayOfMonth'
                                 : 'Enter amount above to view monthly split',
-                            style: GoogleFonts.inter(
+                            style: TextStyle(
                               fontSize: 11.5,
                               color: cs.onSurfaceVariant,
                               fontWeight: FontWeight.w500,
@@ -1575,7 +1575,7 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
                   Expanded(
                     child: Text(
                       'Every month on the ${_dueDayOfMonth.toString().padLeft(2, '0')}th, DueMate will automatically add an installment of ${CurrencyFormatter.format(_monthlyInstallment, symbol: currencySymbol)} to the ledger.',
-                      style: GoogleFonts.inter(
+                      style: TextStyle(
                         fontSize: 12,
                         color: cs.onSurfaceVariant,
                         height: 1.35,
@@ -1593,7 +1593,7 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
               controller: _notesController,
               maxLines: 2,
               decoration: InputDecoration(
-                labelText: 'Notes (Optional)',
+                labelText: 'Notes (optional)',
                 hintText: isLoan ? 'Loan terms, account number, agreement notes...' : 'Order ID, invoice details, bank reference...',
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
               ),
@@ -1620,7 +1620,7 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
                       isEditing
                           ? (isLoan ? 'Save Loan Changes' : 'Save EMI Changes')
                           : (isLoan ? 'Start Monthly Loan Tracking' : 'Start Monthly EMI Tracking'),
-                      style: GoogleFonts.dmSans(
+                      style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w700,
                       ),

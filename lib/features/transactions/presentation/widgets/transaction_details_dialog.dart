@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:duemate/core/constants/app_constants.dart';
 import 'package:duemate/core/utils/currency_formatter.dart';
 import 'package:duemate/core/utils/date_formatter.dart';
@@ -52,11 +51,11 @@ class TransactionDetailsDialog extends ConsumerWidget {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text('Delete Entry?', style: TextStyle(color: cs.error)),
+        title: Text('Delete this entry?', style: TextStyle(color: cs.error)),
         content: Text(
           isSelf || person == null
-              ? 'Are you sure you want to delete this record?'
-              : 'Are you sure you want to delete this record?\n\nDeleting this will recalculate $personName\'s outstanding balance.',
+              ? 'This entry will be removed.'
+              : 'This entry will be removed and $personName\'s balance will be recalculated.',
         ),
         actions: [
           TextButton(
@@ -75,7 +74,7 @@ class TransactionDetailsDialog extends ConsumerWidget {
 
               if (context.mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Transaction deleted')),
+                  const SnackBar(content: Text('Entry deleted')),
                 );
               }
             },
@@ -113,15 +112,15 @@ class TransactionDetailsDialog extends ConsumerWidget {
                   TextField(
                     controller: amountController,
                     keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       labelText: 'Amount',
-                      prefixText: '₹ ',
+                      prefixText: '${ref.read(currencySymbolProvider)} ',
                     ),
                   ),
                   const SizedBox(height: 14),
                   DropdownButtonFormField<PaymentMethod>(
                     initialValue: selectedMethod,
-                    decoration: const InputDecoration(labelText: 'Payment Method'),
+                    decoration: const InputDecoration(labelText: 'Paid with'),
                     items: PaymentMethod.values.map((method) {
                       return DropdownMenuItem(
                         value: method,
@@ -161,7 +160,7 @@ class TransactionDetailsDialog extends ConsumerWidget {
                   TextField(
                     controller: noteController,
                     decoration: const InputDecoration(
-                      labelText: 'Optional Note',
+                      labelText: 'Note (optional)',
                       hintText: 'e.g. Loan instalment',
                     ),
                   ),
@@ -193,11 +192,11 @@ class TransactionDetailsDialog extends ConsumerWidget {
 
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Transaction updated')),
+                      const SnackBar(content: Text('Changes saved')),
                     );
                   }
                 },
-                child: const Text('Save Changes'),
+                child: const Text('Save'),
               ),
             ],
           );
@@ -277,8 +276,8 @@ class TransactionDetailsDialog extends ConsumerWidget {
                 children: [
                   Text(
                     '${isReceived ? '+' : '-'}${CurrencyFormatter.format(transaction.amount, symbol: currencySymbol)}',
-                    style: GoogleFonts.dmSans(
-                      fontWeight: FontWeight.w800,
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
                       fontSize: 34,
                       letterSpacing: -0.8,
                       color: accentColor,

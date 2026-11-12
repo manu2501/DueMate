@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:duemate/domain/entities/credit_card_emi.dart';
 import 'package:duemate/domain/entities/person.dart';
 import 'package:duemate/features/emis/presentation/screens/add_edit_emi_screen.dart';
@@ -23,7 +22,6 @@ class PersonActiveEmisSection extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
-    final isDark = theme.brightness == Brightness.dark;
 
     if (emis.isEmpty) {
       return Padding(
@@ -44,12 +42,12 @@ class PersonActiveEmisSection extends StatelessWidget {
                   width: 36,
                   height: 36,
                   decoration: BoxDecoration(
-                    color: Colors.purple.withValues(alpha: 0.1),
+                    color: Theme.of(context).colorScheme.secondary.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: const Icon(
+                  child: Icon(
                     Icons.event_repeat_rounded,
-                    color: Colors.purple,
+                    color: Theme.of(context).colorScheme.secondary,
                     size: 18,
                   ),
                 ),
@@ -60,15 +58,15 @@ class PersonActiveEmisSection extends StatelessWidget {
                     children: [
                       Text(
                         'Split EMI or Monthly Loan',
-                        style: GoogleFonts.dmSans(
+                        style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w700,
-                          color: isDark ? Colors.white : const Color(0xFF131438),
+                          color: Theme.of(context).colorScheme.onSurface,
                         ),
                       ),
                       Text(
                         'Auto-post monthly installments for cards & loans',
-                        style: GoogleFonts.inter(
+                        style: TextStyle(
                           fontSize: 11.5,
                           color: cs.onSurfaceVariant,
                         ),
@@ -96,26 +94,26 @@ class PersonActiveEmisSection extends StatelessWidget {
                 children: [
                   Text(
                     'EMIs & Monthly Loans',
-                    style: GoogleFonts.dmSans(
+                    style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w700,
                       letterSpacing: -0.2,
-                      color: isDark ? Colors.white : const Color(0xFF131438),
+                      color: Theme.of(context).colorScheme.onSurface,
                     ),
                   ),
                   const SizedBox(width: 8),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                     decoration: BoxDecoration(
-                      color: Colors.purple.withValues(alpha: 0.12),
+                      color: Theme.of(context).colorScheme.secondary.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Text(
                       '${emis.length}',
-                      style: GoogleFonts.dmSans(
+                      style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w700,
-                        color: Colors.purple,
+                        color: Theme.of(context).colorScheme.secondary,
                       ),
                     ),
                   ),

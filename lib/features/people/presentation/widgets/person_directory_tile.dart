@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:duemate/core/utils/currency_formatter.dart';
 import 'package:duemate/core/utils/date_formatter.dart';
 import 'package:duemate/core/utils/whatsapp_helper.dart';
@@ -35,10 +34,10 @@ class PersonDirectoryTile extends StatelessWidget {
     String badgeTitle;
     if (owes) {
       badgeColor = cs.primary;
-      badgeTitle = 'Owes You: ${CurrencyFormatter.format(balance, symbol: currencySymbol)}';
+      badgeTitle = 'Owes you ${CurrencyFormatter.format(balance, symbol: currencySymbol)}';
     } else if (overpaid) {
       badgeColor = cs.error;
-      badgeTitle = 'You Owe: ${CurrencyFormatter.format(balance.abs(), symbol: currencySymbol)}';
+      badgeTitle = 'You owe ${CurrencyFormatter.format(balance.abs(), symbol: currencySymbol)}';
     } else {
       badgeColor = cs.secondary;
       badgeTitle = 'Settled';
@@ -78,10 +77,10 @@ class PersonDirectoryTile extends StatelessWidget {
                     children: [
                       Text(
                         person.name,
-                        style: GoogleFonts.dmSans(
+                        style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w700,
-                          color: isDark ? Colors.white : const Color(0xFF131438),
+                          color: Theme.of(context).colorScheme.onSurface,
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -89,11 +88,11 @@ class PersonDirectoryTile extends StatelessWidget {
                       const SizedBox(height: 2),
                       Text(
                         summary.lastTransaction != null
-                            ? 'Last paid ${DateFormatter.formatRelative(summary.lastTransaction!.transactionDate)}'
+                            ? 'Last activity ${DateFormatter.formatRelative(summary.lastTransaction!.transactionDate)}'
                             : (person.phone != null && person.phone!.isNotEmpty)
                                 ? person.phone!
                                 : 'Added ${DateFormatter.formatShortDate(person.createdAt)}',
-                        style: GoogleFonts.inter(
+                        style: TextStyle(
                           fontSize: 12,
                           color: cs.onSurfaceVariant,
                         ),
@@ -112,9 +111,9 @@ class PersonDirectoryTile extends StatelessWidget {
                   ),
                   child: Text(
                     badgeTitle,
-                    style: GoogleFonts.inter(
+                    style: TextStyle(
                       fontSize: 12,
-                      fontWeight: FontWeight.w800,
+                      fontWeight: FontWeight.w600,
                       color: badgeColor,
                     ),
                   ),
@@ -193,8 +192,8 @@ class PersonDirectoryTile extends StatelessWidget {
                 Row(
                   children: [
                     Text(
-                      'View Ledger',
-                      style: GoogleFonts.inter(
+                      'View ledger',
+                      style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
                         color: cs.primary,

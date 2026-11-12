@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:duemate/features/emis/presentation/screens/add_edit_emi_screen.dart';
 
 class EmiTypeSelector extends StatelessWidget {
@@ -31,7 +30,7 @@ class EmiTypeSelector extends StatelessWidget {
               label: 'Credit Card EMI',
               subtitle: 'Cards & Online EMIs',
               icon: Icons.credit_card_rounded,
-              color: Colors.purple,
+              color: Theme.of(context).colorScheme.secondary,
               isSelected: selectedType == EmiType.creditCard,
               onTap: () => onChanged(EmiType.creditCard),
             ),
@@ -108,7 +107,7 @@ class _TypeTile extends StatelessWidget {
                 children: [
                   Text(
                     label,
-                    style: GoogleFonts.inter(
+                    style: TextStyle(
                       fontSize: 12,
                       fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
                       color: isSelected ? color : cs.onSurface,
@@ -118,7 +117,7 @@ class _TypeTile extends StatelessWidget {
                   ),
                   Text(
                     subtitle,
-                    style: GoogleFonts.inter(
+                    style: TextStyle(
                       fontSize: 10,
                       color: cs.onSurfaceVariant,
                     ),

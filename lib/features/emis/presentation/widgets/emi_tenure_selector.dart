@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 class EmiTenureSelector extends StatelessWidget {
   final TextEditingController controller;
@@ -29,7 +28,7 @@ class EmiTenureSelector extends StatelessWidget {
           children: [
             Text(
               'Tenure (Months)',
-              style: GoogleFonts.inter(
+              style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
                 color: cs.onSurfaceVariant,
@@ -44,7 +43,7 @@ class EmiTenureSelector extends StatelessWidget {
                 ),
                 child: Text(
                   '$currentTenureMonths ${currentTenureMonths == 1 ? 'Month' : 'Months'}',
-                  style: GoogleFonts.inter(
+                  style: TextStyle(
                     fontSize: 11.5,
                     fontWeight: FontWeight.w600,
                     color: cs.onPrimaryContainer,
@@ -83,7 +82,7 @@ class EmiTenureSelector extends StatelessWidget {
         // Quick Presets
         Text(
           'Quick Presets:',
-          style: GoogleFonts.inter(
+          style: TextStyle(
             fontSize: 11.5,
             fontWeight: FontWeight.w500,
             color: cs.onSurfaceVariant.withValues(alpha: 0.8),

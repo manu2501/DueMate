@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:duemate/core/utils/currency_formatter.dart';
 import 'package:duemate/data/database/tables.dart';
 import 'package:duemate/domain/entities/personal_expense.dart';
@@ -122,7 +121,7 @@ class ExpenseCategoryChartCard extends StatelessWidget {
                     const SizedBox(width: 10),
                     Text(
                       'Category Usage & Spend Share',
-                      style: GoogleFonts.inter(
+                      style: TextStyle(
                         fontSize: 13.5,
                         fontWeight: FontWeight.w700,
                         color: cs.onSurface,
@@ -135,7 +134,7 @@ class ExpenseCategoryChartCard extends StatelessWidget {
                     onTap: () => onCategoryTap?.call(null),
                     child: Text(
                       'Show All',
-                      style: GoogleFonts.inter(
+                      style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w700,
                         color: cs.primary,
@@ -174,10 +173,10 @@ class ExpenseCategoryChartCard extends StatelessWidget {
                               children: [
                                 Text(
                                   _getCategoryName(category),
-                                  style: GoogleFonts.inter(
+                                  style: TextStyle(
                                     fontSize: 13,
-                                    fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
-                                    color: isDark ? Colors.white : const Color(0xFF131438),
+                                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.w600,
+                                    color: Theme.of(context).colorScheme.onSurface,
                                   ),
                                 ),
                                 const SizedBox(width: 6),
@@ -189,7 +188,7 @@ class ExpenseCategoryChartCard extends StatelessWidget {
                                   ),
                                   child: Text(
                                     '$percentStr%',
-                                    style: GoogleFonts.inter(
+                                    style: TextStyle(
                                       fontSize: 10.5,
                                       fontWeight: FontWeight.w700,
                                       color: color,
@@ -200,9 +199,9 @@ class ExpenseCategoryChartCard extends StatelessWidget {
                             ),
                             Text(
                               CurrencyFormatter.format(amount, symbol: currencySymbol),
-                              style: GoogleFonts.dmSans(
+                              style: TextStyle(
                                 fontSize: 13.5,
-                                fontWeight: FontWeight.w800,
+                                fontWeight: FontWeight.w600,
                                 color: cs.onSurface,
                               ),
                             ),

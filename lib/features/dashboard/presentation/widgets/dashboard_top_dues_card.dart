@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:duemate/core/utils/currency_formatter.dart';
 import 'package:duemate/core/utils/whatsapp_helper.dart';
 import 'package:duemate/core/widgets/avatar_widget.dart';
@@ -27,7 +26,7 @@ class DashboardTopDuesCard extends StatelessWidget {
     final owesMoney = summary.balance > 0.0001;
     final labelText = owesMoney ? 'Owes you' : 'You owe';
     final amountColor = owesMoney
-        ? (isDark ? Colors.white : const Color(0xFF131438))
+        ? (Theme.of(context).colorScheme.onSurface)
         : cs.error;
 
     return Container(
@@ -63,17 +62,17 @@ class DashboardTopDuesCard extends StatelessWidget {
                   children: [
                     Text(
                       person.name,
-                      style: GoogleFonts.dmSans(
+                      style: TextStyle(
                         fontSize: 14.5,
                         fontWeight: FontWeight.w700,
-                        color: isDark ? Colors.white : const Color(0xFF131438),
+                        color: Theme.of(context).colorScheme.onSurface,
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
                     Text(
                       labelText,
-                      style: GoogleFonts.inter(
+                      style: TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.w500,
                         color: owesMoney ? cs.primary : cs.error,
@@ -89,9 +88,9 @@ class DashboardTopDuesCard extends StatelessWidget {
 
           Text(
             CurrencyFormatter.format(summary.balance.abs(), symbol: currencySymbol),
-            style: GoogleFonts.dmSans(
+            style: TextStyle(
               fontSize: 20,
-              fontWeight: FontWeight.w800,
+              fontWeight: FontWeight.w600,
               letterSpacing: -0.4,
               color: amountColor,
             ),
@@ -113,7 +112,7 @@ class DashboardTopDuesCard extends StatelessWidget {
                     ),
                     child: Text(
                       'View Ledger',
-                      style: GoogleFonts.inter(fontSize: 11.5, fontWeight: FontWeight.w600),
+                      style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),

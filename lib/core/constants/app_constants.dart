@@ -46,18 +46,18 @@ extension TransactionTypeX on TransactionType {
   String get label {
     switch (this) {
       case TransactionType.moneyGiven:
-        return 'Money Given';
+        return 'Money given';
       case TransactionType.paymentReceived:
-        return 'Payment Received';
+        return 'Payment received';
     }
   }
 
   String get actionLabel {
     switch (this) {
       case TransactionType.moneyGiven:
-        return 'Give Money';
+        return 'Give money';
       case TransactionType.paymentReceived:
-        return 'Receive Payment';
+        return 'Receive payment';
     }
   }
 
@@ -88,7 +88,7 @@ extension PaymentMethodX on PaymentMethod {
       case PaymentMethod.cash:
         return 'Cash';
       case PaymentMethod.bankTransfer:
-        return 'Bank Transfer';
+        return 'Bank transfer';
       case PaymentMethod.card:
         return 'Card';
       case PaymentMethod.other:
