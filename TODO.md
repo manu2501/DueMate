@@ -48,6 +48,7 @@ What's done, what's known to be missing, and what's next.
 ## 🔜 Next
 
 ### Money in and out
+- [ ] **Floating Rate & Repo Rate Adjustment:** Mark floating rate bank loans linked to repo rate (RLLR / EBLR). When repo rate increases or decreases, auto-recalculate new monthly EMI or adjust remaining tenure across all linked loans seamlessly.
 - [ ] **UPI QR and deep links:** show a UPI QR on the Receive sheet (`qr_flutter`), and open UPI apps pre-filled (`upi://pay?...`).
 - [ ] **Receipt attachments:** attach payment screenshots or receipts to entries, expenses and EMIs (`image_picker`), with a full-screen viewer.
 - [ ] **Credit card bills:** statement date, total and minimum due, with reminders before the due date.
