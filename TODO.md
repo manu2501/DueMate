@@ -6,6 +6,11 @@ DueMate is a personal ledger, lending, and credit card EMI tracking application.
 
 ## ✅ Completed Features
 
+- [x] **Direct App Startup:** Removed onboarding welcome screen completely; app launches directly into the interactive Dashboard.
+- [x] **Intuitive Motion & Animations:**
+  - **Animated Currency Rollup:** Smooth `AnimatedCurrencyText` counter rollups when financial balances update or load.
+  - **Staggered Entrance Motion:** Lightweight `FadeSlideTransition` for list cards and dues items across Dashboard, Directory, and Transactions screens.
+  - **Interactive Press/Scale Feedback:** Tactile `PressableScale` spring response on buttons and quick action tiles.
 - [x] **Redesigned Core UI Pages:**
   - **Dashboard Page:** Time-aware greeting header, high-contrast Net Ledger Hero card, quick actions dock bar, and horizontal top dues carousel with instant WhatsApp reminders.
   - **Directory Page:** Active contacts summary metrics, status filter chips (*All*, *Owes You*, *Settled*, *Archived*), and `PersonDirectoryTile` cards with quick receive/pay actions.
