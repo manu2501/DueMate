@@ -49,8 +49,8 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
 
   late final TextEditingController _itemController;
   late final TextEditingController _cardController;
-  late final TextEditingController _baseAmountController;
-  late final TextEditingController _chargesController;
+  late final TextEditingController _monthlyEmiController;
+  late final TextEditingController _installmentsPaidController;
   late final TextEditingController _notesController;
   late final TextEditingController _tenureController;
 
@@ -59,6 +59,7 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
   String? _selectedPersonId;
   bool _isPaidByMe = true;
   int _tenureMonths = 6;
+  int _installmentsPaid = 0;
   DateTime _startDate = DateTime.now();
   int _dueDayOfMonth = DateTime.now().day;
   bool _isSaving = false;
@@ -71,14 +72,8 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
 
   bool get isEditing => widget.emiToEdit != null;
 
-  double get _baseAmount => double.tryParse(_baseAmountController.text.trim()) ?? 0.0;
-  double get _charges => double.tryParse(_chargesController.text.trim()) ?? 0.0;
-  double get _totalPayable => _baseAmount + _charges;
-  double get _monthlyInstallment {
-    if (_totalPayable <= 0 || _tenureMonths <= 0) return 0.0;
-    final raw = _totalPayable / _tenureMonths;
-    return double.parse(raw.toStringAsFixed(2));
-  }
+  double get _monthlyInstallment => double.tryParse(_monthlyEmiController.text.trim()) ?? 0.0;
+  double get _totalPayable => _monthlyInstallment * _tenureMonths;
 
   @override
   void initState() {
@@ -97,10 +92,12 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
     }
     _itemController = TextEditingController(text: emi?.itemName ?? '');
     _cardController = TextEditingController(text: emi?.cardName ?? '');
-    _baseAmountController = TextEditingController(
-      text: emi != null ? emi.totalAmount.toStringAsFixed(0) : '',
+    _monthlyEmiController = TextEditingController(
+      text: emi != null ? emi.monthlyInstallment.toStringAsFixed(0) : '',
     );
-    _chargesController = TextEditingController(text: '');
+    _installmentsPaidController = TextEditingController(
+      text: emi != null ? emi.installmentsPaid.toString() : '0',
+    );
     _notesController = TextEditingController(text: emi?.notes ?? '');
 
     if (emi != null) {
@@ -113,15 +110,16 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
 
       _isPaidByMe = emi.isPaidByMe;
       _tenureMonths = emi.totalTenureMonths;
+      _installmentsPaid = emi.installmentsPaid;
       _startDate = emi.startDate;
       _dueDayOfMonth = emi.dueDayOfMonth;
     }
 
     _tenureController = TextEditingController(text: _tenureMonths.toString());
     _tenureController.addListener(_onTenureChanged);
+    _installmentsPaidController.addListener(_onInstallmentsPaidChanged);
 
-    _baseAmountController.addListener(_onAmountOrChargesChanged);
-    _chargesController.addListener(_onAmountOrChargesChanged);
+    _monthlyEmiController.addListener(_onAmountChanged);
     _itemController.addListener(_onTextChanged);
     _cardController.addListener(_onTextChanged);
   }
@@ -134,10 +132,10 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
     _cardController.removeListener(_onTextChanged);
     _itemController.dispose();
     _cardController.dispose();
-    _baseAmountController.removeListener(_onAmountOrChargesChanged);
-    _chargesController.removeListener(_onAmountOrChargesChanged);
-    _baseAmountController.dispose();
-    _chargesController.dispose();
+    _monthlyEmiController.removeListener(_onAmountChanged);
+    _monthlyEmiController.dispose();
+    _installmentsPaidController.removeListener(_onInstallmentsPaidChanged);
+    _installmentsPaidController.dispose();
     _notesController.dispose();
     super.dispose();
   }
@@ -151,27 +149,21 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
     }
   }
 
+  void _onInstallmentsPaidChanged() {
+    final parsed = int.tryParse(_installmentsPaidController.text.trim()) ?? 0;
+    if (_installmentsPaid != parsed) {
+      setState(() {
+        _installmentsPaid = parsed;
+      });
+    }
+  }
+
   void _onTextChanged() {
     setState(() {});
   }
 
-  void _onAmountOrChargesChanged() {
+  void _onAmountChanged() {
     setState(() {});
-  }
-
-  void _applyQuickCharge(double add) {
-    final current = _charges;
-    final updated = current + add;
-    _chargesController.text = updated % 1 == 0 ? updated.toInt().toString() : updated.toStringAsFixed(2);
-    _onAmountOrChargesChanged();
-  }
-
-  void _applyGstCharge(double percent) {
-    if (_baseAmount <= 0) return;
-    final gst = (_baseAmount * (percent / 100.0)).roundToDouble();
-    final updated = _charges + gst;
-    _chargesController.text = updated.toStringAsFixed(0);
-    _onAmountOrChargesChanged();
   }
 
   Future<void> _pickPerson() async {
@@ -238,9 +230,6 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
       final List<String> notesParts = [];
       if (_emiType == EmiType.loan) {
         notesParts.add('[Loan EMI]');
-      }
-      if (_charges > 0) {
-        notesParts.add('Base: ₹${_baseAmount.toStringAsFixed(0)} + Charges: ₹${_charges.toStringAsFixed(0)}');
       }
       if (notesParts.isNotEmpty) {
         final prefix = notesParts.join(' • ');
@@ -956,14 +945,14 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
 
             const SizedBox(height: 22),
 
-            // 5. Principal / Base Amount Field
+            // 5. Monthly EMI Amount Field
             TextFormField(
-              controller: _baseAmountController,
+              controller: _monthlyEmiController,
               keyboardType: const TextInputType.numberWithOptions(decimal: true),
               style: GoogleFonts.dmSans(fontSize: 20, fontWeight: FontWeight.w700),
               decoration: InputDecoration(
-                labelText: isLoan ? 'Loan Principal Amount *' : 'Purchase / Base Amount *',
-                hintText: '0',
+                labelText: 'Monthly EMI Amount *',
+                hintText: 'e.g. 5000',
                 prefixIcon: Padding(
                   padding: const EdgeInsets.only(left: 14, right: 8),
                   child: Center(
@@ -982,7 +971,7 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
               ),
               validator: (v) {
                 if (v == null || v.trim().isEmpty) {
-                  return isLoan ? 'Please enter loan amount' : 'Please enter purchase amount';
+                  return 'Please enter monthly EMI amount';
                 }
                 final n = double.tryParse(v.trim());
                 if (n == null || n <= 0) return 'Please enter a valid amount';
@@ -990,82 +979,9 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
               },
             ),
 
-            const SizedBox(height: 16),
-
-            // 6. Additional Charges / Interest / Fees
-            TextFormField(
-              controller: _chargesController,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              decoration: InputDecoration(
-                labelText: isLoan ? 'Interest / Processing Fee / Extra Charges' : 'Additional Charges / Bank Fees / Interest',
-                hintText: '0',
-                prefixIcon: Padding(
-                  padding: const EdgeInsets.only(left: 14, right: 8),
-                  child: Center(
-                    widthFactor: 0.0,
-                    child: Text(
-                      '+ $currencySymbol',
-                      style: TextStyle(fontWeight: FontWeight.w700, color: cs.error),
-                    ),
-                  ),
-                ),
-                suffixIcon: _charges > 0
-                    ? IconButton(
-                        icon: const Icon(Icons.clear_rounded, size: 18),
-                        onPressed: () {
-                          _chargesController.clear();
-                          _onAmountOrChargesChanged();
-                        },
-                      )
-                    : null,
-                helperText: isLoan
-                    ? 'Total interest or processing fees incurred over the tenure.'
-                    : 'Processing fee, bank interest, or GST incurred for this EMI.',
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
-              ),
-            ),
-
-            const SizedBox(height: 8),
-
-            // Quick fee addition chips
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: [
-                  ActionChip(
-                    avatar: const Icon(Icons.add, size: 14),
-                    label: const Text('+₹199 Fee', style: TextStyle(fontSize: 11)),
-                    onPressed: () => _applyQuickCharge(199),
-                    visualDensity: VisualDensity.compact,
-                  ),
-                  const SizedBox(width: 6),
-                  ActionChip(
-                    avatar: const Icon(Icons.add, size: 14),
-                    label: const Text('+₹499 Fee', style: TextStyle(fontSize: 11)),
-                    onPressed: () => _applyQuickCharge(499),
-                    visualDensity: VisualDensity.compact,
-                  ),
-                  const SizedBox(width: 6),
-                  ActionChip(
-                    avatar: const Icon(Icons.add, size: 14),
-                    label: const Text('+₹999 Fee', style: TextStyle(fontSize: 11)),
-                    onPressed: () => _applyQuickCharge(999),
-                    visualDensity: VisualDensity.compact,
-                  ),
-                  const SizedBox(width: 6),
-                  ActionChip(
-                    avatar: const Icon(Icons.percent_rounded, size: 14),
-                    label: const Text('+18% GST', style: TextStyle(fontSize: 11)),
-                    onPressed: () => _applyGstCharge(18),
-                    visualDensity: VisualDensity.compact,
-                  ),
-                ],
-              ),
-            ),
-
             const SizedBox(height: 18),
 
-            // 7. Tenure Selection (Months)
+            // 6. Tenure Selection (Months)
             EmiTenureSelector(
               controller: _tenureController,
               currentTenureMonths: _tenureMonths,
@@ -1080,11 +996,32 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
 
             const SizedBox(height: 18),
 
+            // 7. Installments Already Paid
+            TextFormField(
+              controller: _installmentsPaidController,
+              keyboardType: TextInputType.number,
+              decoration: InputDecoration(
+                labelText: 'Installments Already Paid',
+                hintText: '0',
+                prefixIcon: const Icon(Icons.history_rounded, size: 20),
+                helperText: 'Enter if migrating an existing loan (e.g., 3 out of 12 already paid).',
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+              ),
+              validator: (v) {
+                final n = int.tryParse(v?.trim() ?? '0');
+                if (n == null || n < 0) return 'Valid number required';
+                if (n > _tenureMonths) return 'Cannot exceed total tenure';
+                return null;
+              },
+            ),
+
+            const SizedBox(height: 18),
+
             // Live EMI Split Breakdown Card
             EmiBreakdownCard(
               isLoan: isLoan,
-              baseAmount: _baseAmount,
-              charges: _charges,
+              baseAmount: _totalPayable,
+              charges: 0.0,
               totalPayable: _totalPayable,
               monthlyInstallment: _monthlyInstallment,
               tenureMonths: _tenureMonths,
@@ -1139,7 +1076,7 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              isLoan ? 'MONTHLY REPAYMENT' : 'MONTHLY INSTALLMENT',
+                              'TOTAL LOAN AMOUNT',
                               style: GoogleFonts.inter(
                                 fontSize: 11,
                                 fontWeight: FontWeight.w700,
@@ -1149,7 +1086,7 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              'Auto-calculated based on tenure',
+                              'Auto-calculated based on EMI & tenure',
                               style: GoogleFonts.inter(
                                 fontSize: 11,
                                 color: cs.onSurfaceVariant,
@@ -1189,7 +1126,7 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
                     textBaseline: TextBaseline.alphabetic,
                     children: [
                       Text(
-                        CurrencyFormatter.format(_monthlyInstallment, symbol: currencySymbol),
+                        CurrencyFormatter.format(_totalPayable, symbol: currencySymbol),
                         style: GoogleFonts.dmSans(
                           fontSize: 28,
                           fontWeight: FontWeight.w800,
@@ -1199,7 +1136,7 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
                       ),
                       const SizedBox(width: 6),
                       Text(
-                        '/ month',
+                        'total',
                         style: GoogleFonts.inter(
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
