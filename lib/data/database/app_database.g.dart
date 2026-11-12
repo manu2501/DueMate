@@ -2713,6 +2713,17 @@ class $ExpensesTable extends Expenses with TableInfo<$ExpensesTable, Expense> {
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _recurringIdMeta = const VerificationMeta(
+    'recurringId',
+  );
+  @override
+  late final GeneratedColumn<String> recurringId = GeneratedColumn<String>(
+    'recurring_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
   );
@@ -2744,6 +2755,7 @@ class $ExpensesTable extends Expenses with TableInfo<$ExpensesTable, Expense> {
     expenseDate,
     paymentMethod,
     notes,
+    recurringId,
     createdAt,
     updatedAt,
   ];
@@ -2795,6 +2807,15 @@ class $ExpensesTable extends Expenses with TableInfo<$ExpensesTable, Expense> {
       context.handle(
         _notesMeta,
         notes.isAcceptableOrUnknown(data['notes']!, _notesMeta),
+      );
+    }
+    if (data.containsKey('recurring_id')) {
+      context.handle(
+        _recurringIdMeta,
+        recurringId.isAcceptableOrUnknown(
+          data['recurring_id']!,
+          _recurringIdMeta,
+        ),
       );
     }
     if (data.containsKey('created_at')) {
@@ -2854,6 +2875,10 @@ class $ExpensesTable extends Expenses with TableInfo<$ExpensesTable, Expense> {
         DriftSqlType.string,
         data['${effectivePrefix}notes'],
       ),
+      recurringId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}recurring_id'],
+      ),
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
@@ -2884,6 +2909,10 @@ class Expense extends DataClass implements Insertable<Expense> {
   final DateTime expenseDate;
   final PaymentMethod paymentMethod;
   final String? notes;
+
+  /// The [RecurringExpenses] rule that posted it, if any. No foreign key:
+  /// stopping a rule keeps the expenses it posted. Since schema v9.
+  final String? recurringId;
   final DateTime createdAt;
   final DateTime updatedAt;
   const Expense({
@@ -2894,6 +2923,7 @@ class Expense extends DataClass implements Insertable<Expense> {
     required this.expenseDate,
     required this.paymentMethod,
     this.notes,
+    this.recurringId,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -2917,6 +2947,9 @@ class Expense extends DataClass implements Insertable<Expense> {
     if (!nullToAbsent || notes != null) {
       map['notes'] = Variable<String>(notes);
     }
+    if (!nullToAbsent || recurringId != null) {
+      map['recurring_id'] = Variable<String>(recurringId);
+    }
     map['created_at'] = Variable<DateTime>(createdAt);
     map['updated_at'] = Variable<DateTime>(updatedAt);
     return map;
@@ -2933,6 +2966,9 @@ class Expense extends DataClass implements Insertable<Expense> {
       notes: notes == null && nullToAbsent
           ? const Value.absent()
           : Value(notes),
+      recurringId: recurringId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(recurringId),
       createdAt: Value(createdAt),
       updatedAt: Value(updatedAt),
     );
@@ -2955,6 +2991,7 @@ class Expense extends DataClass implements Insertable<Expense> {
         serializer.fromJson<int>(json['paymentMethod']),
       ),
       notes: serializer.fromJson<String?>(json['notes']),
+      recurringId: serializer.fromJson<String?>(json['recurringId']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
     );
@@ -2974,6 +3011,7 @@ class Expense extends DataClass implements Insertable<Expense> {
         $ExpensesTable.$converterpaymentMethod.toJson(paymentMethod),
       ),
       'notes': serializer.toJson<String?>(notes),
+      'recurringId': serializer.toJson<String?>(recurringId),
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
     };
@@ -2987,6 +3025,7 @@ class Expense extends DataClass implements Insertable<Expense> {
     DateTime? expenseDate,
     PaymentMethod? paymentMethod,
     Value<String?> notes = const Value.absent(),
+    Value<String?> recurringId = const Value.absent(),
     DateTime? createdAt,
     DateTime? updatedAt,
   }) => Expense(
@@ -2997,6 +3036,7 @@ class Expense extends DataClass implements Insertable<Expense> {
     expenseDate: expenseDate ?? this.expenseDate,
     paymentMethod: paymentMethod ?? this.paymentMethod,
     notes: notes.present ? notes.value : this.notes,
+    recurringId: recurringId.present ? recurringId.value : this.recurringId,
     createdAt: createdAt ?? this.createdAt,
     updatedAt: updatedAt ?? this.updatedAt,
   );
@@ -3013,6 +3053,9 @@ class Expense extends DataClass implements Insertable<Expense> {
           ? data.paymentMethod.value
           : this.paymentMethod,
       notes: data.notes.present ? data.notes.value : this.notes,
+      recurringId: data.recurringId.present
+          ? data.recurringId.value
+          : this.recurringId,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
     );
@@ -3028,6 +3071,7 @@ class Expense extends DataClass implements Insertable<Expense> {
           ..write('expenseDate: $expenseDate, ')
           ..write('paymentMethod: $paymentMethod, ')
           ..write('notes: $notes, ')
+          ..write('recurringId: $recurringId, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt')
           ..write(')'))
@@ -3043,6 +3087,7 @@ class Expense extends DataClass implements Insertable<Expense> {
     expenseDate,
     paymentMethod,
     notes,
+    recurringId,
     createdAt,
     updatedAt,
   );
@@ -3057,6 +3102,7 @@ class Expense extends DataClass implements Insertable<Expense> {
           other.expenseDate == this.expenseDate &&
           other.paymentMethod == this.paymentMethod &&
           other.notes == this.notes &&
+          other.recurringId == this.recurringId &&
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt);
 }
@@ -3069,6 +3115,7 @@ class ExpensesCompanion extends UpdateCompanion<Expense> {
   final Value<DateTime> expenseDate;
   final Value<PaymentMethod> paymentMethod;
   final Value<String?> notes;
+  final Value<String?> recurringId;
   final Value<DateTime> createdAt;
   final Value<DateTime> updatedAt;
   final Value<int> rowid;
@@ -3080,6 +3127,7 @@ class ExpensesCompanion extends UpdateCompanion<Expense> {
     this.expenseDate = const Value.absent(),
     this.paymentMethod = const Value.absent(),
     this.notes = const Value.absent(),
+    this.recurringId = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.rowid = const Value.absent(),
@@ -3092,6 +3140,7 @@ class ExpensesCompanion extends UpdateCompanion<Expense> {
     required DateTime expenseDate,
     required PaymentMethod paymentMethod,
     this.notes = const Value.absent(),
+    this.recurringId = const Value.absent(),
     required DateTime createdAt,
     required DateTime updatedAt,
     this.rowid = const Value.absent(),
@@ -3111,6 +3160,7 @@ class ExpensesCompanion extends UpdateCompanion<Expense> {
     Expression<DateTime>? expenseDate,
     Expression<int>? paymentMethod,
     Expression<String>? notes,
+    Expression<String>? recurringId,
     Expression<DateTime>? createdAt,
     Expression<DateTime>? updatedAt,
     Expression<int>? rowid,
@@ -3123,6 +3173,7 @@ class ExpensesCompanion extends UpdateCompanion<Expense> {
       if (expenseDate != null) 'expense_date': expenseDate,
       if (paymentMethod != null) 'payment_method': paymentMethod,
       if (notes != null) 'notes': notes,
+      if (recurringId != null) 'recurring_id': recurringId,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
       if (rowid != null) 'rowid': rowid,
@@ -3137,6 +3188,7 @@ class ExpensesCompanion extends UpdateCompanion<Expense> {
     Value<DateTime>? expenseDate,
     Value<PaymentMethod>? paymentMethod,
     Value<String?>? notes,
+    Value<String?>? recurringId,
     Value<DateTime>? createdAt,
     Value<DateTime>? updatedAt,
     Value<int>? rowid,
@@ -3149,6 +3201,7 @@ class ExpensesCompanion extends UpdateCompanion<Expense> {
       expenseDate: expenseDate ?? this.expenseDate,
       paymentMethod: paymentMethod ?? this.paymentMethod,
       notes: notes ?? this.notes,
+      recurringId: recurringId ?? this.recurringId,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       rowid: rowid ?? this.rowid,
@@ -3183,6 +3236,9 @@ class ExpensesCompanion extends UpdateCompanion<Expense> {
     if (notes.present) {
       map['notes'] = Variable<String>(notes.value);
     }
+    if (recurringId.present) {
+      map['recurring_id'] = Variable<String>(recurringId.value);
+    }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
@@ -3205,6 +3261,701 @@ class ExpensesCompanion extends UpdateCompanion<Expense> {
           ..write('expenseDate: $expenseDate, ')
           ..write('paymentMethod: $paymentMethod, ')
           ..write('notes: $notes, ')
+          ..write('recurringId: $recurringId, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $RecurringExpensesTable extends RecurringExpenses
+    with TableInfo<$RecurringExpensesTable, RecurringExpense> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $RecurringExpensesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _titleMeta = const VerificationMeta('title');
+  @override
+  late final GeneratedColumn<String> title = GeneratedColumn<String>(
+    'title',
+    aliasedName,
+    false,
+    additionalChecks: GeneratedColumn.checkTextLength(
+      minTextLength: 1,
+      maxTextLength: 150,
+    ),
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _amountMeta = const VerificationMeta('amount');
+  @override
+  late final GeneratedColumn<double> amount = GeneratedColumn<double>(
+    'amount',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: true,
+  );
+  @override
+  late final GeneratedColumnWithTypeConverter<ExpenseCategory, int> category =
+      GeneratedColumn<int>(
+        'category',
+        aliasedName,
+        false,
+        type: DriftSqlType.int,
+        requiredDuringInsert: true,
+      ).withConverter<ExpenseCategory>(
+        $RecurringExpensesTable.$convertercategory,
+      );
+  @override
+  late final GeneratedColumnWithTypeConverter<PaymentMethod, int>
+  paymentMethod =
+      GeneratedColumn<int>(
+        'payment_method',
+        aliasedName,
+        false,
+        type: DriftSqlType.int,
+        requiredDuringInsert: true,
+      ).withConverter<PaymentMethod>(
+        $RecurringExpensesTable.$converterpaymentMethod,
+      );
+  static const VerificationMeta _notesMeta = const VerificationMeta('notes');
+  @override
+  late final GeneratedColumn<String> notes = GeneratedColumn<String>(
+    'notes',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _dayOfMonthMeta = const VerificationMeta(
+    'dayOfMonth',
+  );
+  @override
+  late final GeneratedColumn<int> dayOfMonth = GeneratedColumn<int>(
+    'day_of_month',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _startDateMeta = const VerificationMeta(
+    'startDate',
+  );
+  @override
+  late final GeneratedColumn<DateTime> startDate = GeneratedColumn<DateTime>(
+    'start_date',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _lastPostedDateMeta = const VerificationMeta(
+    'lastPostedDate',
+  );
+  @override
+  late final GeneratedColumn<DateTime> lastPostedDate =
+      GeneratedColumn<DateTime>(
+        'last_posted_date',
+        aliasedName,
+        true,
+        type: DriftSqlType.dateTime,
+        requiredDuringInsert: false,
+      );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+    'updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    title,
+    amount,
+    category,
+    paymentMethod,
+    notes,
+    dayOfMonth,
+    startDate,
+    lastPostedDate,
+    createdAt,
+    updatedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'recurring_expenses';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<RecurringExpense> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('title')) {
+      context.handle(
+        _titleMeta,
+        title.isAcceptableOrUnknown(data['title']!, _titleMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_titleMeta);
+    }
+    if (data.containsKey('amount')) {
+      context.handle(
+        _amountMeta,
+        amount.isAcceptableOrUnknown(data['amount']!, _amountMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_amountMeta);
+    }
+    if (data.containsKey('notes')) {
+      context.handle(
+        _notesMeta,
+        notes.isAcceptableOrUnknown(data['notes']!, _notesMeta),
+      );
+    }
+    if (data.containsKey('day_of_month')) {
+      context.handle(
+        _dayOfMonthMeta,
+        dayOfMonth.isAcceptableOrUnknown(
+          data['day_of_month']!,
+          _dayOfMonthMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_dayOfMonthMeta);
+    }
+    if (data.containsKey('start_date')) {
+      context.handle(
+        _startDateMeta,
+        startDate.isAcceptableOrUnknown(data['start_date']!, _startDateMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_startDateMeta);
+    }
+    if (data.containsKey('last_posted_date')) {
+      context.handle(
+        _lastPostedDateMeta,
+        lastPostedDate.isAcceptableOrUnknown(
+          data['last_posted_date']!,
+          _lastPostedDateMeta,
+        ),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_updatedAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  RecurringExpense map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return RecurringExpense(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      title: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}title'],
+      )!,
+      amount: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}amount'],
+      )!,
+      category: $RecurringExpensesTable.$convertercategory.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.int,
+          data['${effectivePrefix}category'],
+        )!,
+      ),
+      paymentMethod: $RecurringExpensesTable.$converterpaymentMethod.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.int,
+          data['${effectivePrefix}payment_method'],
+        )!,
+      ),
+      notes: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}notes'],
+      ),
+      dayOfMonth: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}day_of_month'],
+      )!,
+      startDate: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}start_date'],
+      )!,
+      lastPostedDate: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}last_posted_date'],
+      ),
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}updated_at'],
+      )!,
+    );
+  }
+
+  @override
+  $RecurringExpensesTable createAlias(String alias) {
+    return $RecurringExpensesTable(attachedDatabase, alias);
+  }
+
+  static JsonTypeConverter2<ExpenseCategory, int, int> $convertercategory =
+      const EnumIndexConverter<ExpenseCategory>(ExpenseCategory.values);
+  static JsonTypeConverter2<PaymentMethod, int, int> $converterpaymentMethod =
+      const EnumIndexConverter<PaymentMethod>(PaymentMethod.values);
+}
+
+class RecurringExpense extends DataClass
+    implements Insertable<RecurringExpense> {
+  final String id;
+  final String title;
+  final double amount;
+  final ExpenseCategory category;
+  final PaymentMethod paymentMethod;
+  final String? notes;
+
+  /// Posts on this day each month (clamped to short months).
+  final int dayOfMonth;
+
+  /// First occurrence; nothing is posted before it.
+  final DateTime startDate;
+
+  /// Date of the latest posted occurrence; months up to it are done.
+  final DateTime? lastPostedDate;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+  const RecurringExpense({
+    required this.id,
+    required this.title,
+    required this.amount,
+    required this.category,
+    required this.paymentMethod,
+    this.notes,
+    required this.dayOfMonth,
+    required this.startDate,
+    this.lastPostedDate,
+    required this.createdAt,
+    required this.updatedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['title'] = Variable<String>(title);
+    map['amount'] = Variable<double>(amount);
+    {
+      map['category'] = Variable<int>(
+        $RecurringExpensesTable.$convertercategory.toSql(category),
+      );
+    }
+    {
+      map['payment_method'] = Variable<int>(
+        $RecurringExpensesTable.$converterpaymentMethod.toSql(paymentMethod),
+      );
+    }
+    if (!nullToAbsent || notes != null) {
+      map['notes'] = Variable<String>(notes);
+    }
+    map['day_of_month'] = Variable<int>(dayOfMonth);
+    map['start_date'] = Variable<DateTime>(startDate);
+    if (!nullToAbsent || lastPostedDate != null) {
+      map['last_posted_date'] = Variable<DateTime>(lastPostedDate);
+    }
+    map['created_at'] = Variable<DateTime>(createdAt);
+    map['updated_at'] = Variable<DateTime>(updatedAt);
+    return map;
+  }
+
+  RecurringExpensesCompanion toCompanion(bool nullToAbsent) {
+    return RecurringExpensesCompanion(
+      id: Value(id),
+      title: Value(title),
+      amount: Value(amount),
+      category: Value(category),
+      paymentMethod: Value(paymentMethod),
+      notes: notes == null && nullToAbsent
+          ? const Value.absent()
+          : Value(notes),
+      dayOfMonth: Value(dayOfMonth),
+      startDate: Value(startDate),
+      lastPostedDate: lastPostedDate == null && nullToAbsent
+          ? const Value.absent()
+          : Value(lastPostedDate),
+      createdAt: Value(createdAt),
+      updatedAt: Value(updatedAt),
+    );
+  }
+
+  factory RecurringExpense.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return RecurringExpense(
+      id: serializer.fromJson<String>(json['id']),
+      title: serializer.fromJson<String>(json['title']),
+      amount: serializer.fromJson<double>(json['amount']),
+      category: $RecurringExpensesTable.$convertercategory.fromJson(
+        serializer.fromJson<int>(json['category']),
+      ),
+      paymentMethod: $RecurringExpensesTable.$converterpaymentMethod.fromJson(
+        serializer.fromJson<int>(json['paymentMethod']),
+      ),
+      notes: serializer.fromJson<String?>(json['notes']),
+      dayOfMonth: serializer.fromJson<int>(json['dayOfMonth']),
+      startDate: serializer.fromJson<DateTime>(json['startDate']),
+      lastPostedDate: serializer.fromJson<DateTime?>(json['lastPostedDate']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'title': serializer.toJson<String>(title),
+      'amount': serializer.toJson<double>(amount),
+      'category': serializer.toJson<int>(
+        $RecurringExpensesTable.$convertercategory.toJson(category),
+      ),
+      'paymentMethod': serializer.toJson<int>(
+        $RecurringExpensesTable.$converterpaymentMethod.toJson(paymentMethod),
+      ),
+      'notes': serializer.toJson<String?>(notes),
+      'dayOfMonth': serializer.toJson<int>(dayOfMonth),
+      'startDate': serializer.toJson<DateTime>(startDate),
+      'lastPostedDate': serializer.toJson<DateTime?>(lastPostedDate),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+    };
+  }
+
+  RecurringExpense copyWith({
+    String? id,
+    String? title,
+    double? amount,
+    ExpenseCategory? category,
+    PaymentMethod? paymentMethod,
+    Value<String?> notes = const Value.absent(),
+    int? dayOfMonth,
+    DateTime? startDate,
+    Value<DateTime?> lastPostedDate = const Value.absent(),
+    DateTime? createdAt,
+    DateTime? updatedAt,
+  }) => RecurringExpense(
+    id: id ?? this.id,
+    title: title ?? this.title,
+    amount: amount ?? this.amount,
+    category: category ?? this.category,
+    paymentMethod: paymentMethod ?? this.paymentMethod,
+    notes: notes.present ? notes.value : this.notes,
+    dayOfMonth: dayOfMonth ?? this.dayOfMonth,
+    startDate: startDate ?? this.startDate,
+    lastPostedDate: lastPostedDate.present
+        ? lastPostedDate.value
+        : this.lastPostedDate,
+    createdAt: createdAt ?? this.createdAt,
+    updatedAt: updatedAt ?? this.updatedAt,
+  );
+  RecurringExpense copyWithCompanion(RecurringExpensesCompanion data) {
+    return RecurringExpense(
+      id: data.id.present ? data.id.value : this.id,
+      title: data.title.present ? data.title.value : this.title,
+      amount: data.amount.present ? data.amount.value : this.amount,
+      category: data.category.present ? data.category.value : this.category,
+      paymentMethod: data.paymentMethod.present
+          ? data.paymentMethod.value
+          : this.paymentMethod,
+      notes: data.notes.present ? data.notes.value : this.notes,
+      dayOfMonth: data.dayOfMonth.present
+          ? data.dayOfMonth.value
+          : this.dayOfMonth,
+      startDate: data.startDate.present ? data.startDate.value : this.startDate,
+      lastPostedDate: data.lastPostedDate.present
+          ? data.lastPostedDate.value
+          : this.lastPostedDate,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('RecurringExpense(')
+          ..write('id: $id, ')
+          ..write('title: $title, ')
+          ..write('amount: $amount, ')
+          ..write('category: $category, ')
+          ..write('paymentMethod: $paymentMethod, ')
+          ..write('notes: $notes, ')
+          ..write('dayOfMonth: $dayOfMonth, ')
+          ..write('startDate: $startDate, ')
+          ..write('lastPostedDate: $lastPostedDate, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    title,
+    amount,
+    category,
+    paymentMethod,
+    notes,
+    dayOfMonth,
+    startDate,
+    lastPostedDate,
+    createdAt,
+    updatedAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is RecurringExpense &&
+          other.id == this.id &&
+          other.title == this.title &&
+          other.amount == this.amount &&
+          other.category == this.category &&
+          other.paymentMethod == this.paymentMethod &&
+          other.notes == this.notes &&
+          other.dayOfMonth == this.dayOfMonth &&
+          other.startDate == this.startDate &&
+          other.lastPostedDate == this.lastPostedDate &&
+          other.createdAt == this.createdAt &&
+          other.updatedAt == this.updatedAt);
+}
+
+class RecurringExpensesCompanion extends UpdateCompanion<RecurringExpense> {
+  final Value<String> id;
+  final Value<String> title;
+  final Value<double> amount;
+  final Value<ExpenseCategory> category;
+  final Value<PaymentMethod> paymentMethod;
+  final Value<String?> notes;
+  final Value<int> dayOfMonth;
+  final Value<DateTime> startDate;
+  final Value<DateTime?> lastPostedDate;
+  final Value<DateTime> createdAt;
+  final Value<DateTime> updatedAt;
+  final Value<int> rowid;
+  const RecurringExpensesCompanion({
+    this.id = const Value.absent(),
+    this.title = const Value.absent(),
+    this.amount = const Value.absent(),
+    this.category = const Value.absent(),
+    this.paymentMethod = const Value.absent(),
+    this.notes = const Value.absent(),
+    this.dayOfMonth = const Value.absent(),
+    this.startDate = const Value.absent(),
+    this.lastPostedDate = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  RecurringExpensesCompanion.insert({
+    required String id,
+    required String title,
+    required double amount,
+    required ExpenseCategory category,
+    required PaymentMethod paymentMethod,
+    this.notes = const Value.absent(),
+    required int dayOfMonth,
+    required DateTime startDate,
+    this.lastPostedDate = const Value.absent(),
+    required DateTime createdAt,
+    required DateTime updatedAt,
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       title = Value(title),
+       amount = Value(amount),
+       category = Value(category),
+       paymentMethod = Value(paymentMethod),
+       dayOfMonth = Value(dayOfMonth),
+       startDate = Value(startDate),
+       createdAt = Value(createdAt),
+       updatedAt = Value(updatedAt);
+  static Insertable<RecurringExpense> custom({
+    Expression<String>? id,
+    Expression<String>? title,
+    Expression<double>? amount,
+    Expression<int>? category,
+    Expression<int>? paymentMethod,
+    Expression<String>? notes,
+    Expression<int>? dayOfMonth,
+    Expression<DateTime>? startDate,
+    Expression<DateTime>? lastPostedDate,
+    Expression<DateTime>? createdAt,
+    Expression<DateTime>? updatedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (title != null) 'title': title,
+      if (amount != null) 'amount': amount,
+      if (category != null) 'category': category,
+      if (paymentMethod != null) 'payment_method': paymentMethod,
+      if (notes != null) 'notes': notes,
+      if (dayOfMonth != null) 'day_of_month': dayOfMonth,
+      if (startDate != null) 'start_date': startDate,
+      if (lastPostedDate != null) 'last_posted_date': lastPostedDate,
+      if (createdAt != null) 'created_at': createdAt,
+      if (updatedAt != null) 'updated_at': updatedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  RecurringExpensesCompanion copyWith({
+    Value<String>? id,
+    Value<String>? title,
+    Value<double>? amount,
+    Value<ExpenseCategory>? category,
+    Value<PaymentMethod>? paymentMethod,
+    Value<String?>? notes,
+    Value<int>? dayOfMonth,
+    Value<DateTime>? startDate,
+    Value<DateTime?>? lastPostedDate,
+    Value<DateTime>? createdAt,
+    Value<DateTime>? updatedAt,
+    Value<int>? rowid,
+  }) {
+    return RecurringExpensesCompanion(
+      id: id ?? this.id,
+      title: title ?? this.title,
+      amount: amount ?? this.amount,
+      category: category ?? this.category,
+      paymentMethod: paymentMethod ?? this.paymentMethod,
+      notes: notes ?? this.notes,
+      dayOfMonth: dayOfMonth ?? this.dayOfMonth,
+      startDate: startDate ?? this.startDate,
+      lastPostedDate: lastPostedDate ?? this.lastPostedDate,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (title.present) {
+      map['title'] = Variable<String>(title.value);
+    }
+    if (amount.present) {
+      map['amount'] = Variable<double>(amount.value);
+    }
+    if (category.present) {
+      map['category'] = Variable<int>(
+        $RecurringExpensesTable.$convertercategory.toSql(category.value),
+      );
+    }
+    if (paymentMethod.present) {
+      map['payment_method'] = Variable<int>(
+        $RecurringExpensesTable.$converterpaymentMethod.toSql(
+          paymentMethod.value,
+        ),
+      );
+    }
+    if (notes.present) {
+      map['notes'] = Variable<String>(notes.value);
+    }
+    if (dayOfMonth.present) {
+      map['day_of_month'] = Variable<int>(dayOfMonth.value);
+    }
+    if (startDate.present) {
+      map['start_date'] = Variable<DateTime>(startDate.value);
+    }
+    if (lastPostedDate.present) {
+      map['last_posted_date'] = Variable<DateTime>(lastPostedDate.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('RecurringExpensesCompanion(')
+          ..write('id: $id, ')
+          ..write('title: $title, ')
+          ..write('amount: $amount, ')
+          ..write('category: $category, ')
+          ..write('paymentMethod: $paymentMethod, ')
+          ..write('notes: $notes, ')
+          ..write('dayOfMonth: $dayOfMonth, ')
+          ..write('startDate: $startDate, ')
+          ..write('lastPostedDate: $lastPostedDate, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('rowid: $rowid')
@@ -3220,6 +3971,8 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $TransactionsTable transactions = $TransactionsTable(this);
   late final $CreditCardEmisTable creditCardEmis = $CreditCardEmisTable(this);
   late final $ExpensesTable expenses = $ExpensesTable(this);
+  late final $RecurringExpensesTable recurringExpenses =
+      $RecurringExpensesTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -3229,6 +3982,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     transactions,
     creditCardEmis,
     expenses,
+    recurringExpenses,
   ];
   @override
   StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules([
@@ -4891,6 +5645,7 @@ typedef $$ExpensesTableCreateCompanionBuilder = ExpensesCompanion Function({
   required DateTime expenseDate,
   required PaymentMethod paymentMethod,
   Value<String?> notes,
+  Value<String?> recurringId,
   required DateTime createdAt,
   required DateTime updatedAt,
   Value<int> rowid,
@@ -4903,6 +5658,7 @@ typedef $$ExpensesTableUpdateCompanionBuilder = ExpensesCompanion Function({
   Value<DateTime> expenseDate,
   Value<PaymentMethod> paymentMethod,
   Value<String?> notes,
+  Value<String?> recurringId,
   Value<DateTime> createdAt,
   Value<DateTime> updatedAt,
   Value<int> rowid,
@@ -4951,6 +5707,11 @@ class $$ExpensesTableFilterComposer
 
   ColumnFilters<String> get notes => $composableBuilder(
     column: $table.notes,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get recurringId => $composableBuilder(
+    column: $table.recurringId,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -5009,6 +5770,11 @@ class $$ExpensesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get recurringId => $composableBuilder(
+    column: $table.recurringId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get createdAt => $composableBuilder(
     column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
@@ -5055,6 +5821,11 @@ class $$ExpensesTableAnnotationComposer
   GeneratedColumn<String> get notes =>
       $composableBuilder(column: $table.notes, builder: (column) => column);
 
+  GeneratedColumn<String> get recurringId => $composableBuilder(
+    column: $table.recurringId,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
 
@@ -5097,6 +5868,7 @@ class $$ExpensesTableTableManager
                 Value<DateTime> expenseDate = const Value.absent(),
                 Value<PaymentMethod> paymentMethod = const Value.absent(),
                 Value<String?> notes = const Value.absent(),
+                Value<String?> recurringId = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
@@ -5108,6 +5880,7 @@ class $$ExpensesTableTableManager
                 expenseDate: expenseDate,
                 paymentMethod: paymentMethod,
                 notes: notes,
+                recurringId: recurringId,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 rowid: rowid,
@@ -5121,6 +5894,7 @@ class $$ExpensesTableTableManager
                 required DateTime expenseDate,
                 required PaymentMethod paymentMethod,
                 Value<String?> notes = const Value.absent(),
+                Value<String?> recurringId = const Value.absent(),
                 required DateTime createdAt,
                 required DateTime updatedAt,
                 Value<int> rowid = const Value.absent(),
@@ -5132,6 +5906,7 @@ class $$ExpensesTableTableManager
                 expenseDate: expenseDate,
                 paymentMethod: paymentMethod,
                 notes: notes,
+                recurringId: recurringId,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 rowid: rowid,
@@ -5167,6 +5942,351 @@ typedef $$ExpensesTableProcessedTableManager =
       Expense,
       PrefetchHooks Function()
     >;
+typedef $$RecurringExpensesTableCreateCompanionBuilder =
+    RecurringExpensesCompanion Function({
+      required String id,
+      required String title,
+      required double amount,
+      required ExpenseCategory category,
+      required PaymentMethod paymentMethod,
+      Value<String?> notes,
+      required int dayOfMonth,
+      required DateTime startDate,
+      Value<DateTime?> lastPostedDate,
+      required DateTime createdAt,
+      required DateTime updatedAt,
+      Value<int> rowid,
+    });
+typedef $$RecurringExpensesTableUpdateCompanionBuilder =
+    RecurringExpensesCompanion Function({
+      Value<String> id,
+      Value<String> title,
+      Value<double> amount,
+      Value<ExpenseCategory> category,
+      Value<PaymentMethod> paymentMethod,
+      Value<String?> notes,
+      Value<int> dayOfMonth,
+      Value<DateTime> startDate,
+      Value<DateTime?> lastPostedDate,
+      Value<DateTime> createdAt,
+      Value<DateTime> updatedAt,
+      Value<int> rowid,
+    });
+
+class $$RecurringExpensesTableFilterComposer
+    extends Composer<_$AppDatabase, $RecurringExpensesTable> {
+  $$RecurringExpensesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get title => $composableBuilder(
+    column: $table.title,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get amount => $composableBuilder(
+    column: $table.amount,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnWithTypeConverterFilters<ExpenseCategory, ExpenseCategory, int>
+  get category => $composableBuilder(
+    column: $table.category,
+    builder: (column) => ColumnWithTypeConverterFilters(column),
+  );
+
+  ColumnWithTypeConverterFilters<PaymentMethod, PaymentMethod, int>
+  get paymentMethod => $composableBuilder(
+    column: $table.paymentMethod,
+    builder: (column) => ColumnWithTypeConverterFilters(column),
+  );
+
+  ColumnFilters<String> get notes => $composableBuilder(
+    column: $table.notes,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get dayOfMonth => $composableBuilder(
+    column: $table.dayOfMonth,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get startDate => $composableBuilder(
+    column: $table.startDate,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get lastPostedDate => $composableBuilder(
+    column: $table.lastPostedDate,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$RecurringExpensesTableOrderingComposer
+    extends Composer<_$AppDatabase, $RecurringExpensesTable> {
+  $$RecurringExpensesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get title => $composableBuilder(
+    column: $table.title,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get amount => $composableBuilder(
+    column: $table.amount,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get category => $composableBuilder(
+    column: $table.category,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get paymentMethod => $composableBuilder(
+    column: $table.paymentMethod,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get notes => $composableBuilder(
+    column: $table.notes,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get dayOfMonth => $composableBuilder(
+    column: $table.dayOfMonth,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get startDate => $composableBuilder(
+    column: $table.startDate,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get lastPostedDate => $composableBuilder(
+    column: $table.lastPostedDate,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$RecurringExpensesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $RecurringExpensesTable> {
+  $$RecurringExpensesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get title =>
+      $composableBuilder(column: $table.title, builder: (column) => column);
+
+  GeneratedColumn<double> get amount =>
+      $composableBuilder(column: $table.amount, builder: (column) => column);
+
+  GeneratedColumnWithTypeConverter<ExpenseCategory, int> get category =>
+      $composableBuilder(column: $table.category, builder: (column) => column);
+
+  GeneratedColumnWithTypeConverter<PaymentMethod, int> get paymentMethod =>
+      $composableBuilder(
+        column: $table.paymentMethod,
+        builder: (column) => column,
+      );
+
+  GeneratedColumn<String> get notes =>
+      $composableBuilder(column: $table.notes, builder: (column) => column);
+
+  GeneratedColumn<int> get dayOfMonth => $composableBuilder(
+    column: $table.dayOfMonth,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get startDate =>
+      $composableBuilder(column: $table.startDate, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get lastPostedDate => $composableBuilder(
+    column: $table.lastPostedDate,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+}
+
+class $$RecurringExpensesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $RecurringExpensesTable,
+          RecurringExpense,
+          $$RecurringExpensesTableFilterComposer,
+          $$RecurringExpensesTableOrderingComposer,
+          $$RecurringExpensesTableAnnotationComposer,
+          $$RecurringExpensesTableCreateCompanionBuilder,
+          $$RecurringExpensesTableUpdateCompanionBuilder,
+          (
+            RecurringExpense,
+            BaseReferences<
+              _$AppDatabase,
+              $RecurringExpensesTable,
+              RecurringExpense
+            >,
+          ),
+          RecurringExpense,
+          PrefetchHooks Function()
+        > {
+  $$RecurringExpensesTableTableManager(
+    _$AppDatabase db,
+    $RecurringExpensesTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$RecurringExpensesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$RecurringExpensesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$RecurringExpensesTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> title = const Value.absent(),
+                Value<double> amount = const Value.absent(),
+                Value<ExpenseCategory> category = const Value.absent(),
+                Value<PaymentMethod> paymentMethod = const Value.absent(),
+                Value<String?> notes = const Value.absent(),
+                Value<int> dayOfMonth = const Value.absent(),
+                Value<DateTime> startDate = const Value.absent(),
+                Value<DateTime?> lastPostedDate = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => RecurringExpensesCompanion(
+                id: id,
+                title: title,
+                amount: amount,
+                category: category,
+                paymentMethod: paymentMethod,
+                notes: notes,
+                dayOfMonth: dayOfMonth,
+                startDate: startDate,
+                lastPostedDate: lastPostedDate,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String title,
+                required double amount,
+                required ExpenseCategory category,
+                required PaymentMethod paymentMethod,
+                Value<String?> notes = const Value.absent(),
+                required int dayOfMonth,
+                required DateTime startDate,
+                Value<DateTime?> lastPostedDate = const Value.absent(),
+                required DateTime createdAt,
+                required DateTime updatedAt,
+                Value<int> rowid = const Value.absent(),
+              }) => RecurringExpensesCompanion.insert(
+                id: id,
+                title: title,
+                amount: amount,
+                category: category,
+                paymentMethod: paymentMethod,
+                notes: notes,
+                dayOfMonth: dayOfMonth,
+                startDate: startDate,
+                lastPostedDate: lastPostedDate,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$RecurringExpensesTable, RecurringExpense>(table),
+                  BaseReferences<
+                    _$AppDatabase,
+                    $RecurringExpensesTable,
+                    RecurringExpense
+                  >(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$RecurringExpensesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $RecurringExpensesTable,
+      RecurringExpense,
+      $$RecurringExpensesTableFilterComposer,
+      $$RecurringExpensesTableOrderingComposer,
+      $$RecurringExpensesTableAnnotationComposer,
+      $$RecurringExpensesTableCreateCompanionBuilder,
+      $$RecurringExpensesTableUpdateCompanionBuilder,
+      (
+        RecurringExpense,
+        BaseReferences<
+          _$AppDatabase,
+          $RecurringExpensesTable,
+          RecurringExpense
+        >,
+      ),
+      RecurringExpense,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -5179,4 +6299,6 @@ class $AppDatabaseManager {
       $$CreditCardEmisTableTableManager(_db, _db.creditCardEmis);
   $$ExpensesTableTableManager get expenses =>
       $$ExpensesTableTableManager(_db, _db.expenses);
+  $$RecurringExpensesTableTableManager get recurringExpenses =>
+      $$RecurringExpensesTableTableManager(_db, _db.recurringExpenses);
 }

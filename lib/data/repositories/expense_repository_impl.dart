@@ -17,6 +17,7 @@ class ExpenseRepositoryImpl implements ExpenseRepository {
       expenseDate: row.expenseDate,
       paymentMethod: row.paymentMethod,
       notes: row.notes,
+      recurringId: row.recurringId,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
     );
@@ -68,6 +69,7 @@ class ExpenseRepositoryImpl implements ExpenseRepository {
             expenseDate: expense.expenseDate,
             paymentMethod: expense.paymentMethod,
             notes: Value(expense.notes),
+            recurringId: Value(expense.recurringId),
             createdAt: expense.createdAt,
             updatedAt: expense.updatedAt,
           ),

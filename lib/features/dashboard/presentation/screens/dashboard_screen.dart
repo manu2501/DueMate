@@ -39,8 +39,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Post any EMI installments that fell due since the app was last opened.
+    // Post EMI installments and recurring expenses that fell due since the
+    // app was last opened.
     ref.watch(emiAutoProcessorProvider);
+    ref.watch(recurringExpenseProcessorProvider);
 
     final symbol = ref.watch(currencySymbolProvider);
     final hasPeople = (ref.watch(allPersonSummariesProvider).value ?? const [])

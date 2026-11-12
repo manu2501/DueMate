@@ -70,6 +70,17 @@ This month's spending against the budget (*left*, *only … left* from 85%, *ove
 expenses grouped by day with a daily total. Tap an expense to edit or delete it.
 *Earlier months* and the chart icon open **Spending trends**.
 
+**Repeats every month** lists recurring expenses (rent, subscriptions) with the day they post and
+the next date. They're added as ordinary expenses on that day each month (the 31st posts on the
+last day of shorter months), catching up on any months missed while the app wasn't opened. Tap one
+to **change the amount** (from now on; past months keep theirs) or **stop repeating** (asks first;
+expenses it already added stay).
+
+<p>
+  <img src="screenshots/21_recurring.png" width="260" alt="Recurring expense, light" />
+  <img src="screenshots/21_recurring_dark.png" width="260" alt="Recurring expense, dark" />
+</p>
+
 <p>
   <img src="screenshots/10_expenses_emis.png" width="260" alt="Expenses, EMIs view, light" />
   <img src="screenshots/10_expenses_emis_dark.png" width="260" alt="Expenses, EMIs view, dark" />
@@ -201,6 +212,8 @@ for your UPI ID (also in Settings › Money). WhatsApp reminders include your UP
 </p>
 
 Amount first, then category. The description is optional (the category is used if empty).
+**Repeat every month** (new expenses) makes it recurring from that date: this one is added now,
+and the same expense is added on that day every month after.
 When editing, the sheet also has *Delete expense*.
 
 ### Add EMI or loan

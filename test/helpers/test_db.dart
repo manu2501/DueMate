@@ -11,3 +11,11 @@ Future<void> closeTestDb(WidgetTester tester, AppDatabase db) async {
   await tester.pump(const Duration(seconds: 1));
   await tester.runAsync(db.close);
 }
+
+/// Turns a current database back into schema v8 (before recurring expenses),
+/// for upgrade tests.
+Future<void> downgradeToV8(AppDatabase db) async {
+  await db.customStatement('DROP TABLE recurring_expenses');
+  await db.customStatement('ALTER TABLE expenses DROP COLUMN recurring_id');
+  await db.customStatement('PRAGMA user_version = 8');
+}

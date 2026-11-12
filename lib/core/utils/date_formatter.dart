@@ -46,3 +46,10 @@ const monthNamesLong = [
   'January', 'February', 'March', 'April', 'May', 'June',
   'July', 'August', 'September', 'October', 'November', 'December',
 ];
+
+/// 1st, 2nd, 3rd, 4th … 11th, 12th, 13th … 21st, 22nd …
+String ordinal(int n) {
+  final teen = n % 100 >= 11 && n % 100 <= 13;
+  final suffix = teen ? 'th' : switch (n % 10) { 1 => 'st', 2 => 'nd', 3 => 'rd', _ => 'th' };
+  return '$n$suffix';
+}

@@ -3,6 +3,7 @@ library;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:duemate/domain/entities/personal_expense.dart';
+import 'package:duemate/domain/entities/recurring_expense.dart';
 import 'database_providers.dart';
 import 'settings_providers.dart';
 
@@ -41,3 +42,14 @@ class MonthlyBudgetNotifier extends PrefsNotifier<double> {
 }
 
 final monthlyBudgetLimitProvider = NotifierProvider<MonthlyBudgetNotifier, double>(MonthlyBudgetNotifier.new);
+
+final recurringExpensesProvider = StreamProvider<List<RecurringExpense>>((ref) {
+  return ref.watch(recurringExpenseRepositoryProvider).watchAll();
+});
+
+/// Posts recurring expenses that fell due since the app last ran. Watched by
+/// Home next to the EMI processor; invalidate it to run again (after a
+/// restore, or after adding a rule with a past start date).
+final recurringExpenseProcessorProvider = FutureProvider<int>((ref) {
+  return ref.read(recurringExpenseRepositoryProvider).postDue(DateTime.now());
+});

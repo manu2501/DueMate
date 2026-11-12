@@ -23,9 +23,10 @@ class BackupContents {
   final List<TransactionsCompanion> transactions;
   final List<CreditCardEmisCompanion> emis;
   final List<ExpensesCompanion> expenses;
+  final List<RecurringExpensesCompanion> recurring;
   final DateTime? exportedAt;
 
-  const BackupContents._(this.persons, this.transactions, this.emis, this.expenses, this.exportedAt);
+  const BackupContents._(this.persons, this.transactions, this.emis, this.expenses, this.recurring, this.exportedAt);
 
   /// People in the backup, not counting your own "self" row.
   int get peopleCount => persons.where((p) => p.id.value != _selfId).length;
@@ -54,6 +55,7 @@ class BackupContents {
         rows('transactions', _transaction),
         rows('creditCardEmis', _emi),
         rows('expenses', _expense),
+        rows('recurringExpenses', _recurring), // absent before schema v9
         DateTime.tryParse(decoded['exportedAt'] as String? ?? ''),
       );
     } catch (_) {
@@ -71,6 +73,7 @@ class BackupContents {
           b.insertAllOnConflictUpdate(db.creditCardEmis, emis);
           b.insertAllOnConflictUpdate(db.transactions, transactions);
           b.insertAllOnConflictUpdate(db.expenses, expenses);
+          b.insertAllOnConflictUpdate(db.recurringExpenses, recurring);
         });
       });
 
@@ -146,19 +149,35 @@ class BackupContents {
         expenseDate: Value(_date(x['expenseDate'])),
         paymentMethod: Value(PaymentMethod.values[x['paymentMethod'] as int]),
         notes: Value(x['notes'] as String?),
+        recurringId: Value(x['recurringId'] as String?),
         createdAt: Value(_date(x['createdAt'])),
         updatedAt: Value(_date(x['updatedAt'])),
+      );
+
+  static RecurringExpensesCompanion _recurring(Map<String, dynamic> r) => RecurringExpensesCompanion(
+        id: Value(r['id'] as String),
+        title: Value(r['title'] as String),
+        amount: Value(_num(r['amount'])),
+        category: Value(ExpenseCategory.values[r['category'] as int]),
+        paymentMethod: Value(PaymentMethod.values[r['paymentMethod'] as int]),
+        notes: Value(r['notes'] as String?),
+        dayOfMonth: Value(r['dayOfMonth'] as int),
+        startDate: Value(_date(r['startDate'])),
+        lastPostedDate: Value(_dateOrNull(r['lastPostedDate'])),
+        createdAt: Value(_date(r['createdAt'])),
+        updatedAt: Value(_date(r['updatedAt'])),
       );
 }
 
 class BackupHelper {
   /// The whole database as backup JSON (format version 2).
   static Future<String> buildBackupJson(AppDatabase db) async {
-    final (persons, transactions, emis, expenses) = await (
+    final (persons, transactions, emis, expenses, recurring) = await (
       db.select(db.persons).get(),
       db.select(db.transactions).get(),
       db.select(db.creditCardEmis).get(),
       db.select(db.expenses).get(),
+      db.select(db.recurringExpenses).get(),
     ).wait;
 
     final backupData = {
@@ -231,8 +250,24 @@ class BackupHelper {
                 'expenseDate': x.expenseDate.toIso8601String(),
                 'paymentMethod': x.paymentMethod.index,
                 'notes': x.notes,
+                'recurringId': x.recurringId,
                 'createdAt': x.createdAt.toIso8601String(),
                 'updatedAt': x.updatedAt.toIso8601String(),
+              })
+          .toList(),
+      'recurringExpenses': recurring
+          .map((r) => {
+                'id': r.id,
+                'title': r.title,
+                'amount': r.amount,
+                'category': r.category.index,
+                'paymentMethod': r.paymentMethod.index,
+                'notes': r.notes,
+                'dayOfMonth': r.dayOfMonth,
+                'startDate': r.startDate.toIso8601String(),
+                'lastPostedDate': r.lastPostedDate?.toIso8601String(),
+                'createdAt': r.createdAt.toIso8601String(),
+                'updatedAt': r.updatedAt.toIso8601String(),
               })
           .toList(),
     };

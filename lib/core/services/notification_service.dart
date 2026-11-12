@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -13,6 +14,22 @@ class NotificationService implements EmiReminderScheduler {
 
   final FlutterLocalNotificationsPlugin _notificationsPlugin = FlutterLocalNotificationsPlugin();
   bool _isInitialized = false;
+
+  final _emiReminderTaps = StreamController<String>.broadcast();
+
+  /// EMI ids from reminders tapped while the app is running.
+  Stream<String> get emiReminderTaps => _emiReminderTaps.stream;
+
+  /// The EMI id of the reminder that launched the app, if one did.
+  Future<String?> emiReminderThatLaunchedApp() async {
+    try {
+      final details = await _notificationsPlugin.getNotificationAppLaunchDetails();
+      if (details == null || !details.didNotificationLaunchApp) return null;
+      return EmiReminder.emiIdFromPayload(details.notificationResponse?.payload);
+    } catch (_) {
+      return null;
+    }
+  }
 
   static const String _kNotificationsEnabledKey = 'duemate_notifications_enabled';
   static const String _channelId = 'duemate_reminders';
@@ -40,8 +57,9 @@ class NotificationService implements EmiReminderScheduler {
 
       await _notificationsPlugin.initialize(
         settings: initSettings,
-        onDidReceiveNotificationResponse: (NotificationResponse details) {
-          debugPrint('Notification clicked with payload: ${details.payload}');
+        onDidReceiveNotificationResponse: (details) {
+          final emiId = EmiReminder.emiIdFromPayload(details.payload);
+          if (emiId != null) _emiReminderTaps.add(emiId);
         },
       );
 

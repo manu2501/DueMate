@@ -38,3 +38,10 @@ final emiReminderSyncProvider = Provider<void>((ref) {
     if (plan != null) ref.read(emiReminderSchedulerProvider).replaceEmiReminders(plan);
   }, fireImmediately: true);
 });
+
+/// EMI ids from tapped reminders while the app runs (overridable in tests).
+final emiReminderTapsProvider = Provider<Stream<String>>((ref) => NotificationService().emiReminderTaps);
+
+/// The EMI id of the reminder that launched the app, if any.
+final emiReminderLaunchProvider =
+    Provider<Future<String?> Function()>((ref) => NotificationService().emiReminderThatLaunchedApp);

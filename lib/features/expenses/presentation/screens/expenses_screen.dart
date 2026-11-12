@@ -13,6 +13,7 @@ import 'package:duemate/features/emis/presentation/screens/add_edit_emi_screen.d
 import 'package:duemate/features/emis/presentation/widgets/emi_card.dart';
 import 'package:duemate/features/expenses/presentation/widgets/add_edit_expense_sheet.dart';
 import 'package:duemate/features/expenses/presentation/widgets/budget_dialog.dart';
+import 'package:duemate/features/expenses/presentation/widgets/recurring_expense_sheet.dart';
 
 enum _View { spending, emis }
 
@@ -80,10 +81,36 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
     );
   }
 
+  /// Monthly repeats (rent, subscriptions), above this month's expenses.
+  List<Widget> _recurringSlivers(String symbol) {
+    final rules = ref.watch(recurringExpensesProvider).value ?? const [];
+    if (rules.isEmpty) return const [];
+    final now = DateTime.now();
+    return [
+      const SliverToBoxAdapter(child: SectionHeader('Repeats every month')),
+      SliverToBoxAdapter(
+        child: GroupCard(
+          children: [
+            for (final r in rules)
+              ListTile(
+                onTap: () => RecurringExpenseSheet.show(context, r),
+                leading: IconBadge(r.category.icon),
+                title: Text(r.title, maxLines: 1, overflow: TextOverflow.ellipsis),
+                subtitle: Text(recurringScheduleLabel(r, now)),
+                trailing: MoneyText(r.amount, symbol: symbol, sign: '−'),
+              ),
+          ],
+        ),
+      ),
+    ];
+  }
+
   List<Widget> _spendingSlivers(String symbol) {
     final expenses = ref.watch(monthlyExpensesProvider).value ?? const <PersonalExpense>[];
+    final recurring = _recurringSlivers(symbol);
     if (expenses.isEmpty) {
       return [
+        ...recurring,
         SliverToBoxAdapter(
           child: Padding(
             padding: const EdgeInsets.only(top: AppSpace.xxl),
@@ -107,6 +134,7 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
     }
 
     return [
+      ...recurring,
       for (final entry in byDay.entries) ...[
         SliverToBoxAdapter(
           child: DateHeader(

@@ -6,23 +6,43 @@ import 'entities/credit_card_emi.dart';
 class EmiReminder {
   /// Stable per EMI + installment, so a re-plan reuses the same ids.
   final int id;
+
+  /// The EMI it's about: tapping the notification opens it.
+  final String emiId;
   final DateTime at;
   final String title;
   final String body;
 
-  const EmiReminder({required this.id, required this.at, required this.title, required this.body});
+  const EmiReminder({
+    required this.id,
+    required this.emiId,
+    required this.at,
+    required this.title,
+    required this.body,
+  });
 
   /// Marks notifications as DueMate EMI reminders, so they can be replaced
-  /// without touching any other notification.
+  /// without touching any other notification, and says which EMI to open.
   static const payloadPrefix = 'emi:';
-  String get payload => '$payloadPrefix$id';
+  String get payload => '$payloadPrefix$emiId';
+
+  /// The EMI id in a notification payload, or null if it isn't a reminder.
+  static String? emiIdFromPayload(String? payload) =>
+      payload != null && payload.length > payloadPrefix.length && payload.startsWith(payloadPrefix)
+          ? payload.substring(payloadPrefix.length)
+          : null;
 
   @override
   bool operator ==(Object other) =>
-      other is EmiReminder && other.id == id && other.at == at && other.title == title && other.body == body;
+      other is EmiReminder &&
+      other.id == id &&
+      other.emiId == emiId &&
+      other.at == at &&
+      other.title == title &&
+      other.body == body;
 
   @override
-  int get hashCode => Object.hash(id, at, title, body);
+  int get hashCode => Object.hash(id, emiId, at, title, body);
 }
 
 /// Works out which EMI reminders should be scheduled. Pure: the same EMIs and
@@ -68,6 +88,7 @@ class EmiReminderPlanner {
         final who = whoFor?.call(emi);
         out.add(EmiReminder(
           id: _id(emi.id, k),
+          emiId: emi.id,
           at: at,
           title: '${emi.itemName} $when',
           body: [

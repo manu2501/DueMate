@@ -18,13 +18,16 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:duemate/core/constants/app_constants.dart';
 import 'package:duemate/core/navigation/app_router.dart';
-import 'package:duemate/data/database/app_database.dart' hide Person, CreditCardEmi, Transaction;
+import 'package:duemate/data/database/app_database.dart' hide Person, CreditCardEmi, Transaction, RecurringExpense;
 import 'package:duemate/data/database/tables.dart';
 import 'package:duemate/data/providers/app_providers.dart';
 import 'package:duemate/core/services/app_lock_service.dart';
 import 'package:duemate/core/widgets/upi_widgets.dart';
 import 'package:duemate/data/repositories/emi_repository_impl.dart';
 import 'package:duemate/data/repositories/expense_repository_impl.dart';
+import 'package:duemate/data/repositories/recurring_expense_repository_impl.dart';
+import 'package:duemate/domain/entities/recurring_expense.dart';
+import 'package:duemate/features/expenses/presentation/widgets/recurring_expense_sheet.dart';
 import 'package:duemate/data/repositories/person_repository_impl.dart';
 import 'package:duemate/data/repositories/transaction_repository_impl.dart';
 import 'package:duemate/domain/entities/credit_card_emi.dart';
@@ -157,7 +160,32 @@ Future<void> _seed(AppDatabase db) async {
   await x('Electricity bill', 1890, ExpenseCategory.utilities, 3);
   await x('Petrol', 1500, ExpenseCategory.fuel, 5);
   await x('Dinner out', 1200, ExpenseCategory.food, 6);
-  await x('Rent', 18000, ExpenseCategory.rent, 9);
+  // Rent repeats every month: shows under "Repeats every month".
+  final rentDay = DateTime(now.year, now.month, (now.day - 9).clamp(1, 28));
+  final rent = RecurringExpense(
+    id: 'rent',
+    title: 'Rent',
+    amount: 18000,
+    category: ExpenseCategory.rent,
+    paymentMethod: PaymentMethod.bankTransfer,
+    dayOfMonth: rentDay.day,
+    startDate: rentDay,
+    createdAt: now,
+    updatedAt: now,
+  );
+  await RecurringExpenseRepositoryImpl(db).createWithFirst(
+    rent,
+    PersonalExpense(
+      id: 'x-rent',
+      title: 'Rent',
+      amount: 18000,
+      category: ExpenseCategory.rent,
+      expenseDate: rentDay,
+      paymentMethod: PaymentMethod.bankTransfer,
+      createdAt: now,
+      updatedAt: now,
+    ),
+  );
 }
 
 void main() {
@@ -217,6 +245,10 @@ void main() {
       await shot('03_person');
       await go('/expenses');
       await shot('04_expenses');
+      await tester.tap(find.text('Rent').first);
+      await shot('21_recurring');
+      Navigator.of(tester.element(find.byType(RecurringExpenseSheet))).pop();
+      await settle();
       await go('/reports');
       await shot('05_activity');
       await go('/settings');

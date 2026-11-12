@@ -55,6 +55,10 @@ What's done, what's known to be missing, and what's next.
 - [ ] **Credit card bills:** statement date, total and minimum due, with reminders before the due date.
 - [ ] **Loan prepayment:** remaining principal vs interest, and a close-early calculator.
 
+### Spending
+- [x] **Recurring expenses:** monthly repeats (schema v9), posted on open with catch-up, managed under Expenses › Repeats every month.
+- [x] **Tap a reminder to open its EMI.**
+
 ### Insight
 - [x] **Lending cashflow chart:** Lending trends (People › chart icon), lent vs collected per month.
 - [ ] **Repayment reliability:** an on-time percentage per person.
@@ -68,5 +72,5 @@ What's done, what's known to be missing, and what's next.
 
 ## 📌 Technical notes
 - Android only. `compileSdk` 37; min / target SDK follow Flutter's defaults.
-- Clean architecture with Riverpod 3 and Drift (SQLite, schema v8, WAL).
+- Clean architecture with Riverpod 3 and Drift (SQLite, schema v9, WAL).
 - Design rules and the screenshot workflow are documented in `CLAUDE.md`.

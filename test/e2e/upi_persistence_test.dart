@@ -9,6 +9,8 @@ import 'package:duemate/data/repositories/person_repository_impl.dart';
 import 'package:duemate/data/repositories/transaction_repository_impl.dart';
 import 'package:duemate/domain/entities/person.dart';
 
+import '../helpers/test_db.dart';
+
 void main() {
   final now = DateTime(2026, 11, 1);
 
@@ -39,9 +41,10 @@ void main() {
     addTearDown(() => dir.delete(recursive: true));
     final file = File('${dir.path}/db.sqlite');
 
-    // Make a current database, then turn it back into v7: no upi_id column.
+    // Make a current database, then turn it back into v7.
     var db = AppDatabase(NativeDatabase(file));
     await PersonRepositoryImpl(db).createPerson(Person(id: 'p', name: 'Ravi', createdAt: now, updatedAt: now));
+    await downgradeToV8(db);
     await db.customStatement('ALTER TABLE persons DROP COLUMN upi_id');
     await db.customStatement('PRAGMA user_version = 7');
     await db.close();

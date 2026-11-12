@@ -8,6 +8,9 @@ class PersonalExpense {
   final DateTime expenseDate;
   final PaymentMethod paymentMethod;
   final String? notes;
+
+  /// The recurring rule that posted it, if any.
+  final String? recurringId;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -19,6 +22,7 @@ class PersonalExpense {
     required this.expenseDate,
     required this.paymentMethod,
     this.notes,
+    this.recurringId,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -42,6 +46,7 @@ class PersonalExpense {
       expenseDate: expenseDate ?? this.expenseDate,
       paymentMethod: paymentMethod ?? this.paymentMethod,
       notes: notes ?? this.notes,
+      recurringId: recurringId,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );

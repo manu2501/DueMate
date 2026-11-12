@@ -102,6 +102,10 @@ class Expenses extends Table {
   DateTimeColumn get expenseDate => dateTime()();
   IntColumn get paymentMethod => intEnum<PaymentMethod>()();
   TextColumn get notes => text().nullable()();
+
+  /// The [RecurringExpenses] rule that posted it, if any. No foreign key:
+  /// stopping a rule keeps the expenses it posted. Since schema v9.
+  TextColumn get recurringId => text().nullable()();
   DateTimeColumn get createdAt => dateTime()();
   DateTimeColumn get updatedAt => dateTime()();
 
@@ -109,3 +113,27 @@ class Expenses extends Table {
   Set<Column> get primaryKey => {id};
 }
 
+/// A monthly repeating expense (rent, subscriptions). Since schema v9.
+/// Deleting a rule stops it; expenses it already posted stay.
+class RecurringExpenses extends Table {
+  TextColumn get id => text()();
+  TextColumn get title => text().withLength(min: 1, max: 150)();
+  RealColumn get amount => real()();
+  IntColumn get category => intEnum<ExpenseCategory>()();
+  IntColumn get paymentMethod => intEnum<PaymentMethod>()();
+  TextColumn get notes => text().nullable()();
+
+  /// Posts on this day each month (clamped to short months).
+  IntColumn get dayOfMonth => integer()();
+
+  /// First occurrence; nothing is posted before it.
+  DateTimeColumn get startDate => dateTime()();
+
+  /// Date of the latest posted occurrence; months up to it are done.
+  DateTimeColumn get lastPostedDate => dateTime().nullable()();
+  DateTimeColumn get createdAt => dateTime()();
+  DateTimeColumn get updatedAt => dateTime()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}

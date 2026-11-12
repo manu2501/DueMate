@@ -57,7 +57,8 @@ Future<void> restoreFromBackup(BuildContext context, WidgetRef ref) async {
     say("Couldn't restore. Nothing was changed.");
     return;
   }
-  // Post any installments that fell due since the backup was made.
-  ref.invalidate(emiAutoProcessorProvider);
+  // Post installments and recurring expenses due since the backup was made.
+  // refresh (not just invalidate): runs now even if Home isn't on screen.
+  await (ref.refresh(emiAutoProcessorProvider.future), ref.refresh(recurringExpenseProcessorProvider.future)).wait;
   say('Backup restored');
 }

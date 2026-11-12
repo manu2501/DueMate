@@ -5,20 +5,22 @@ import 'tables.dart';
 
 part 'app_database.g.dart';
 
-@DriftDatabase(tables: [Persons, Transactions, CreditCardEmis, Expenses])
+@DriftDatabase(tables: [Persons, Transactions, CreditCardEmis, Expenses, RecurringExpenses])
 class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? e]) : super(e ?? driftDatabase(name: 'duemate_db'));
 
   @override
-  int get schemaVersion => 8;
+  int get schemaVersion => 9;
 
-  /// Deletes every person, transaction, EMI and expense, in one transaction.
+  /// Deletes every person, transaction, EMI, expense and recurring expense,
+  /// in one transaction.
   /// The user's own "self" row is kept: EMIs and expenses added afterwards
   /// reference it.
   Future<void> eraseAllData() => transaction(() async {
         await delete(transactions).go();
         await delete(creditCardEmis).go();
         await delete(expenses).go();
+        await delete(recurringExpenses).go();
         await (delete(persons)..where((p) => p.id.equals(AppConstants.selfPersonId).not())).go();
       });
 
@@ -61,6 +63,10 @@ class AppDatabase extends _$AppDatabase {
       }
       if (from < 8) {
         await m.addColumn(persons, persons.upiId);
+      }
+      if (from < 9) {
+        await m.createTable(recurringExpenses);
+        await m.addColumn(expenses, expenses.recurringId);
       }
     },
     beforeOpen: (details) async {
