@@ -44,6 +44,7 @@ DueMate is a personal ledger, lending, expense, and credit card EMI tracking app
 
 #### 2. 🧮 Personal Bank Loans & Credit Card Bill Hub
 - [ ] **Bank & Personal Loans Tracker:** Track loans taken from banks, financial apps, or family (_Home Loan, Car Loan, Personal Bank Loan_) with interest rate (% p.a.), EMI due date, and tenure.
+- [ ] **Existing Loan Modification & Schedule Refinancing:** Edit existing active loans and EMI schedules (update principal, change interest rate, adjust remaining tenure, or recalculate monthly installments) seamlessly without losing recorded past payments.
 - [ ] **Credit Card Bill & Due Date Alerts:** Record credit card statement billing dates, total due, and minimum due with automated reminder notifications before penalty dates.
 - [ ] **Loan Amortization & Early Prepayment:** Live breakdown of remaining principal vs. interest paid, with one-tap "Prepay / Early Settlement" calculator.
 
