@@ -194,7 +194,7 @@ class PdfExporter {
             pw.Row(
               mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
               children: [
-                pw.Text('DueMate - 100% Private Ledger',
+                pw.Text('DueMate ledger',
                     style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey600)),
                 pw.Text(
                   'Page ${context.pageNumber} of ${context.pagesCount}',
@@ -401,7 +401,7 @@ class PdfExporter {
             pw.Row(
               mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
               children: [
-                pw.Text('DueMate - 100% Private Ledger',
+                pw.Text('DueMate ledger',
                     style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey600)),
                 pw.Text(
                   'Page ${context.pageNumber} of ${context.pagesCount}',

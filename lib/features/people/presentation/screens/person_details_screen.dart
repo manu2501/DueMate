@@ -1,21 +1,26 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:duemate/core/theme/app_theme.dart';
 import 'package:duemate/core/utils/csv_exporter.dart';
+import 'package:duemate/core/utils/date_formatter.dart';
 import 'package:duemate/core/utils/pdf_exporter.dart';
 import 'package:duemate/core/utils/reminder_helper.dart';
 import 'package:duemate/core/utils/whatsapp_helper.dart';
+import 'package:duemate/core/widgets/avatar_widget.dart';
+import 'package:duemate/core/widgets/confirm_dialog.dart';
 import 'package:duemate/core/widgets/empty_state_widget.dart';
 import 'package:duemate/core/widgets/export_options_sheet.dart';
 import 'package:duemate/core/widgets/quick_give_sheet.dart';
+import 'package:duemate/core/widgets/quick_receive_sheet.dart';
 import 'package:duemate/core/widgets/transaction_tile.dart';
-import 'package:duemate/core/widgets/whatsapp_icon.dart';
+import 'package:duemate/core/widgets/ui_kit.dart';
 import 'package:duemate/data/providers/app_providers.dart';
+import 'package:duemate/domain/entities/ledger_transaction.dart';
+import 'package:duemate/domain/entities/person_summary.dart';
 import 'package:duemate/features/emis/presentation/screens/add_edit_emi_screen.dart';
+import 'package:duemate/features/emis/presentation/widgets/emi_card.dart';
 import 'package:duemate/features/people/presentation/screens/add_edit_person_screen.dart';
-import 'package:duemate/features/people/presentation/widgets/person_active_emis_section.dart';
-import 'package:duemate/features/people/presentation/widgets/person_header_card.dart';
 import 'package:duemate/features/people/presentation/widgets/person_info_sheet.dart';
 import 'package:duemate/features/transactions/presentation/widgets/transaction_details_dialog.dart';
 
@@ -24,40 +29,24 @@ class PersonDetailsScreen extends ConsumerWidget {
 
   const PersonDetailsScreen({super.key, required this.personId});
 
-  void _confirmArchive(BuildContext context, WidgetRef ref, bool isArchived, String name) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(isArchived ? 'Unarchive $name?' : 'Archive $name?'),
-        content: Text(
-          isArchived
-              ? '$name will be restored to your active list.'
-              : '$name will be hidden from the primary active list, but all records remain safe.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () async {
-              Navigator.of(ctx).pop();
-              if (isArchived) {
-                await ref.read(personRepositoryProvider).unarchivePerson(personId);
-              } else {
-                await ref.read(personRepositoryProvider).archivePerson(personId);
-              }
-              if (context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text(isArchived ? '$name unarchived' : '$name archived')),
-                );
-              }
-            },
-            child: Text(isArchived ? 'Unarchive' : 'Archive'),
-          ),
-        ],
-      ),
+  Future<void> _confirmArchive(BuildContext context, WidgetRef ref, bool isArchived, String name) async {
+    final ok = await showConfirmDialog(
+      context,
+      title: isArchived ? 'Unarchive $name?' : 'Archive $name?',
+      message: isArchived
+          ? '$name will be back in your people list.'
+          : '$name will be hidden from your people list. Their records are kept.',
+      confirmLabel: isArchived ? 'Unarchive' : 'Archive',
     );
+    if (!ok || !context.mounted) return;
+    final messenger = ScaffoldMessenger.of(context);
+    final repo = ref.read(personRepositoryProvider);
+    if (isArchived) {
+      await repo.unarchivePerson(personId);
+    } else {
+      await repo.archivePerson(personId);
+    }
+    messenger.showSnackBar(SnackBar(content: Text(isArchived ? '$name unarchived' : '$name archived')));
   }
 
   void _navigateBack(BuildContext context) {
@@ -70,420 +59,302 @@ class PersonDetailsScreen extends ConsumerWidget {
     }
   }
 
-  void _confirmDeletePerson(BuildContext context, WidgetRef ref, String name) {
-    final theme = Theme.of(context);
-    final cs = theme.colorScheme;
-
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text('Delete $name?', style: TextStyle(color: cs.error)),
-        content: Text(
-          'Are you sure you want to permanently delete $name and all associated transactions? This cannot be undone.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            style: FilledButton.styleFrom(backgroundColor: cs.error, foregroundColor: cs.onError),
-            onPressed: () async {
-              Navigator.of(ctx).pop();
-              await ref.read(personRepositoryProvider).deletePerson(personId);
-              if (context.mounted) {
-                _navigateBack(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('$name deleted')),
-                );
-              }
-            },
-            child: const Text('Delete'),
-          ),
-        ],
-      ),
+  Future<void> _confirmDeletePerson(BuildContext context, WidgetRef ref, String name) async {
+    final ok = await showConfirmDialog(
+      context,
+      title: 'Delete $name?',
+      message: "This permanently deletes $name along with every transaction and EMI recorded with them. "
+          "This can't be undone.\n\nIf you only want them out of your list, archive them instead.",
+      confirmLabel: 'Delete',
+      destructive: true,
     );
+    if (!ok || !context.mounted) return;
+    final messenger = ScaffoldMessenger.of(context);
+    await ref.read(personRepositoryProvider).deletePerson(personId);
+    if (context.mounted) _navigateBack(context);
+    messenger.showSnackBar(SnackBar(content: Text('$name and their records were deleted')));
   }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context);
-    final cs = theme.colorScheme;
-    final isDark = theme.brightness == Brightness.dark;
-    final currencySymbol = ref.watch(currencySymbolProvider);
+    final symbol = ref.watch(currencySymbolProvider);
     final summaryAsync = ref.watch(personSummaryProvider(personId));
-    final transactionsAsync = ref.watch(personTransactionsProvider(personId));
-    final emisAsync = ref.watch(personEmisProvider(personId));
 
     return summaryAsync.when(
+      loading: () => const Scaffold(body: Center(child: CircularProgressIndicator())),
+      error: (_, _) => Scaffold(
+        appBar: AppBar(),
+        body: const Center(child: Text("Couldn't load this. Please try again.")),
+      ),
       data: (summary) {
         if (summary == null) {
-          return PopScope(
-            canPop: false,
-            onPopInvokedWithResult: (didPop, _) {
-              if (!didPop) _navigateBack(context);
-            },
-            child: Scaffold(
-              appBar: AppBar(
-                leading: IconButton(
-                  icon: const Icon(Icons.arrow_back_rounded),
-                  onPressed: () => _navigateBack(context),
-                ),
-              ),
-              body: const Center(child: Text('Person not found')),
+          return Scaffold(
+            appBar: AppBar(),
+            body: const EmptyStateWidget(
+              icon: Icons.person_off_outlined,
+              title: 'This person was removed',
+              description: 'Their records are no longer in your ledger.',
             ),
           );
         }
-
-        final person = summary.person;
-        final transactions = transactionsAsync.value ?? [];
-
         return PopScope(
           canPop: false,
           onPopInvokedWithResult: (didPop, _) {
             if (!didPop) _navigateBack(context);
           },
-          child: Scaffold(
-            appBar: PreferredSize(
-              preferredSize: const Size.fromHeight(64),
-              child: SafeArea(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                  child: Row(
-                    children: [
-                      // Back button in rounded white box (Screen 2 from screenshot)
-                      InkWell(
-                        onTap: () => _navigateBack(context),
-                        borderRadius: BorderRadius.circular(14),
-                        child: Container(
-                          width: 42,
-                          height: 42,
-                          decoration: BoxDecoration(
-                            color: cs.surfaceContainerLow,
-                            borderRadius: BorderRadius.circular(14),
-                            border: Border.all(color: cs.outlineVariant),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.04),
-                                blurRadius: 8,
-                                offset: const Offset(0, 2),
-                              ),
-                            ],
-                          ),
-                          child: Icon(
-                            Icons.arrow_back_rounded,
-                            size: 20,
-                            color: cs.onSurface,
-                          ),
-                        ),
-                      ),
-                    const Spacer(),
-
-                    // Action buttons (WhatsApp + Share reminder + Person Info + Options)
-                    IconButton(
-                      tooltip: 'WhatsApp Reminder',
-                      icon: const WhatsAppIcon(size: 22),
-                      onPressed: () {
-                        final msg = WhatsAppHelper.generateLedgerReminderMessage(summary, currencySymbol: currencySymbol);
-                        WhatsAppHelper.sendWhatsAppMessage(
-                          phoneNumber: person.phone,
-                          message: msg,
-                          context: context,
-                        );
-                      },
-                    ),
-                    IconButton(
-                      tooltip: 'Person Information',
-                      icon: const Icon(Icons.info_outline_rounded),
-                      onPressed: () => PersonInfoSheet.show(
-                        context,
-                        person: person,
-                        summary: summary,
-                        currencySymbol: currencySymbol,
-                      ),
-                    ),
-                    IconButton(
-                      tooltip: 'Share Reminder',
-                      icon: const Icon(Icons.share_outlined),
-                      onPressed: () => ReminderHelper.shareReminder(summary, currencySymbol: currencySymbol),
-                    ),
-                    IconButton(
-                      tooltip: 'Share Statement',
-                      icon: const Icon(Icons.receipt_long_outlined),
-                      onPressed: () {
-                        ExportOptionsSheet.show(
-                          context: context,
-                          title: 'Statement for ${person.name}',
-                          onSharePdf: () => PdfExporter.exportAndSharePersonStatement(
-                            summary: summary,
-                            transactions: transactions,
-                            currencySymbol: currencySymbol,
-                          ),
-                          onShareCsv: () => CsvExporter.exportAndSharePersonStatement(
-                            summary: summary,
-                            transactions: transactions,
-                            currencySymbol: currencySymbol,
-                          ),
-                        );
-                      },
-                    ),
-
-                    // Help / Options button in rounded white box (Screen 2 from screenshot)
-                    PopupMenuButton<String>(
-                      onSelected: (value) {
-                        if (value == 'pdf') {
-                          PdfExporter.exportAndSharePersonStatement(
-                            summary: summary,
-                            transactions: transactions,
-                            currencySymbol: currencySymbol,
-                          );
-                        } else if (value == 'csv') {
-                          CsvExporter.exportAndSharePersonStatement(
-                            summary: summary,
-                            transactions: transactions,
-                            currencySymbol: currencySymbol,
-                          );
-                        } else if (value == 'edit') {
-                          AddEditPersonScreen.show(context, personToEdit: person);
-                        } else if (value == 'add_emi') {
-                          AddEditEmiScreen.show(context, personId: personId);
-                        } else if (value == 'archive') {
-                          _confirmArchive(context, ref, person.isArchived, person.name);
-                        } else if (value == 'delete') {
-                          _confirmDeletePerson(context, ref, person.name);
-                        }
-                      },
-                      itemBuilder: (ctx) => [
-                        const PopupMenuItem(
-                          value: 'pdf',
-                          child: Row(
-                            children: [
-                              Icon(Icons.picture_as_pdf_outlined, size: 20, color: Colors.red),
-                              SizedBox(width: 12),
-                              Text('Share PDF Statement'),
-                            ],
-                          ),
-                        ),
-                        const PopupMenuItem(
-                          value: 'csv',
-                          child: Row(
-                            children: [
-                              Icon(Icons.table_chart_outlined, size: 20, color: Colors.green),
-                              SizedBox(width: 12),
-                              Text('Export CSV Statement'),
-                            ],
-                          ),
-                        ),
-                        const PopupMenuDivider(),
-                        const PopupMenuItem(
-                          value: 'add_emi',
-                          child: Row(
-                            children: [
-                              Icon(Icons.event_repeat_rounded, size: 20, color: Colors.purple),
-                              SizedBox(width: 12),
-                              Text('Add EMI / Loan'),
-                            ],
-                          ),
-                        ),
-                        const PopupMenuItem(
-                          value: 'edit',
-                          child: Row(
-                            children: [
-                              Icon(Icons.edit_outlined, size: 20),
-                              SizedBox(width: 12),
-                              Text('Edit Details'),
-                            ],
-                          ),
-                        ),
-                        PopupMenuItem(
-                          value: 'archive',
-                          child: Row(
-                            children: [
-                              Icon(person.isArchived ? Icons.unarchive_outlined : Icons.archive_outlined, size: 20),
-                              SizedBox(width: 12),
-                              Text(person.isArchived ? 'Unarchive' : 'Archive'),
-                            ],
-                          ),
-                        ),
-                        PopupMenuItem(
-                          value: 'delete',
-                          child: Row(
-                            children: [
-                              Icon(Icons.delete_outline, size: 20, color: cs.error),
-                              SizedBox(width: 12),
-                              Text('Delete Person', style: TextStyle(color: cs.error)),
-                            ],
-                          ),
-                        ),
-                      ],
-                      child: Container(
-                        width: 42,
-                        height: 42,
-                        decoration: BoxDecoration(
-                          color: cs.surfaceContainerLow,
-                          borderRadius: BorderRadius.circular(14),
-                          border: Border.all(color: cs.outlineVariant),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.04),
-                              blurRadius: 8,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                        child: Icon(
-                          Icons.more_vert_rounded,
-                          size: 20,
-                          color: cs.onSurface,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
+          child: _PersonLedger(
+            summary: summary,
+            symbol: symbol,
+            onBack: () => _navigateBack(context),
+            onArchive: () => _confirmArchive(context, ref, summary.person.isArchived, summary.person.name),
+            onDelete: () => _confirmDeletePerson(context, ref, summary.person.name),
           ),
-          body: SingleChildScrollView(
-            padding: const EdgeInsets.only(bottom: 40),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const SizedBox(height: 12),
+        );
+      },
+    );
+  }
+}
 
-                // Person Header Summary Card
-                PersonHeaderCard(
-                  person: person,
-                  summary: summary,
-                  currencySymbol: currencySymbol,
+enum _MenuAction { statement, shareText, details, edit, addEmi, archive, delete }
+
+class _PersonLedger extends ConsumerWidget {
+  final PersonSummary summary;
+  final String symbol;
+  final VoidCallback onBack;
+  final VoidCallback onArchive;
+  final VoidCallback onDelete;
+
+  const _PersonLedger({
+    required this.summary,
+    required this.symbol,
+    required this.onBack,
+    required this.onArchive,
+    required this.onDelete,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    final person = summary.person;
+    final transactions = ref.watch(personTransactionsProvider(person.id)).value ?? const <LedgerTransaction>[];
+    final emis = ref.watch(personEmisProvider(person.id)).value ?? const [];
+    final hasPhone = person.phone?.trim().isNotEmpty ?? false;
+    final canRemind = summary.owesMoney && hasPhone;
+    final money = ref.watch(displayMoneyProvider);
+
+    final firstName = person.name.split(' ').first;
+    final String headline;
+    final MoneyTone tone;
+    if (summary.owesMoney) {
+      headline = '$firstName owes you';
+      tone = MoneyTone.positive;
+    } else if (summary.isOverpaid) {
+      headline = 'You owe $firstName';
+      tone = MoneyTone.negative;
+    } else {
+      headline = summary.hasNoTransactions ? 'No entries yet' : 'All settled';
+      tone = MoneyTone.neutral;
+    }
+
+    void remind() => WhatsAppHelper.sendWhatsAppMessage(
+          phoneNumber: person.phone,
+          message: WhatsAppHelper.generateLedgerReminderMessage(summary, currencySymbol: symbol),
+          context: context,
+        );
+
+    void onMenu(_MenuAction a) {
+      switch (a) {
+        case _MenuAction.statement:
+          ExportOptionsSheet.show(
+            context: context,
+            title: 'Statement for ${person.name}',
+            onSharePdf: () => PdfExporter.exportAndSharePersonStatement(
+              summary: summary,
+              transactions: transactions,
+              currencySymbol: symbol,
+            ),
+            onShareCsv: () => CsvExporter.exportAndSharePersonStatement(
+              summary: summary,
+              transactions: transactions,
+              currencySymbol: symbol,
+            ),
+          );
+        case _MenuAction.shareText:
+          ReminderHelper.shareReminder(summary, currencySymbol: symbol);
+        case _MenuAction.details:
+          PersonInfoSheet.show(context, person: person, summary: summary, currencySymbol: symbol);
+        case _MenuAction.edit:
+          AddEditPersonScreen.show(context, personToEdit: person);
+        case _MenuAction.addEmi:
+          AddEditEmiScreen.show(context, personId: person.id);
+        case _MenuAction.archive:
+          onArchive();
+        case _MenuAction.delete:
+          onDelete();
+      }
+    }
+
+    PopupMenuItem<_MenuAction> item(_MenuAction a, IconData icon, String label, {Color? color}) =>
+        PopupMenuItem(
+          value: a,
+          child: Row(
+            children: [
+              Icon(icon, size: 20, color: color),
+              const SizedBox(width: AppSpace.md),
+              Text(label, style: color == null ? null : TextStyle(color: color)),
+            ],
+          ),
+        );
+
+    // Group history by month, newest first.
+    final byMonth = <String, List<LedgerTransaction>>{};
+    for (final t in transactions) {
+      byMonth.putIfAbsent(DateFormatter.formatMonthYear(t.transactionDate), () => []).add(t);
+    }
+
+    return Scaffold(
+      body: CustomScrollView(
+        slivers: [
+          SliverAppBar(
+            pinned: true,
+            leading: IconButton(
+              tooltip: 'Back',
+              icon: const Icon(Icons.arrow_back_rounded),
+              onPressed: onBack,
+            ),
+            title: Text(person.name, maxLines: 1, overflow: TextOverflow.ellipsis),
+            actions: [
+              if (canRemind)
+                IconButton(
+                  tooltip: 'Remind on WhatsApp',
+                  icon: const Icon(Icons.chat_outlined),
+                  onPressed: remind,
                 ),
+              PopupMenuButton<_MenuAction>(
+                tooltip: 'More',
+                onSelected: onMenu,
+                itemBuilder: (_) => [
+                  item(_MenuAction.statement, Icons.description_outlined, 'Share statement'),
+                  item(_MenuAction.shareText, Icons.ios_share_rounded, 'Share balance as text'),
+                  item(_MenuAction.details, Icons.info_outline_rounded, 'Contact details'),
+                  item(_MenuAction.edit, Icons.edit_outlined, 'Edit'),
+                  item(_MenuAction.addEmi, Icons.event_repeat_outlined, 'Add EMI or loan'),
+                  const PopupMenuDivider(),
+                  item(_MenuAction.archive, Icons.archive_outlined, person.isArchived ? 'Unarchive' : 'Archive'),
+                  item(_MenuAction.delete, Icons.delete_outline_rounded, 'Delete', color: cs.error),
+                ],
+              ),
+            ],
+          ),
 
-                const SizedBox(height: 20),
-
-                // Credit Card EMIs section
-                emisAsync.when(
-                  data: (emis) => PersonActiveEmisSection(
-                    personId: personId,
-                    person: person,
-                    emis: emis,
-                    currencySymbol: currencySymbol,
-                  ),
-                  loading: () => const SizedBox.shrink(),
-                  error: (_, _) => const SizedBox.shrink(),
-                ),
-
-                const SizedBox(height: 20),
-
-                // 4. Transaction History Header
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          // Who and where you stand
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(AppSpace.screenGutter, AppSpace.sm, AppSpace.screenGutter, AppSpace.lg),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
                     children: [
-                      Text(
-                        'Transaction History',
-                        style: GoogleFonts.dmSans(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: -0.2,
-                          color: isDark ? Colors.white : const Color(0xFF131438),
-                        ),
-                      ),
-                      Text(
-                        '${transactions.length} entries',
-                        style: GoogleFonts.inter(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w500,
-                          color: cs.onSurfaceVariant,
+                      AvatarWidget(name: person.name, radius: 24, heroTag: 'avatar-${person.id}'),
+                      const SizedBox(width: AppSpace.md),
+                      Expanded(
+                        child: Text(
+                          [if (hasPhone) person.phone!, if (person.isArchived) 'Archived'].join(' · '),
+                          style: theme.textTheme.bodyMedium?.copyWith(color: cs.onSurfaceVariant),
                         ),
                       ),
                     ],
                   ),
-                ),
-
-                const SizedBox(height: 10),
-
-                // Transaction list or empty state
-                if (transactions.isEmpty)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                    child: EmptyStateWidget(
-                      icon: Icons.receipt_long_outlined,
-                      title: 'No transactions yet',
-                      description: 'Tap Give Money or Repayment above to record your first transaction with ${person.name}.',
-                      actionLabel: 'Give Money',
-                      onActionPressed: () => QuickGiveSheet.show(context, personId: personId),
+                  const SizedBox(height: AppSpace.lg),
+                  Text(headline, style: theme.textTheme.labelLarge?.copyWith(color: cs.onSurfaceVariant)),
+                  const SizedBox(height: AppSpace.xs),
+                  MoneyText(summary.balance, symbol: symbol, tone: tone, style: theme.textTheme.displaySmall),
+                  if (!summary.hasNoTransactions) ...[
+                    const SizedBox(height: AppSpace.xs),
+                    Text(
+                      'You gave ${money(summary.totalGiven)} · received ${money(summary.totalReceived)}',
+                      style: theme.textTheme.bodyMedium?.copyWith(color: cs.onSurfaceVariant),
                     ),
-                  )
-                else
-                  Container(
-                    margin: const EdgeInsets.symmetric(horizontal: 20),
-                    decoration: BoxDecoration(
-                      color: cs.surfaceContainerLow,
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: cs.outlineVariant),
-                    ),
-                    child: ListView.separated(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      itemCount: transactions.length,
-                      separatorBuilder: (ctx, i) => Divider(
-                        height: 1,
-                        indent: 68,
-                        endIndent: 16,
-                        color: cs.outlineVariant.withValues(alpha: 0.6),
-                      ),
-                      itemBuilder: (ctx, index) {
-                        final tx = transactions[index];
-                        return TransactionTile(
-                          transaction: tx,
-                          person: person,
-                          currencySymbol: currencySymbol,
-                          onTap: () {
-                            TransactionDetailsDialog.show(
-                              context,
-                              transaction: tx,
-                              person: person,
-                            );
-                          },
-                        );
-                      },
+                  ],
+                ],
+              ),
+            ),
+          ),
+
+          // What you can do with them
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: AppSpace.lg),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: FilledButton.tonalIcon(
+                      onPressed: () => QuickGiveSheet.show(context, personId: person.id),
+                      icon: const Icon(Icons.north_east_rounded, size: 20),
+                      label: const Text('Give'),
                     ),
                   ),
-              ],
+                  const SizedBox(width: AppSpace.sm),
+                  Expanded(
+                    child: FilledButton.tonalIcon(
+                      onPressed: () => QuickReceiveSheet.show(context, personId: person.id),
+                      icon: const Icon(Icons.south_west_rounded, size: 20),
+                      label: const Text('Receive'),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
-        ),
-      );
-    },
-      loading: () => PopScope(
-        canPop: false,
-        onPopInvokedWithResult: (didPop, _) {
-          if (!didPop) _navigateBack(context);
-        },
-        child: Scaffold(
-          appBar: AppBar(
-            leading: IconButton(
-              icon: const Icon(Icons.arrow_back_rounded),
-              onPressed: () => _navigateBack(context),
+
+          if (emis.isNotEmpty) ...[
+            SliverToBoxAdapter(
+              child: SectionHeader(
+                'EMIs and loans',
+                actionLabel: 'Add',
+                onAction: () => AddEditEmiScreen.show(context, personId: person.id),
+              ),
             ),
-          ),
-          body: const Center(child: CircularProgressIndicator()),
-        ),
-      ),
-      error: (err, _) => PopScope(
-        canPop: false,
-        onPopInvokedWithResult: (didPop, _) {
-          if (!didPop) _navigateBack(context);
-        },
-        child: Scaffold(
-          appBar: AppBar(
-            leading: IconButton(
-              icon: const Icon(Icons.arrow_back_rounded),
-              onPressed: () => _navigateBack(context),
+            SliverToBoxAdapter(
+              child: GroupCard(
+                children: [for (final e in emis) EmiCard(emi: e, person: person, currencySymbol: symbol)],
+              ),
             ),
-          ),
-          body: Center(child: Text('Error: $err')),
-        ),
+          ],
+
+          if (transactions.isEmpty)
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.only(top: AppSpace.xxl),
+                child: EmptyStateWidget(
+                  icon: Icons.receipt_long_outlined,
+                  title: 'Nothing recorded yet',
+                  description: 'Use Give or Receive above to start ${person.name.split(' ').first}\'s ledger.',
+                ),
+              ),
+            )
+          else
+            for (final entry in byMonth.entries) ...[
+              SliverToBoxAdapter(child: SectionHeader(entry.key)),
+              SliverToBoxAdapter(
+                child: GroupCard(
+                  children: [
+                    for (final t in entry.value)
+                      TransactionTile(
+                        transaction: t,
+                        person: person,
+                        currencySymbol: symbol,
+                        showPerson: false,
+                        onTap: () => TransactionDetailsDialog.show(context, transaction: t, person: person),
+                      ),
+                  ],
+                ),
+              ),
+            ],
+          const SliverToBoxAdapter(child: SizedBox(height: AppSpace.xxl)),
+        ],
       ),
     );
   }

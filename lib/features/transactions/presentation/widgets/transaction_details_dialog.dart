@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:duemate/core/theme/app_theme.dart';
 import 'package:duemate/core/constants/app_constants.dart';
+import 'package:duemate/core/widgets/confirm_dialog.dart';
 import 'package:duemate/core/utils/currency_formatter.dart';
 import 'package:duemate/core/utils/date_formatter.dart';
 import 'package:duemate/core/widgets/avatar_widget.dart';
@@ -43,45 +44,25 @@ class TransactionDetailsDialog extends ConsumerWidget {
     );
   }
 
-  void _confirmDelete(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context);
-    final cs = theme.colorScheme;
-    final personName = person?.name ?? 'the borrower';
-
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text('Delete Entry?', style: TextStyle(color: cs.error)),
-        content: Text(
-          'Are you sure you want to delete this record?\n\n'
-          'Deleting this will recalculate $personName\'s outstanding balance.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            style: FilledButton.styleFrom(
-              backgroundColor: cs.error,
-              foregroundColor: cs.onError,
-            ),
-            onPressed: () async {
-              Navigator.of(ctx).pop(); // Dismiss alert dialog
-              Navigator.of(context).pop(); // Dismiss bottom sheet
-              await ref.read(transactionRepositoryProvider).deleteTransaction(transaction.id);
-
-              if (context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Transaction deleted')),
-                );
-              }
-            },
-            child: const Text('Delete'),
-          ),
-        ],
-      ),
+  Future<void> _confirmDelete(BuildContext context, WidgetRef ref) async {
+    final isSelf = person?.id == AppConstants.selfPersonId;
+    final personName = person?.name ?? 'this contact';
+    final ok = await showConfirmDialog(
+      context,
+      title: 'Delete this entry?',
+      message: isSelf || person == null
+          ? 'This entry will be removed.'
+          : "This entry will be removed and $personName's balance will be recalculated.",
+      confirmLabel: 'Delete',
+      destructive: true,
     );
+    if (!ok || !context.mounted) return;
+    // Grab what we need before closing the sheet; its context and ref go away.
+    final messenger = ScaffoldMessenger.of(context);
+    final repo = ref.read(transactionRepositoryProvider);
+    Navigator.of(context).pop();
+    await repo.deleteTransaction(transaction.id);
+    messenger.showSnackBar(const SnackBar(content: Text('Entry deleted')));
   }
 
   void _showEditDialog(BuildContext context, WidgetRef ref) {
@@ -111,15 +92,15 @@ class TransactionDetailsDialog extends ConsumerWidget {
                   TextField(
                     controller: amountController,
                     keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       labelText: 'Amount',
-                      prefixText: '₹ ',
+                      prefixText: '${ref.read(currencySymbolProvider)} ',
                     ),
                   ),
                   const SizedBox(height: 14),
                   DropdownButtonFormField<PaymentMethod>(
                     initialValue: selectedMethod,
-                    decoration: const InputDecoration(labelText: 'Payment Method'),
+                    decoration: const InputDecoration(labelText: 'Paid with'),
                     items: PaymentMethod.values.map((method) {
                       return DropdownMenuItem(
                         value: method,
@@ -159,7 +140,7 @@ class TransactionDetailsDialog extends ConsumerWidget {
                   TextField(
                     controller: noteController,
                     decoration: const InputDecoration(
-                      labelText: 'Optional Note',
+                      labelText: 'Note (optional)',
                       hintText: 'e.g. Loan instalment',
                     ),
                   ),
@@ -191,11 +172,11 @@ class TransactionDetailsDialog extends ConsumerWidget {
 
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Transaction updated')),
+                      const SnackBar(content: Text('Changes saved')),
                     );
                   }
                 },
-                child: const Text('Save Changes'),
+                child: const Text('Save'),
               ),
             ],
           );
@@ -210,7 +191,7 @@ class TransactionDetailsDialog extends ConsumerWidget {
     final cs = theme.colorScheme;
     final currencySymbol = ref.watch(currencySymbolProvider);
     final isReceived = transaction.type == TransactionType.paymentReceived;
-    final accentColor = isReceived ? cs.primary : cs.error;
+    final accentColor = isReceived ? LedgerColors.of(context).cashIn : cs.onSurface;
 
     return SafeArea(
       child: Padding(
@@ -247,7 +228,7 @@ class TransactionDetailsDialog extends ConsumerWidget {
                         ),
                       ),
                       Text(
-                        isReceived ? 'Money received into your ledger' : 'Money lent or advanced',
+                        isReceived ? 'They paid you' : 'You gave or lent',
                         style: theme.textTheme.bodySmall?.copyWith(
                           color: cs.onSurfaceVariant,
                         ),
@@ -274,15 +255,17 @@ class TransactionDetailsDialog extends ConsumerWidget {
               child: Column(
                 children: [
                   Text(
-                    '${isReceived ? '+' : '-'}${CurrencyFormatter.format(transaction.amount, symbol: currencySymbol)}',
-                    style: GoogleFonts.dmSans(
-                      fontWeight: FontWeight.w800,
+                    ref.watch(hideBalancesProvider)
+                        ? ref.watch(displayMoneyProvider)(transaction.amount)
+                        : '${isReceived ? '+' : '-'}${CurrencyFormatter.format(transaction.amount, symbol: currencySymbol)}',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
                       fontSize: 34,
                       letterSpacing: -0.8,
                       color: accentColor,
                     ),
                   ),
-                  if (person != null) ...[
+                  if (person != null && person!.id != AppConstants.selfPersonId) ...[
                     const SizedBox(height: 8),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -317,7 +300,7 @@ class TransactionDetailsDialog extends ConsumerWidget {
                   Divider(height: 16, color: cs.outlineVariant),
                   _infoRow('Time', DateFormatter.formatTime(transaction.transactionDate), theme),
                   Divider(height: 16, color: cs.outlineVariant),
-                  _infoRow('Payment Method', transaction.paymentMethod.label, theme),
+                  _infoRow('Paid with', transaction.paymentMethod.label, theme),
                   if (transaction.note != null && transaction.note!.trim().isNotEmpty) ...[
                     Divider(height: 16, color: cs.outlineVariant),
                     _infoRow('Note', transaction.note!.trim(), theme),
@@ -358,7 +341,7 @@ class TransactionDetailsDialog extends ConsumerWidget {
                       children: [
                         Icon(Icons.edit_outlined, size: 18),
                         SizedBox(width: 8),
-                        Text('Edit Entry'),
+                        Text('Edit'),
                       ],
                     ),
                   ),

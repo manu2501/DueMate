@@ -1,8 +1,8 @@
 import 'package:intl/intl.dart';
 
 class DateFormatter {
-  static final _fullDate = DateFormat('dd MMM yyyy');
-  static final _shortDate = DateFormat('dd MMM');
+  static final _fullDate = DateFormat('d MMM yyyy');
+  static final _shortDate = DateFormat('d MMM');
   static final _dateTime = DateFormat('dd MMM yyyy, hh:mm a');
   static final _time = DateFormat('hh:mm a');
   static final _monthYear = DateFormat('MMMM yyyy');

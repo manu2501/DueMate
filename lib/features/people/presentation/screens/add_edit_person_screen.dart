@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:uuid/uuid.dart';
 import 'package:duemate/core/utils/contacts_helper.dart';
 import 'package:duemate/core/widgets/avatar_widget.dart';
-import 'package:duemate/core/widgets/pressable_scale.dart';
+import 'package:duemate/core/theme/app_theme.dart';
+import 'package:duemate/core/widgets/confirm_dialog.dart';
 import 'package:duemate/data/providers/app_providers.dart';
+import 'package:duemate/domain/person_matcher.dart';
 import 'package:duemate/domain/entities/person.dart';
 
 class AddEditPersonScreen extends ConsumerStatefulWidget {
@@ -62,61 +63,24 @@ class _AddEditPersonScreenState extends ConsumerState<AddEditPersonScreen> {
     super.dispose();
   }
 
-  String _normalizePhone(String raw) {
-    final digitsOnly = raw.replaceAll(RegExp(r'\D'), '');
-    if (digitsOnly.length > 10) {
-      return digitsOnly.substring(digitsOnly.length - 10);
-    }
-    return digitsOnly;
-  }
-
   Future<void> _importFromContacts() async {
     setState(() => _isImporting = true);
     try {
       final contact = await ContactsHelper.pickContact();
       if (contact == null) return;
 
-      final allPersons = await ref.read(allPersonSummariesProvider.future);
-      final contactName = contact.name.trim();
-      final contactPhone = contact.phone != null ? contact.phone!.trim() : '';
-      final normPhone = contactPhone.isNotEmpty ? _normalizePhone(contactPhone) : '';
-
-      final existing = allPersons.where((s) {
-        if (isEditing && s.person.id == widget.personToEdit!.id) return false;
-
-        final sameName = s.person.name.trim().toLowerCase() == contactName.toLowerCase();
-        bool samePhone = false;
-        if (normPhone.isNotEmpty && s.person.phone != null && s.person.phone!.trim().isNotEmpty) {
-          final existingNorm = _normalizePhone(s.person.phone!);
-          samePhone = existingNorm.isNotEmpty && existingNorm == normPhone;
+      final people = (await ref.read(allPersonSummariesProvider.future)).map((s) => s.person);
+      final existing = PersonMatcher.findDuplicate(
+        people,
+        name: contact.name,
+        phone: contact.phone,
+        excludeId: widget.personToEdit?.id,
+      );
+      if (existing != null) {
+        if (mounted && await showAlreadyInLedgerDialog(context, existing) && mounted) {
+          _navigateBack();
+          context.push('/people/${existing.id}');
         }
-        return sameName || samePhone;
-      }).firstOrNull;
-
-      if (existing != null && mounted) {
-        showDialog(
-          context: context,
-          builder: (ctx) => AlertDialog(
-            title: const Text('Contact Already Exists'),
-            content: Text(
-              '${existing.person.name} (${existing.person.phone ?? 'No phone'}) is already in your ledger.',
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(ctx).pop(),
-                child: const Text('Cancel'),
-              ),
-              FilledButton(
-                onPressed: () {
-                  Navigator.of(ctx).pop();
-                  _navigateBack();
-                  context.push('/people/${existing.person.id}');
-                },
-                child: const Text('Open Ledger'),
-              ),
-            ],
-          ),
-        );
         return;
       }
 
@@ -132,14 +96,14 @@ class _AddEditPersonScreenState extends ConsumerState<AddEditPersonScreen> {
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Imported ${contact.name} from contacts'),
+            content: Text('Filled in details for ${contact.name}'),
           ),
         );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Could not read contact: $e')),
+          const SnackBar(content: Text("Couldn't read that contact.")),
         );
       }
     } finally {
@@ -162,51 +126,23 @@ class _AddEditPersonScreenState extends ConsumerState<AddEditPersonScreen> {
 
     final inputName = _nameController.text.trim();
     final inputPhone = _phoneController.text.trim();
-    final normPhone = inputPhone.isNotEmpty ? _normalizePhone(inputPhone) : '';
+    final normPhone = PersonMatcher.normalizePhone(inputPhone);
 
-    final allPersons = await ref.read(allPersonSummariesProvider.future);
-    final existingPerson = allPersons.where((s) {
-      if (isEditing && s.person.id == widget.personToEdit!.id) return false;
-
-      final sameName = s.person.name.trim().toLowerCase() == inputName.toLowerCase();
-      bool samePhone = false;
-      if (normPhone.isNotEmpty && s.person.phone != null && s.person.phone!.trim().isNotEmpty) {
-        final existingNorm = _normalizePhone(s.person.phone!);
-        samePhone = existingNorm.isNotEmpty && existingNorm == normPhone;
+    final people = (await ref.read(allPersonSummariesProvider.future)).map((s) => s.person);
+    final existing = PersonMatcher.findDuplicate(
+      people,
+      name: inputName,
+      phone: inputPhone,
+      excludeId: widget.personToEdit?.id,
+    );
+    if (existing != null) {
+      if (!mounted) return;
+      final samePhone =
+          normPhone.isNotEmpty && PersonMatcher.normalizePhone(existing.phone) == normPhone;
+      if (await showAlreadyInLedgerDialog(context, existing, samePhone: samePhone) && mounted) {
+        _navigateBack();
+        context.push('/people/${existing.id}');
       }
-      return sameName || samePhone;
-    }).firstOrNull;
-
-    if (existingPerson != null && mounted) {
-      final isSamePhone = normPhone.isNotEmpty &&
-          existingPerson.person.phone != null &&
-          _normalizePhone(existingPerson.person.phone!) == normPhone;
-
-      final message = isSamePhone
-          ? 'A contact with phone number "${existingPerson.person.phone}" already exists in your ledger (${existingPerson.person.name}).'
-          : 'A contact named "${existingPerson.person.name}" already exists in your ledger.';
-
-      showDialog(
-        context: context,
-        builder: (ctx) => AlertDialog(
-          title: const Text('Duplicate Contact Found'),
-          content: Text('$message\n\nWould you like to open their ledger instead?'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(ctx).pop(),
-              child: const Text('Cancel'),
-            ),
-            FilledButton(
-              onPressed: () {
-                Navigator.of(ctx).pop();
-                _navigateBack();
-                context.push('/people/${existingPerson.person.id}');
-              },
-              child: const Text('Open Ledger'),
-            ),
-          ],
-        ),
-      );
       return;
     }
 
@@ -240,14 +176,14 @@ class _AddEditPersonScreenState extends ConsumerState<AddEditPersonScreen> {
         _navigateBack();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(isEditing ? 'Details updated' : 'Added to ledger'),
+            content: Text(isEditing ? 'Changes saved' : 'Person added'),
           ),
         );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error saving: $e')),
+          const SnackBar(content: Text("Couldn't save. Please try again.")),
         );
       }
     } finally {
@@ -259,11 +195,7 @@ class _AddEditPersonScreenState extends ConsumerState<AddEditPersonScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
-    final isDark = theme.brightness == Brightness.dark;
-
-    final displayName = _nameController.text.trim().isEmpty
-        ? (isEditing ? widget.personToEdit!.name : 'New Contact')
-        : _nameController.text.trim();
+    final name = _nameController.text.trim();
 
     return PopScope(
       canPop: false,
@@ -273,255 +205,93 @@ class _AddEditPersonScreenState extends ConsumerState<AddEditPersonScreen> {
       child: Scaffold(
         appBar: AppBar(
           leading: IconButton(
-            icon: const Icon(Icons.arrow_back_rounded),
+            tooltip: 'Close',
+            icon: const Icon(Icons.close_rounded),
             onPressed: _navigateBack,
           ),
-          title: Text(isEditing ? 'Edit Details' : 'New Person'),
+          title: Text(isEditing ? 'Edit person' : 'Add person'),
         ),
-        body: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // Live Avatar Preview Badge
-                Center(
-                  child: Column(
+        body: Form(
+          key: _formKey,
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(AppSpace.screenGutter, AppSpace.sm, AppSpace.screenGutter, AppSpace.xxl),
+            children: [
+              Center(child: AvatarWidget(name: name.isEmpty ? '?' : name, radius: 36)),
+              const SizedBox(height: AppSpace.xl),
+              if (!isEditing) ...[
+                OutlinedButton.icon(
+                  onPressed: _isImporting ? null : _importFromContacts,
+                  icon: _isImporting
+                      ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                      : const Icon(Icons.contacts_outlined),
+                  label: const Text('Pick from contacts'),
+                ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: AppSpace.lg),
+                  child: Row(
                     children: [
-                      AvatarWidget(
-                        name: displayName,
-                        radius: 36,
+                      const Expanded(child: Divider()),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: AppSpace.md),
+                        child: Text('or type it in', style: theme.textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant)),
                       ),
-                      const SizedBox(height: 10),
-                      Text(
-                        displayName,
-                        style: GoogleFonts.dmSans(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w800,
-                          color: isDark ? Colors.white : const Color(0xFF131438),
-                        ),
-                      ),
-                      Text(
-                        'Live Contact Preview',
-                        style: GoogleFonts.inter(
-                          fontSize: 12,
-                          color: cs.onSurfaceVariant,
-                        ),
-                      ),
+                      const Expanded(child: Divider()),
                     ],
                   ),
                 ),
-                const SizedBox(height: 20),
-
-                // Import from contacts hero card
-                PressableScale(
-                  onTap: _isImporting ? null : _importFromContacts,
-                  borderRadius: BorderRadius.circular(20),
-                  child: Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: cs.primary.withValues(alpha: 0.08),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: cs.primary.withValues(alpha: 0.2)),
-                    ),
-                    child: Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(10),
-                          decoration: BoxDecoration(
-                            color: cs.primary,
-                            shape: BoxShape.circle,
-                          ),
-                          child: _isImporting
-                              ? const SizedBox(
-                                  width: 18,
-                                  height: 18,
-                                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                                )
-                              : const Icon(Icons.contacts_rounded, color: Colors.white, size: 20),
-                        ),
-                        const SizedBox(width: 14),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Import from Phone Contacts',
-                                style: GoogleFonts.inter(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w700,
-                                  color: cs.primary,
-                                ),
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                'Auto-fill contact name & phone in one tap',
-                                style: GoogleFonts.inter(
-                                  fontSize: 12,
-                                  color: cs.onSurfaceVariant,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        Icon(Icons.chevron_right_rounded, color: cs.primary),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 20),
-
-                // Section 1: Contact Details Card
-                _sectionHeader('CONTACT DETAILS', theme),
-                Container(
-                  padding: const EdgeInsets.all(18),
-                  decoration: BoxDecoration(
-                    color: cs.surfaceContainerLow,
-                    borderRadius: BorderRadius.circular(24),
-                    border: Border.all(color: cs.outlineVariant),
-                  ),
-                  child: Column(
-                    children: [
-                      TextFormField(
-                        controller: _nameController,
-                        decoration: const InputDecoration(
-                          labelText: 'Full Name *',
-                          hintText: 'e.g. Rahul Kumar',
-                          prefixIcon: Icon(Icons.person_outline_rounded, size: 20),
-                        ),
-                        validator: (value) {
-                          if (value == null || value.trim().isEmpty) {
-                            return 'Please enter a name';
-                          }
-                          return null;
-                        },
-                        textCapitalization: TextCapitalization.words,
-                      ),
-                      const SizedBox(height: 16),
-                      TextFormField(
-                        controller: _phoneController,
-                        decoration: const InputDecoration(
-                          labelText: 'Phone Number (Optional)',
-                          hintText: 'e.g. +91 98765 43210',
-                          prefixIcon: Icon(Icons.phone_outlined, size: 20),
-                        ),
-                        keyboardType: TextInputType.phone,
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 20),
-
-                // Section 2: Additional Information Card
-                _sectionHeader('ADDITIONAL INFORMATION', theme),
-                Container(
-                  padding: const EdgeInsets.all(18),
-                  decoration: BoxDecoration(
-                    color: cs.surfaceContainerLow,
-                    borderRadius: BorderRadius.circular(24),
-                    border: Border.all(color: cs.outlineVariant),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      TextFormField(
-                        controller: _emailController,
-                        decoration: const InputDecoration(
-                          labelText: 'Email Address (Optional)',
-                          hintText: 'e.g. rahul@example.com',
-                          prefixIcon: Icon(Icons.email_outlined, size: 20),
-                        ),
-                        keyboardType: TextInputType.emailAddress,
-                      ),
-                      const SizedBox(height: 16),
-                      TextFormField(
-                        controller: _notesController,
-                        decoration: const InputDecoration(
-                          labelText: 'Notes & Relationship (Optional)',
-                          hintText: 'e.g. Roommate, colleague, friend',
-                          prefixIcon: Icon(Icons.notes_rounded, size: 20),
-                        ),
-                        maxLines: 2,
-                      ),
-                      const SizedBox(height: 14),
-
-                      Text(
-                        'Quick Relationship Tags:',
-                        style: GoogleFonts.inter(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: cs.onSurfaceVariant,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 6,
-                        children: ['Friend', 'Colleague', 'Family', 'Roommate', 'Business'].map((tag) {
-                          final contains = _notesController.text.contains(tag);
-                          return FilterChip(
-                            label: Text(tag, style: const TextStyle(fontSize: 12)),
-                            selected: contains,
-                            onSelected: (selected) {
-                              if (selected && !contains) {
-                                final current = _notesController.text.trim();
-                                _notesController.text = current.isEmpty ? tag : '$current, $tag';
-                              }
-                              setState(() {});
-                            },
-                          );
-                        }).toList(),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 28),
-
-                // Save Action Button
-                PressableScale(
-                  onTap: _isSaving ? null : _save,
-                  borderRadius: BorderRadius.circular(16),
-                  child: SizedBox(
-                    height: 54,
-                    width: double.infinity,
-                    child: FilledButton(
-                      onPressed: _isSaving ? null : _save,
-                      style: FilledButton.styleFrom(
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                      ),
-                      child: _isSaving
-                          ? SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(strokeWidth: 2, color: cs.onPrimary),
-                            )
-                          : Text(
-                              isEditing ? 'Save Changes' : 'Create Person',
-                              style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w700),
-                            ),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 32),
               ],
-            ),
+              TextFormField(
+                controller: _nameController,
+                autofocus: !isEditing,
+                textCapitalization: TextCapitalization.words,
+                textInputAction: TextInputAction.next,
+                decoration: const InputDecoration(labelText: 'Name', prefixIcon: Icon(Icons.person_outline_rounded)),
+                validator: (v) => (v == null || v.trim().isEmpty) ? 'Enter a name' : null,
+              ),
+              const SizedBox(height: AppSpace.lg),
+              TextFormField(
+                controller: _phoneController,
+                keyboardType: TextInputType.phone,
+                textInputAction: TextInputAction.next,
+                decoration: const InputDecoration(
+                  labelText: 'Phone (optional)',
+                  prefixIcon: Icon(Icons.phone_outlined),
+                  helperText: 'Needed for WhatsApp reminders',
+                ),
+              ),
+              const SizedBox(height: AppSpace.lg),
+              TextFormField(
+                controller: _emailController,
+                keyboardType: TextInputType.emailAddress,
+                textInputAction: TextInputAction.next,
+                decoration: const InputDecoration(labelText: 'Email (optional)', prefixIcon: Icon(Icons.mail_outline_rounded)),
+                validator: (v) {
+                  final t = (v ?? '').trim();
+                  if (t.isEmpty) return null;
+                  return RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(t) ? null : 'Check the email address';
+                },
+              ),
+              const SizedBox(height: AppSpace.lg),
+              TextFormField(
+                controller: _notesController,
+                maxLines: 3,
+                minLines: 1,
+                textCapitalization: TextCapitalization.sentences,
+                decoration: const InputDecoration(
+                  labelText: 'Notes (optional)',
+                  prefixIcon: Icon(Icons.notes_rounded),
+                  hintText: 'e.g. Roommate, colleague',
+                ),
+              ),
+              const SizedBox(height: AppSpace.xl),
+              FilledButton(
+                onPressed: _isSaving ? null : _save,
+                child: _isSaving
+                    ? SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: cs.onPrimary))
+                    : Text(isEditing ? 'Save changes' : 'Add person'),
+              ),
+            ],
           ),
-        ),
-      ),
-    );
-  }
-
-  Widget _sectionHeader(String title, ThemeData theme) {
-    return Padding(
-      padding: const EdgeInsets.only(left: 4, bottom: 8),
-      child: Text(
-        title,
-        style: theme.textTheme.labelSmall?.copyWith(
-          fontWeight: FontWeight.w700,
-          letterSpacing: 1.0,
-          color: theme.colorScheme.onSurfaceVariant,
         ),
       ),
     );

@@ -1,12 +1,21 @@
 import 'package:drift/native.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:duemate/core/constants/app_constants.dart';
 import 'package:duemate/data/database/app_database.dart';
 import 'package:duemate/data/providers/app_providers.dart';
 import 'package:duemate/main.dart';
 
 void main() {
-  testWidgets('DueMate app renders welcome animation and transitions to dashboard', (WidgetTester tester) async {
+  testWidgets('DueMate launches directly into Dashboard with 4-tab navigation bar', (WidgetTester tester) async {
+    // No platform channels in tests: provide prefs in-memory and mark this
+    // version as already seen so the dashboard doesn't open the permissions
+    // sheet (which would need permission_handler's native side).
+    SharedPreferences.setMockInitialValues({
+      'duemate_last_run_version': AppConstants.appVersionString,
+    });
     final testDb = AppDatabase(NativeDatabase.memory());
 
     await tester.pumpWidget(
@@ -18,42 +27,48 @@ void main() {
       ),
     );
 
-    // Initial pump for welcome animation
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 500));
 
-    // Verify Welcome screen renders
-    expect(find.text('Get Started'), findsOneWidget);
+    // Empty ledger: Home shows the first-run welcome and its two ways in.
+    expect(find.text('Keep track of who owes what'), findsOneWidget);
+    expect(find.text('Add a person'), findsOneWidget);
+    expect(find.text('Add an expense'), findsOneWidget);
 
-    // Tap "Get Started" button to enter Dashboard
-    await tester.tap(find.text('Get Started'));
+    // Verify 4-tab navigation bar
+    expect(find.byTooltip('Home'), findsOneWidget);
+    expect(find.byTooltip('People'), findsOneWidget);
+    expect(find.byTooltip('Expenses'), findsOneWidget);
+    expect(find.byTooltip('Activity'), findsOneWidget);
+
+    // Tap People tab
+    await tester.tap(find.byTooltip('People'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 500));
+    expect(find.text('People'), findsWidgets);
 
-    // Verify dashboard renders with new floating dock navigation
-    expect(find.text('DueMate'), findsWidgets);
-    expect(find.text('Settlement Progress'), findsOneWidget);
-    expect(find.text('Top Dues'), findsOneWidget);
-    expect(find.text('They owe you'), findsOneWidget);
-    expect(find.text('You owe'), findsOneWidget);
-    expect(find.byTooltip('Dashboard'), findsOneWidget);
-    expect(find.byTooltip('Directory'), findsOneWidget);
-    expect(find.byTooltip('Transactions'), findsOneWidget);
-    expect(find.byTooltip('Notifications'), findsNothing);
+    // Tap Expenses tab
+    await tester.tap(find.byTooltip('Expenses'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+    expect(find.text('Expenses'), findsWidgets);
 
-    // Tap on Directory tab to leave dashboard
-    await tester.tap(find.byTooltip('Directory'));
-    await tester.pumpAndSettle();
-    expect(find.text('Search people or notes...'), findsOneWidget);
+    // Tap Activity tab
+    await tester.tap(find.byTooltip('Activity'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+    expect(find.text('Activity'), findsWidgets);
 
-    // Simulate system back button: should navigate back to Dashboard
-    await tester.binding.handlePopRoute();
-    await tester.pumpAndSettle();
+    // Finish all ticking animation controllers & pending microtasks
+    await tester.pump(const Duration(seconds: 5));
 
-    // Verify we are back on Dashboard, not closing app
-    expect(find.text('Settlement Progress'), findsOneWidget);
-    expect(find.text('Top Dues'), findsOneWidget);
-
-    await testDb.close();
-  });
+    // Tear down the widget tree so stream subscriptions are cancelled. Drift
+    // schedules the actual stream cleanup on timers created in this fake-async
+    // zone, so they must be pumped before close() — otherwise close() waits on
+    // them forever and the test hangs.
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump(const Duration(seconds: 1));
+    await tester.runAsync(() => testDb.close());
+    // Fail fast instead of hanging if teardown ever regresses.
+  }, timeout: const Timeout(Duration(seconds: 30)));
 }

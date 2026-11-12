@@ -193,6 +193,61 @@ void main() {
       expect(txsAfter.length, equals(2));
     });
 
+    test('Does not re-post installments the user marked as already paid', () async {
+      final emi = CreditCardEmi(
+        id: 'emi-prepaid',
+        personId: personId,
+        itemName: 'Laptop',
+        cardName: 'ICICI',
+        totalAmount: 40000,
+        monthlyInstallment: 10000,
+        totalTenureMonths: 4,
+        installmentsPaid: 2, // first two paid before tracking started
+        startDate: DateTime(2026, 6, 1),
+        dueDayOfMonth: 5,
+        isPaidByMe: true,
+        createdAt: DateTime(2026, 6, 1),
+        updatedAt: DateTime(2026, 6, 1),
+      );
+      await emiRepo.createEmi(emi);
+
+      // By Sept 6 installments 1..4 are due, but 1-2 are pre-paid.
+      final refDate = DateTime(2026, 9, 6);
+      final result = await processor.processDueInstallments(referenceDate: refDate);
+      expect(result.installmentsGenerated, equals(2));
+
+      final txs = await txRepo.watchTransactionsForPerson(personId).first;
+      expect(txs.map((t) => t.installmentNumber).toSet(), equals({3, 4}));
+
+      final updated = await emiRepo.getEmiById('emi-prepaid');
+      expect(updated!.installmentsPaid, equals(4));
+      expect(updated.status, equals('completed'));
+
+      // Idempotent on a second run
+      final again = await processor.processDueInstallments(referenceDate: refDate);
+      expect(again.installmentsGenerated, equals(0));
+    });
+
+    test('paid/remaining amounts honor custom per-month schedule', () {
+      final emi = CreditCardEmi(
+        id: 'emi-custom',
+        personId: personId,
+        itemName: 'Item',
+        cardName: 'Card',
+        totalAmount: 3500,
+        monthlyInstallment: 1000,
+        totalTenureMonths: 3,
+        installmentsPaid: 1,
+        startDate: DateTime(2026, 1, 1),
+        dueDayOfMonth: 1,
+        customScheduleJson: '{"1":1500,"3":1000}',
+        createdAt: DateTime(2026, 1, 1),
+        updatedAt: DateTime(2026, 1, 1),
+      );
+      expect(emi.paidAmount, equals(1500));
+      expect(emi.remainingAmount, equals(2000));
+    });
+
     test('Marks EMI as completed when last installment is processed', () async {
       final emi = CreditCardEmi(
         id: 'emi-test-2',

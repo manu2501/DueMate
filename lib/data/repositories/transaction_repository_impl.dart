@@ -24,6 +24,7 @@ class TransactionRepositoryImpl implements TransactionRepository {
       note: row.note,
       emiId: row.emiId,
       installmentNumber: row.installmentNumber,
+      isSettled: row.isSettled,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
     );
@@ -86,6 +87,7 @@ class TransactionRepositoryImpl implements TransactionRepository {
               note: Value(transaction.note),
               emiId: Value(transaction.emiId),
               installmentNumber: Value(transaction.installmentNumber),
+              isSettled: Value(transaction.isSettled),
               createdAt: transaction.createdAt,
               updatedAt: transaction.updatedAt,
             ),
@@ -112,6 +114,7 @@ class TransactionRepositoryImpl implements TransactionRepository {
           note: Value(transaction.note),
           emiId: Value(transaction.emiId),
           installmentNumber: Value(transaction.installmentNumber),
+          isSettled: Value(transaction.isSettled),
           updatedAt: Value(DateTime.now()),
         ),
       );

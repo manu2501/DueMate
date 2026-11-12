@@ -144,7 +144,7 @@ class PermissionManager {
     }
   }
 
-  /// Displays a polished bottom sheet asking for the permissions needed by DueMate.
+  /// Displays a bottom sheet asking for the permissions needed by DueMate.
   static Future<void> showPermissionsSheet(
     BuildContext context, {
     bool isUpdate = false,
@@ -362,7 +362,7 @@ class _PermissionsRationaleSheetState extends State<_PermissionsRationaleSheet> 
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      '100% Offline & Private: Contacts and records never leave your phone.',
+                      'Contacts and records stay on your phone.',
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: colorScheme.onSurfaceVariant,
                         fontSize: 12,

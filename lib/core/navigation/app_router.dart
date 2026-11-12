@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:duemate/core/theme/app_motion.dart';
 import 'package:duemate/core/widgets/dock_nav_icon.dart';
 import 'package:duemate/features/dashboard/presentation/screens/dashboard_screen.dart';
 import 'package:duemate/features/emis/presentation/screens/add_edit_emi_screen.dart';
+import 'package:duemate/features/expenses/presentation/screens/expense_charts_screen.dart';
+import 'package:duemate/features/expenses/presentation/screens/expenses_screen.dart';
 import 'package:duemate/features/people/presentation/screens/add_edit_person_screen.dart';
 import 'package:duemate/features/people/presentation/screens/people_screen.dart';
 import 'package:duemate/features/people/presentation/screens/person_details_screen.dart';
@@ -14,6 +16,7 @@ import 'package:duemate/features/settings/presentation/screens/settings_screen.d
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
 final _shellNavigatorKey = GlobalKey<NavigatorState>();
 
+/// Peer tabs: fade through, no direction.
 CustomTransitionPage<void> _buildTabTransition({
   required BuildContext context,
   required GoRouterState state,
@@ -22,22 +25,13 @@ CustomTransitionPage<void> _buildTabTransition({
   return CustomTransitionPage<void>(
     key: state.pageKey,
     child: child,
-    transitionDuration: const Duration(milliseconds: 280),
-    transitionsBuilder: (context, animation, secondaryAnimation, child) {
-      final fade = CurvedAnimation(
-        parent: animation,
-        curve: Curves.easeOutCubic,
-      );
-      final scale = Tween<double>(begin: 0.98, end: 1.0).animate(fade);
-
-      return FadeTransition(
-        opacity: fade,
-        child: ScaleTransition(scale: scale, child: child),
-      );
-    },
+    transitionDuration: AppMotion.medium,
+    reverseTransitionDuration: AppMotion.short,
+    transitionsBuilder: AppMotion.fadeThrough,
   );
 }
 
+/// Going deeper: shared-axis slide, so back has a direction.
 CustomTransitionPage<void> _buildSlideTransition({
   required BuildContext context,
   required GoRouterState state,
@@ -46,25 +40,9 @@ CustomTransitionPage<void> _buildSlideTransition({
   return CustomTransitionPage<void>(
     key: state.pageKey,
     child: child,
-    transitionDuration: const Duration(milliseconds: 320),
-    reverseTransitionDuration: const Duration(milliseconds: 260),
-    transitionsBuilder: (context, animation, secondaryAnimation, child) {
-      final curved = CurvedAnimation(
-        parent: animation,
-        curve: Curves.easeOutCubic,
-        reverseCurve: Curves.easeInCubic,
-      );
-
-      final offset = Tween<Offset>(
-        begin: const Offset(0.08, 0.0),
-        end: Offset.zero,
-      ).animate(curved);
-
-      return SlideTransition(
-        position: offset,
-        child: FadeTransition(opacity: curved, child: child),
-      );
-    },
+    transitionDuration: AppMotion.medium,
+    reverseTransitionDuration: AppMotion.medium,
+    transitionsBuilder: AppMotion.sharedAxisX,
   );
 }
 
@@ -96,6 +74,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             ),
           ),
           GoRoute(
+            path: '/expenses',
+            pageBuilder: (context, state) => _buildTabTransition(
+              context: context,
+              state: state,
+              child: ExpensesScreen(initialTab: state.uri.queryParameters['tab']),
+            ),
+          ),
+          GoRoute(
             path: '/reports',
             pageBuilder: (context, state) => _buildTabTransition(
               context: context,
@@ -112,6 +98,15 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           context: context,
           state: state,
           child: const SettingsScreen(),
+        ),
+      ),
+      GoRoute(
+        parentNavigatorKey: _rootNavigatorKey,
+        path: '/expense-charts',
+        pageBuilder: (context, state) => _buildSlideTransition(
+          context: context,
+          state: state,
+          child: const ExpenseChartsScreen(),
         ),
       ),
       GoRoute(
@@ -160,7 +155,8 @@ class AppShell extends StatelessWidget {
     final location = GoRouterState.of(context).uri.path;
     if (location == '/') return 0;
     if (location.startsWith('/people')) return 1;
-    if (location.startsWith('/reports')) return 2;
+    if (location.startsWith('/expenses')) return 2;
+    if (location.startsWith('/reports')) return 3;
     return 0;
   }
 
@@ -173,6 +169,9 @@ class AppShell extends StatelessWidget {
         context.go('/people');
         break;
       case 2:
+        context.go('/expenses');
+        break;
+      case 3:
         context.go('/reports');
         break;
     }
@@ -184,18 +183,17 @@ class AppShell extends StatelessWidget {
     final location = GoRouterState.of(context).uri.path;
     final isDashboard = location == '/';
 
-    return BackButtonListener(
-      onBackButtonPressed: () async {
-        if (!isDashboard) {
-          context.go('/');
-          return true;
-        }
-        return false;
+    // PopScope (not BackButtonListener): it is only consulted when the shell
+    // is the top route. A router-level listener fires first and would swallow
+    // back presses meant for forms/sheets pushed above the tabs.
+    return PopScope(
+      canPop: isDashboard,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) context.go('/');
       },
       child: Scaffold(
-        extendBody: true,
         body: child,
-        bottomNavigationBar: _FloatingDockNavBar(
+        bottomNavigationBar: _AppNavBar(
           selectedIndex: selectedIndex,
           onItemSelected: (index) => _onItemTapped(index, context),
         ),
@@ -204,117 +202,41 @@ class AppShell extends StatelessWidget {
   }
 }
 
-class _FloatingDockNavBar extends StatelessWidget {
+class _AppNavBar extends StatelessWidget {
   final int selectedIndex;
   final ValueChanged<int> onItemSelected;
 
-  const _FloatingDockNavBar({
+  const _AppNavBar({
     required this.selectedIndex,
     required this.onItemSelected,
   });
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final cs = theme.colorScheme;
-    final isDark = theme.brightness == Brightness.dark;
+    const labels = ['Home', 'People', 'Expenses', 'Activity'];
 
-    final labels = const [
-      'Dashboard',
-      'Directory',
-      'Transactions',
-    ];
-
-    return SafeArea(
-      top: false,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-        child: Container(
-          height: 64,
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-          decoration: BoxDecoration(
-            color: isDark ? const Color(0xFF1E1B4B) : cs.surfaceContainerLow,
-            borderRadius: BorderRadius.circular(32),
-            border: Border.all(
-              color: cs.outlineVariant.withValues(alpha: 0.9),
-              width: 1.2,
+    return NavigationBar(
+      selectedIndex: selectedIndex,
+      onDestinationSelected: onItemSelected,
+      destinations: [
+        for (var i = 0; i < labels.length; i++)
+          NavigationDestination(
+            label: labels[i],
+            tooltip: labels[i],
+            icon: DockNavIcon(
+              index: i,
+              isSelected: false,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+              size: 24,
             ),
-            boxShadow: [
-              BoxShadow(
-                color: (isDark ? Colors.black : const Color(0xFF101124))
-                    .withValues(alpha: isDark ? 0.4 : 0.1),
-                blurRadius: 20,
-                offset: const Offset(0, 8),
-              ),
-            ],
+            selectedIcon: DockNavIcon(
+              index: i,
+              isSelected: true,
+              color: Theme.of(context).colorScheme.primary,
+              size: 24,
+            ),
           ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: List.generate(labels.length, (index) {
-              final isSelected = selectedIndex == index;
-              final label = labels[index];
-
-              final activeBgColor = isDark
-                  ? cs.primary
-                  : const Color(0xFF131438);
-              final activeTextColor = Colors.white;
-
-              return Tooltip(
-                message: label,
-                child: InkWell(
-                  onTap: () => onItemSelected(index),
-                  borderRadius: BorderRadius.circular(24),
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 280),
-                    curve: Curves.easeOutCubic,
-                    padding: EdgeInsets.symmetric(
-                      horizontal: isSelected ? 18 : 14,
-                      vertical: 10,
-                    ),
-                    decoration: BoxDecoration(
-                      color: isSelected ? activeBgColor : Colors.transparent,
-                      borderRadius: BorderRadius.circular(24),
-                      boxShadow: isSelected
-                          ? [
-                              BoxShadow(
-                                color: activeBgColor.withValues(alpha: 0.25),
-                                blurRadius: 10,
-                                offset: const Offset(0, 4),
-                              ),
-                            ]
-                          : null,
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        DockNavIcon(
-                          index: index,
-                          isSelected: isSelected,
-                          color: isSelected
-                              ? activeTextColor
-                              : cs.onSurfaceVariant.withValues(alpha: 0.8),
-                          size: 20,
-                        ),
-                        if (isSelected) ...[
-                          const SizedBox(width: 8),
-                          Text(
-                            label,
-                            style: GoogleFonts.inter(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w700,
-                              color: activeTextColor,
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-                ),
-              );
-            }),
-          ),
-        ),
-      ),
+      ],
     );
   }
 }

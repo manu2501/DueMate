@@ -46,3 +46,7 @@ app.*.map.json
 
 # Widget Preview related
 .widget_preview/
+
+# Screenshot harness output (flutter test test_screens --update-goldens)
+/test_screens/out/
+/test_screens/failures/

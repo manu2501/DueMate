@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'package:duemate/core/constants/app_constants.dart';
+
 class CreditCardEmi {
   final String id;
   final String personId;
@@ -11,6 +14,13 @@ class CreditCardEmi {
   final int dueDayOfMonth;
   final bool isPaidByMe;
   final String status; // 'active', 'completed', 'cancelled'
+  final double interestRate; // % per annum
+  final String interestType; // 'reducing', 'flat'
+  final String kind; // 'card' | 'loan'
+  final String planMode; // 'split' | 'emi'
+  final double principal; // 0 = unknown
+  final double charges; // one-time fees, GST, etc.
+  final String? customScheduleJson;
   final String? notes;
   final DateTime createdAt;
   final DateTime updatedAt;
@@ -29,6 +39,13 @@ class CreditCardEmi {
     required this.dueDayOfMonth,
     this.isPaidByMe = true,
     this.status = 'active',
+    this.interestRate = 0.0,
+    this.interestType = 'reducing',
+    this.kind = 'card',
+    this.planMode = 'emi',
+    this.principal = 0.0,
+    this.charges = 0.0,
+    this.customScheduleJson,
     this.notes,
     required this.createdAt,
     required this.updatedAt,
@@ -38,11 +55,52 @@ class CreditCardEmi {
   bool get isActive => status == 'active' && installmentsPaid < totalTenureMonths;
   bool get isCompleted => status == 'completed' || installmentsPaid >= totalTenureMonths;
   bool get isCancelled => status == 'cancelled';
+  bool get isForSelf => personId == AppConstants.selfPersonId;
+  bool get isLoan => kind == 'loan';
+  bool get isSplitPlan => planMode == 'split';
+
+  /// Best guess for data that predates the stored [kind] column (old backups).
+  static String inferKind({required String cardName, required String itemName, String? notes}) {
+    final card = cardName.toLowerCase();
+    final looksLikeLoan = card.contains('loan') ||
+        itemName.toLowerCase().contains('loan') ||
+        card.contains('cash') ||
+        card.contains('transfer') ||
+        (notes?.toLowerCase().contains('loan') ?? false);
+    return looksLikeLoan ? 'loan' : 'card';
+  }
 
   int get remainingInstallments => (totalTenureMonths - installmentsPaid).clamp(0, totalTenureMonths);
-  double get paidAmount => (installmentsPaid * monthlyInstallment).clamp(0.0, totalAmount);
-  double get remainingAmount => (remainingInstallments * monthlyInstallment).clamp(0.0, totalAmount);
+  double get paidAmount {
+    double sum = 0;
+    for (int k = 1; k <= installmentsPaid && k <= totalTenureMonths; k++) {
+      sum += getMonthlyInstallmentFor(k);
+    }
+    return sum;
+  }
+
+  double get remainingAmount {
+    double sum = 0;
+    for (int k = installmentsPaid + 1; k <= totalTenureMonths; k++) {
+      sum += getMonthlyInstallmentFor(k);
+    }
+    return sum;
+  }
   double get progress => totalTenureMonths > 0 ? (installmentsPaid / totalTenureMonths).clamp(0.0, 1.0) : 1.0;
+
+  /// Returns the specific customized installment figure for month [installmentNumber], or fallback to default
+  double getMonthlyInstallmentFor(int installmentNumber) {
+    if (customScheduleJson != null && customScheduleJson!.isNotEmpty) {
+      try {
+        final Map<String, dynamic> parsed = jsonDecode(customScheduleJson!);
+        final val = parsed['$installmentNumber'];
+        if (val != null) {
+          return (val as num).toDouble();
+        }
+      } catch (_) {}
+    }
+    return monthlyInstallment;
+  }
 
   /// Calculates the due date for a specific installment number (1-based index)
   DateTime getDueDateForInstallment(int installmentNumber) {
@@ -81,6 +139,14 @@ class CreditCardEmi {
     int? dueDayOfMonth,
     bool? isPaidByMe,
     String? status,
+    double? interestRate,
+    String? interestType,
+    String? kind,
+    String? planMode,
+    double? principal,
+    double? charges,
+    String? customScheduleJson,
+    bool clearCustomSchedule = false,
     String? notes,
     DateTime? createdAt,
     DateTime? updatedAt,
@@ -99,6 +165,13 @@ class CreditCardEmi {
       dueDayOfMonth: dueDayOfMonth ?? this.dueDayOfMonth,
       isPaidByMe: isPaidByMe ?? this.isPaidByMe,
       status: status ?? this.status,
+      interestRate: interestRate ?? this.interestRate,
+      interestType: interestType ?? this.interestType,
+      kind: kind ?? this.kind,
+      planMode: planMode ?? this.planMode,
+      principal: principal ?? this.principal,
+      charges: charges ?? this.charges,
+      customScheduleJson: clearCustomSchedule ? null : (customScheduleJson ?? this.customScheduleJson),
       notes: notes ?? this.notes,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
@@ -114,4 +187,3 @@ class CreditCardEmi {
   @override
   int get hashCode => id.hashCode;
 }
-

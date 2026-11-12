@@ -124,7 +124,7 @@ class NotificationService {
       await _notificationsPlugin.show(
         id: 9999,
         title: '🔔 DueMate Notification Test',
-        body: 'Smart due date notifications are working perfectly!',
+        body: 'Notifications are working.',
         notificationDetails: details,
       );
       return true;
@@ -174,7 +174,9 @@ class NotificationService {
       await _notificationsPlugin.zonedSchedule(
         id: id,
         title: '⏰ Upcoming EMI Due: ${emi.itemName}',
-        body: '$personName owes $monthlyStr (${emi.installmentsPaid + 1}/${emi.totalTenureMonths} mo due today)',
+        body: emi.isForSelf
+            ? 'Personal EMI $monthlyStr (${emi.installmentsPaid + 1}/${emi.totalTenureMonths} mo due today)'
+            : '$personName • Installment ${emi.installmentsPaid + 1}/${emi.totalTenureMonths} ($monthlyStr) due today',
         scheduledDate: tzScheduled,
         notificationDetails: notificationDetails,
         androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,

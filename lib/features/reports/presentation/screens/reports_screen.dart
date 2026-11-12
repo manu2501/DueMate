@@ -1,24 +1,45 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:duemate/core/constants/app_constants.dart';
+import 'package:duemate/core/constants/expense_category_x.dart';
+import 'package:duemate/core/theme/app_theme.dart';
 import 'package:duemate/core/utils/csv_exporter.dart';
-import 'package:duemate/core/utils/pdf_exporter.dart';
-import 'package:duemate/core/utils/currency_formatter.dart';
 import 'package:duemate/core/utils/date_formatter.dart';
-import 'package:duemate/core/widgets/avatar_widget.dart';
+import 'package:duemate/core/utils/pdf_exporter.dart';
 import 'package:duemate/core/widgets/empty_state_widget.dart';
 import 'package:duemate/core/widgets/export_options_sheet.dart';
-import 'package:duemate/core/widgets/fade_slide_transition.dart';
 import 'package:duemate/core/widgets/transaction_tile.dart';
+import 'package:duemate/core/widgets/ui_kit.dart';
 import 'package:duemate/data/database/tables.dart';
 import 'package:duemate/data/providers/app_providers.dart';
 import 'package:duemate/domain/entities/ledger_transaction.dart';
-import 'package:duemate/domain/entities/person_summary.dart';
+import 'package:duemate/domain/entities/personal_expense.dart';
+import 'package:duemate/features/expenses/presentation/widgets/add_edit_expense_sheet.dart';
 import 'package:duemate/features/transactions/presentation/widgets/transaction_details_dialog.dart';
 
 enum ReportDateFilter { allTime, thisMonth, lastMonth, thisYear, custom }
 
+enum ActivityTypeFilter { all, ledger, expenses }
+
+class ActivityItem {
+  final bool isExpense;
+  final DateTime date;
+  final LedgerTransaction? transaction;
+  final PersonalExpense? expense;
+
+  ActivityItem.transaction(this.transaction)
+      : isExpense = false,
+        date = transaction!.transactionDate,
+        expense = null;
+
+  ActivityItem.expense(this.expense)
+      : isExpense = true,
+        date = expense!.expenseDate,
+        transaction = null;
+}
+
+/// Everything that happened, newest first: ledger entries and expenses in
+/// one timeline, with search and filters.
 class ReportsScreen extends ConsumerStatefulWidget {
   const ReportsScreen({super.key});
 
@@ -26,465 +47,349 @@ class ReportsScreen extends ConsumerStatefulWidget {
   ConsumerState<ReportsScreen> createState() => _ReportsScreenState();
 }
 
-class _ReportsScreenState extends ConsumerState<ReportsScreen> with SingleTickerProviderStateMixin {
-  late TabController _tabController;
-  ReportDateFilter _dateFilter = ReportDateFilter.allTime;
-  DateTimeRange? _customDateRange;
+class _ReportsScreenState extends ConsumerState<ReportsScreen> {
+  final _searchController = TextEditingController();
 
-  @override
-  void initState() {
-    super.initState();
-    _tabController = TabController(length: 2, vsync: this);
-  }
+  ReportDateFilter _dateFilter = ReportDateFilter.allTime;
+  ActivityTypeFilter _typeFilter = ActivityTypeFilter.all;
+  PaymentMethod? _methodFilter;
+  DateTimeRange? _customRange;
+
+  static const _typeLabels = {
+    ActivityTypeFilter.all: 'Everything',
+    ActivityTypeFilter.ledger: 'Lending',
+    ActivityTypeFilter.expenses: 'Expenses',
+  };
 
   @override
   void dispose() {
-    _tabController.dispose();
+    _searchController.dispose();
     super.dispose();
   }
 
-  bool _isDateInRange(DateTime date) {
-    final now = DateTime.now();
+  String get _periodLabel => switch (_dateFilter) {
+        ReportDateFilter.allTime => 'All time',
+        ReportDateFilter.thisMonth => 'This month',
+        ReportDateFilter.lastMonth => 'Last month',
+        ReportDateFilter.thisYear => 'This year',
+        ReportDateFilter.custom => _customRange == null
+            ? 'Custom'
+            : '${DateFormatter.formatShortDate(_customRange!.start)} – ${DateFormatter.formatShortDate(_customRange!.end)}',
+      };
 
+  bool _inPeriod(DateTime date) {
+    final now = DateTime.now();
     switch (_dateFilter) {
       case ReportDateFilter.allTime:
         return true;
       case ReportDateFilter.thisMonth:
         return date.year == now.year && date.month == now.month;
       case ReportDateFilter.lastMonth:
-        final lastMonthDate = DateTime(now.year, now.month - 1, 1);
-        return date.year == lastMonthDate.year && date.month == lastMonthDate.month;
+        final last = DateTime(now.year, now.month - 1, 1);
+        return date.year == last.year && date.month == last.month;
       case ReportDateFilter.thisYear:
         return date.year == now.year;
       case ReportDateFilter.custom:
-        if (_customDateRange == null) return true;
-        return date.isAfter(_customDateRange!.start.subtract(const Duration(seconds: 1))) &&
-            date.isBefore(_customDateRange!.end.add(const Duration(days: 1)));
+        final r = _customRange;
+        if (r == null) return true;
+        return !date.isBefore(r.start) && date.isBefore(r.end.add(const Duration(days: 1)));
     }
   }
 
-  Future<void> _pickCustomRange() async {
-    final initial = _customDateRange ??
-        DateTimeRange(
-          start: DateTime.now().subtract(const Duration(days: 30)),
-          end: DateTime.now(),
-        );
-
-    final picked = await showDateRangePicker(
+  Future<void> _pickPeriod() async {
+    final choice = await showModalBottomSheet<ReportDateFilter>(
       context: context,
-      firstDate: DateTime(2020),
-      lastDate: DateTime.now().add(const Duration(days: 365)),
-      initialDateRange: initial,
+      useRootNavigator: true,
+      builder: (ctx) => SafeArea(
+        child: RadioGroup<ReportDateFilter>(
+          groupValue: _dateFilter,
+          onChanged: (v) => Navigator.of(ctx).pop(v),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              for (final f in ReportDateFilter.values)
+                RadioListTile<ReportDateFilter>(
+                  value: f,
+                  title: Text(switch (f) {
+                    ReportDateFilter.allTime => 'All time',
+                    ReportDateFilter.thisMonth => 'This month',
+                    ReportDateFilter.lastMonth => 'Last month',
+                    ReportDateFilter.thisYear => 'This year',
+                    ReportDateFilter.custom => 'Pick dates…',
+                  }),
+                ),
+            ],
+          ),
+        ),
+      ),
     );
-
-    if (picked != null) {
+    if (choice == null || !mounted) return;
+    if (choice == ReportDateFilter.custom) {
+      final picked = await showDateRangePicker(
+        context: context,
+        firstDate: DateTime(2020),
+        lastDate: DateTime.now().add(const Duration(days: 365)),
+        initialDateRange: _customRange ??
+            DateTimeRange(start: DateTime.now().subtract(const Duration(days: 30)), end: DateTime.now()),
+      );
+      if (picked == null) return;
       setState(() {
-        _customDateRange = picked;
+        _customRange = picked;
         _dateFilter = ReportDateFilter.custom;
       });
+    } else {
+      setState(() => _dateFilter = choice);
     }
+  }
+
+  Future<void> _pickMethod() async {
+    final choice = await showModalBottomSheet<Object>(
+      context: context,
+      useRootNavigator: true,
+      builder: (ctx) => SafeArea(
+        child: RadioGroup<Object>(
+          groupValue: _methodFilter ?? 'any',
+          onChanged: (v) => Navigator.of(ctx).pop(v),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const RadioListTile<Object>(value: 'any', title: Text('Any method')),
+              for (final m in PaymentMethod.values) RadioListTile<Object>(value: m, title: Text(m.label)),
+            ],
+          ),
+        ),
+      ),
+    );
+    if (choice == null) return;
+    setState(() => _methodFilter = choice is PaymentMethod ? choice : null);
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
-    final isDark = theme.brightness == Brightness.dark;
-    final currencySymbol = ref.watch(currencySymbolProvider);
-    final allTxsAsync = ref.watch(allTransactionsProvider);
-    final allSummariesAsync = ref.watch(allPersonSummariesProvider);
-    final personsMap = ref.watch(personsMapProvider);
+    final symbol = ref.watch(currencySymbolProvider);
+    final people = ref.watch(personsMapProvider);
+    final allTxs = ref.watch(allTransactionsProvider).value ?? const <LedgerTransaction>[];
+    final allExpenses = ref.watch(allExpensesProvider).value ?? const <PersonalExpense>[];
+    final query = _searchController.text.trim().toLowerCase();
 
-    final allTxs = allTxsAsync.value ?? [];
-    final filteredTxs = allTxs.where((t) => _isDateInRange(t.transactionDate)).toList();
+    final txs = allTxs.where((t) {
+      if (_typeFilter == ActivityTypeFilter.expenses) return false;
+      if (!_inPeriod(t.transactionDate)) return false;
+      if (_methodFilter != null && t.paymentMethod != _methodFilter) return false;
+      if (query.isEmpty) return true;
+      final name = people[t.personId]?.name.toLowerCase() ?? '';
+      return name.contains(query) || (t.note?.toLowerCase().contains(query) ?? false);
+    }).toList();
 
-    double totalGiven = 0;
-    double totalReceived = 0;
-    for (final tx in filteredTxs) {
-      if (tx.type == TransactionType.moneyGiven) {
-        totalGiven += tx.amount;
-      } else {
-        totalReceived += tx.amount;
-      }
+    final expenses = allExpenses.where((e) {
+      if (_typeFilter == ActivityTypeFilter.ledger) return false;
+      if (!_inPeriod(e.expenseDate)) return false;
+      if (_methodFilter != null && e.paymentMethod != _methodFilter) return false;
+      if (query.isEmpty) return true;
+      return e.title.toLowerCase().contains(query) ||
+          (e.notes?.toLowerCase().contains(query) ?? false) ||
+          e.category.label.toLowerCase().contains(query);
+    }).toList();
+
+    final items = [
+      ...txs.map(ActivityItem.transaction),
+      ...expenses.map(ActivityItem.expense),
+    ]..sort((a, b) => b.date.compareTo(a.date));
+
+    double moneyIn = 0, moneyOut = 0, spent = 0;
+    for (final t in txs) {
+      t.type == TransactionType.paymentReceived ? moneyIn += t.amount : moneyOut += t.amount;
     }
-    final netBalance = totalGiven - totalReceived;
-    final totalVolume = totalGiven + totalReceived;
+    for (final e in expenses) {
+      spent += e.amount;
+    }
 
-    return Scaffold(
-      appBar: PreferredSize(
-        preferredSize: const Size.fromHeight(112),
-        child: SafeArea(
+    final byDay = <DateTime, List<ActivityItem>>{};
+    for (final i in items) {
+      byDay.putIfAbsent(DateTime(i.date.year, i.date.month, i.date.day), () => []).add(i);
+    }
+
+    void export() => ExportOptionsSheet.show(
+          context: context,
+          title: 'Share activity ($_periodLabel)',
+          onSharePdf: () => PdfExporter.exportAndShareAllTransactions(
+            transactions: txs,
+            personsMap: people,
+            currencySymbol: symbol,
+            filterTitle: _periodLabel,
+          ),
+          onShareCsv: () => CsvExporter.exportAndShareAllTransactions(
+            transactions: txs,
+            personsMap: people,
+            currencySymbol: symbol,
+          ),
+        );
+
+    Widget figure(String label, double v, MoneyTone tone, String sign) => Expanded(
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(
-                            'Transactions',
-                            style: GoogleFonts.dmSans(
-                              fontSize: 22,
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: -0.4,
-                              color: isDark ? Colors.white : const Color(0xFF131438),
-                            ),
-                          ),
-                          Text(
-                            '${filteredTxs.length} Transactions • ${CurrencyFormatter.formatCompact(totalVolume, symbol: currencySymbol)} Volume',
-                            style: GoogleFonts.inter(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w500,
-                              color: cs.onSurfaceVariant,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    IconButton.filledTonal(
-                      tooltip: 'Share Report',
-                      icon: const Icon(Icons.share_outlined, size: 18),
-                      onPressed: () {
-                        final filterName = switch (_dateFilter) {
-                          ReportDateFilter.allTime => 'All Time',
-                          ReportDateFilter.thisMonth => 'This Month',
-                          ReportDateFilter.lastMonth => 'Last Month',
-                          ReportDateFilter.thisYear => 'This Year',
-                          ReportDateFilter.custom => 'Custom Range',
-                        };
-
-                        ExportOptionsSheet.show(
-                          context: context,
-                          title: 'Share Activity Report ($filterName)',
-                          onSharePdf: () => PdfExporter.exportAndShareAllTransactions(
-                            transactions: filteredTxs,
-                            personsMap: personsMap,
-                            currencySymbol: currencySymbol,
-                            filterTitle: filterName,
-                          ),
-                          onShareCsv: () => CsvExporter.exportAndShareAllTransactions(
-                            transactions: filteredTxs,
-                            personsMap: personsMap,
-                            currencySymbol: currencySymbol,
-                          ),
-                        );
-                      },
-                    ),
-                  ],
-                ),
-              ),
-              TabBar(
-                controller: _tabController,
-                indicatorSize: TabBarIndicatorSize.tab,
-                labelStyle: GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 13),
-                unselectedLabelStyle: GoogleFonts.inter(fontWeight: FontWeight.w500, fontSize: 13),
-                tabs: const [
-                  Tab(text: 'Activity Feed'),
-                  Tab(text: 'By Person'),
-                ],
-              ),
+              Text(label, style: theme.textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant)),
+              MoneyText(v, symbol: symbol, tone: v == 0 ? MoneyTone.muted : tone, sign: v == 0 ? '' : sign),
             ],
           ),
+        );
+
+    return TabScaffold(
+      title: 'Activity',
+      actions: [
+        IconButton(tooltip: 'Share or export', icon: const Icon(Icons.ios_share_rounded), onPressed: export),
+      ],
+      slivers: [
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: AppSpace.lg),
+            child: TextField(
+              controller: _searchController,
+              textInputAction: TextInputAction.search,
+              decoration: InputDecoration(
+                hintText: 'Search people, notes or expenses',
+                prefixIcon: const Icon(Icons.search_rounded),
+                suffixIcon: query.isEmpty
+                    ? null
+                    : IconButton(
+                        tooltip: 'Clear search',
+                        icon: const Icon(Icons.close_rounded),
+                        onPressed: () => setState(_searchController.clear),
+                      ),
+              ),
+              onChanged: (_) => setState(() {}),
+            ),
+          ),
         ),
-      ),
-      body: Column(
-        children: [
-          // Date Filter Bar
-          SingleChildScrollView(
+        SliverToBoxAdapter(
+          child: SingleChildScrollView(
             scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+            padding: const EdgeInsets.fromLTRB(AppSpace.lg, AppSpace.md, AppSpace.lg, 0),
             child: Row(
               children: [
-                _filterChip('All Time', ReportDateFilter.allTime),
-                const SizedBox(width: 8),
-                _filterChip('This Month', ReportDateFilter.thisMonth),
-                const SizedBox(width: 8),
-                _filterChip('Last Month', ReportDateFilter.lastMonth),
-                const SizedBox(width: 8),
-                _filterChip('This Year', ReportDateFilter.thisYear),
-                const SizedBox(width: 8),
-                ActionChip(
-                  avatar: Icon(Icons.date_range_rounded, size: 16, color: cs.primary),
-                  label: Text(
-                    _dateFilter == ReportDateFilter.custom && _customDateRange != null
-                        ? '${DateFormatter.formatShortDate(_customDateRange!.start)} - ${DateFormatter.formatShortDate(_customDateRange!.end)}'
-                        : 'Custom Range',
-                  ),
-                  onPressed: _pickCustomRange,
+                _MenuChip(
+                  label: _typeLabels[_typeFilter]!,
+                  active: _typeFilter != ActivityTypeFilter.all,
+                  onTap: () async {
+                    final v = await showModalBottomSheet<ActivityTypeFilter>(
+                      context: context,
+                      useRootNavigator: true,
+                      builder: (ctx) => SafeArea(
+                        child: RadioGroup<ActivityTypeFilter>(
+                          groupValue: _typeFilter,
+                          onChanged: (v) => Navigator.of(ctx).pop(v),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              for (final e in _typeLabels.entries)
+                                RadioListTile<ActivityTypeFilter>(value: e.key, title: Text(e.value)),
+                            ],
+                          ),
+                        ),
+                      ),
+                    );
+                    if (v != null) setState(() => _typeFilter = v);
+                  },
+                ),
+                const SizedBox(width: AppSpace.sm),
+                _MenuChip(
+                  label: _periodLabel,
+                  active: _dateFilter != ReportDateFilter.allTime,
+                  onTap: _pickPeriod,
+                ),
+                const SizedBox(width: AppSpace.sm),
+                _MenuChip(
+                  label: _methodFilter?.label ?? 'Any method',
+                  active: _methodFilter != null,
+                  onTap: _pickMethod,
                 ),
               ],
             ),
           ),
-
-          // Cashflow Overview Card
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
-            child: Container(
-              padding: const EdgeInsets.all(18),
-              decoration: BoxDecoration(
-                color: cs.surfaceContainerLow,
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: cs.outlineVariant),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: isDark ? 0.15 : 0.03),
-                    blurRadius: 10,
-                    offset: const Offset(0, 3),
-                  ),
-                ],
-              ),
-              child: Column(
-                children: [
-                  Row(
-                    children: [
-                      _statBox('TOTAL GIVEN', totalGiven, cs.error, cs.surfaceContainer, currencySymbol, context),
-                      const SizedBox(width: 12),
-                      _statBox('TOTAL RECEIVED', totalReceived, const Color(0xFF10B981), cs.surfaceContainer, currencySymbol, context),
-                    ],
-                  ),
-                  const SizedBox(height: 14),
-                  Divider(height: 1, color: cs.outlineVariant.withValues(alpha: 0.6)),
-                  const SizedBox(height: 10),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Net Difference',
-                        style: GoogleFonts.inter(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          color: cs.onSurfaceVariant,
-                        ),
-                      ),
-                      Text(
-                        CurrencyFormatter.format(netBalance, symbol: currencySymbol),
-                        style: GoogleFonts.dmSans(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w800,
-                          color: netBalance > 0
-                              ? cs.error
-                              : netBalance < 0
-                                  ? const Color(0xFF10B981)
-                                  : cs.onSurfaceVariant,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ),
-
-          const SizedBox(height: 8),
-
-          Expanded(
-            child: allTxsAsync.when(
-              data: (_) {
-                // Group filtered transactions by personId to update breakdown as per filters
-                final Map<String, ({double given, double received, LedgerTransaction? lastTx, int count})> personStats = {};
-                for (final tx in filteredTxs) {
-                  final current = personStats[tx.personId];
-                  final isGiven = tx.type == TransactionType.moneyGiven;
-                  final g = (current?.given ?? 0.0) + (isGiven ? tx.amount : 0.0);
-                  final r = (current?.received ?? 0.0) + (!isGiven ? tx.amount : 0.0);
-                  final last = current?.lastTx == null || tx.transactionDate.isAfter(current!.lastTx!.transactionDate)
-                      ? tx
-                      : current.lastTx;
-                  final c = (current?.count ?? 0) + 1;
-                  personStats[tx.personId] = (given: g, received: r, lastTx: last, count: c);
-                }
-
-                final List<PersonSummary> filteredPersonSummaries = [];
-                for (final entry in personStats.entries) {
-                  final person = personsMap[entry.key];
-                  if (person != null) {
-                    filteredPersonSummaries.add(
-                      PersonSummary(
-                        person: person,
-                        totalGiven: entry.value.given,
-                        totalReceived: entry.value.received,
-                        balance: entry.value.given - entry.value.received,
-                        lastTransaction: entry.value.lastTx,
-                        transactionCount: entry.value.count,
-                      ),
-                    );
-                  }
-                }
-
-                if (_dateFilter == ReportDateFilter.allTime) {
-                  final allSummaries = allSummariesAsync.value ?? [];
-                  for (final s in allSummaries) {
-                    if (!personStats.containsKey(s.person.id)) {
-                      filteredPersonSummaries.add(s);
-                    }
-                  }
-                }
-
-                filteredPersonSummaries.sort((a, b) {
-                  final volumeA = a.totalGiven + a.totalReceived;
-                  final volumeB = b.totalGiven + b.totalReceived;
-                  final cmp = volumeB.compareTo(volumeA);
-                  if (cmp != 0) return cmp;
-                  return a.person.name.compareTo(b.person.name);
-                });
-
-                return TabBarView(
-                  controller: _tabController,
-                  children: [
-                    // Tab 1: Activity Timeline
-                    filteredTxs.isEmpty
-                        ? const EmptyStateWidget(
-                            icon: Icons.filter_list_off_rounded,
-                            title: 'No activity in this period',
-                            description: 'Try changing the date range filter above.',
-                          )
-                        : Container(
-                            margin: const EdgeInsets.fromLTRB(20, 4, 20, 140),
-                            decoration: BoxDecoration(
-                              color: cs.surfaceContainerLow,
-                              borderRadius: BorderRadius.circular(20),
-                              border: Border.all(color: cs.outlineVariant),
-                            ),
-                            child: ListView.separated(
-                              padding: const EdgeInsets.symmetric(vertical: 6),
-                              itemCount: filteredTxs.length,
-                              separatorBuilder: (_, _) => Divider(
-                                height: 1,
-                                indent: 68,
-                                endIndent: 16,
-                                color: cs.outlineVariant.withValues(alpha: 0.6),
-                              ),
-                              itemBuilder: (ctx, index) {
-                                final tx = filteredTxs[index];
-                                final person = personsMap[tx.personId];
-                                return FadeSlideTransition(
-                                  index: index,
-                                  child: TransactionTile(
-                                    transaction: tx,
-                                    person: person,
-                                    currencySymbol: currencySymbol,
-                                    onTap: () {
-                                      TransactionDetailsDialog.show(
-                                        context,
-                                        transaction: tx,
-                                        person: person,
-                                      );
-                                    },
-                                  ),
-                                );
-                              },
-                            ),
-                          ),
-
-                    // Tab 2: By Person Breakdown
-                    filteredPersonSummaries.isEmpty
-                        ? const EmptyStateWidget(
-                            icon: Icons.people_outline_rounded,
-                            title: 'No contact activity in this period',
-                            description: 'Try selecting another date filter above.',
-                          )
-                        : Container(
-                            margin: const EdgeInsets.fromLTRB(20, 4, 20, 140),
-                            decoration: BoxDecoration(
-                              color: cs.surfaceContainerLow,
-                              borderRadius: BorderRadius.circular(20),
-                              border: Border.all(color: cs.outlineVariant),
-                            ),
-                            child: ListView.separated(
-                              padding: const EdgeInsets.symmetric(vertical: 6),
-                              itemCount: filteredPersonSummaries.length,
-                              separatorBuilder: (_, _) => Divider(
-                                height: 1,
-                                indent: 68,
-                                endIndent: 16,
-                                color: cs.outlineVariant.withValues(alpha: 0.6),
-                              ),
-                              itemBuilder: (ctx, index) {
-                                final s = filteredPersonSummaries[index];
-                                return ListTile(
-                                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                                  leading: AvatarWidget(name: s.person.name, radius: 20),
-                                  title: Text(
-                                    s.person.name,
-                                    style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
-                                  ),
-                                  subtitle: Text(
-                                    'Given: ${CurrencyFormatter.formatCompact(s.totalGiven, symbol: currencySymbol)} • Received: ${CurrencyFormatter.formatCompact(s.totalReceived, symbol: currencySymbol)}',
-                                    style: theme.textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
-                                  ),
-                                  trailing: Text(
-                                    CurrencyFormatter.format(s.balance, symbol: currencySymbol),
-                                    style: GoogleFonts.inter(
-                                      fontWeight: FontWeight.w800,
-                                      fontSize: 14,
-                                      color: s.balance > 0.001
-                                          ? cs.error
-                                          : s.balance < -0.001
-                                              ? const Color(0xFF10B981)
-                                              : cs.primary,
-                                    ),
-                                  ),
-                                  onTap: () => context.push('/people/${s.person.id}'),
-                                );
-                              },
-                            ),
-                          ),
-                  ],
-                );
-              },
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (err, _) => Center(child: Text('Error: $err')),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _filterChip(String label, ReportDateFilter filter) {
-    return ChoiceChip(
-      label: Text(label),
-      selected: _dateFilter == filter,
-      onSelected: (_) => setState(() => _dateFilter = filter),
-    );
-  }
-
-  Widget _statBox(String label, double amount, Color accent, Color bg, String symbol, BuildContext context) {
-    final theme = Theme.of(context);
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: bg,
-          borderRadius: BorderRadius.circular(14),
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              label,
-              style: theme.textTheme.labelSmall?.copyWith(
-                color: accent,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 0.5,
-              ),
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(AppSpace.screenGutter, AppSpace.lg, AppSpace.screenGutter, 0),
+            child: Row(
+              children: [
+                figure('Money in', moneyIn, MoneyTone.positive, '+'),
+                figure('Money out', moneyOut, MoneyTone.neutral, '−'),
+                figure('Spent', spent, MoneyTone.neutral, '−'),
+              ],
             ),
-            const SizedBox(height: 4),
-            Text(
-              CurrencyFormatter.format(amount, symbol: symbol),
-              style: GoogleFonts.dmSans(
-                fontSize: 17,
-                fontWeight: FontWeight.w800,
-                color: accent,
+          ),
+        ),
+        if (items.isEmpty)
+          SliverFillRemaining(
+            hasScrollBody: false,
+            child: EmptyStateWidget(
+              icon: query.isEmpty ? Icons.receipt_long_outlined : Icons.search_off_rounded,
+              title: query.isEmpty ? 'Nothing in this period' : 'Nothing matches "${_searchController.text}"',
+              description: 'Try a different period, type or search.',
+            ),
+          )
+        else
+          for (final entry in byDay.entries) ...[
+            SliverToBoxAdapter(child: DateHeader(entry.key)),
+            SliverToBoxAdapter(
+              child: GroupCard(
+                children: [
+                  for (final item in entry.value)
+                    if (item.isExpense)
+                      ListTile(
+                        onTap: () => AddEditExpenseSheet.show(context, expenseToEdit: item.expense),
+                        leading: IconBadge(item.expense!.category.icon),
+                        title: Text(item.expense!.title, maxLines: 1, overflow: TextOverflow.ellipsis),
+                        subtitle: Text('Expense · ${item.expense!.category.label}'),
+                        trailing: MoneyText(item.expense!.amount, symbol: symbol, sign: '−'),
+                      )
+                    else
+                      TransactionTile(
+                        transaction: item.transaction!,
+                        person: people[item.transaction!.personId],
+                        currencySymbol: symbol,
+                        showDate: false,
+                        onTap: () => TransactionDetailsDialog.show(
+                          context,
+                          transaction: item.transaction!,
+                          person: item.transaction!.personId == AppConstants.selfPersonId
+                              ? null
+                              : people[item.transaction!.personId],
+                        ),
+                      ),
+                ],
               ),
             ),
           ],
-        ),
+      ],
+    );
+  }
+}
+
+/// A chip that opens a choice sheet and shows the current choice.
+class _MenuChip extends StatelessWidget {
+  final String label;
+  final bool active;
+  final VoidCallback onTap;
+
+  const _MenuChip({required this.label, required this.active, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return FilterChip(
+      label: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(label),
+          const SizedBox(width: 2),
+          const Icon(Icons.arrow_drop_down_rounded, size: 20),
+        ],
       ),
+      selected: active,
+      onSelected: (_) => onTap(),
     );
   }
 }

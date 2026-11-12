@@ -1,267 +1,252 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:duemate/core/constants/app_constants.dart';
+import 'package:duemate/core/services/notification_service.dart';
+import 'package:duemate/core/theme/app_theme.dart';
+import 'package:duemate/core/utils/backup_helper.dart';
+import 'package:duemate/core/utils/csv_exporter.dart';
+import 'package:duemate/core/utils/permission_manager.dart';
+import 'package:duemate/core/widgets/app_logo.dart';
+import 'package:duemate/core/widgets/confirm_dialog.dart';
+import 'package:duemate/core/widgets/ui_kit.dart';
 import 'package:duemate/data/providers/app_providers.dart';
-import 'package:duemate/features/settings/presentation/widgets/data_management_tile.dart';
-import 'package:duemate/features/settings/presentation/widgets/notification_settings_tile.dart';
-import 'package:duemate/features/settings/presentation/widgets/theme_and_currency_settings.dart';
+import 'package:duemate/features/expenses/presentation/widgets/budget_dialog.dart';
 
-class SettingsScreen extends ConsumerWidget {
+/// Settings, grouped by what you're trying to do. Each row says what it
+/// changes; anything destructive is last and asks first.
+class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
 
-  Future<void> _clearAllData(BuildContext context, WidgetRef ref) async {
-    final theme = Theme.of(context);
-    final cs = theme.colorScheme;
+  @override
+  ConsumerState<SettingsScreen> createState() => _SettingsScreenState();
+}
 
-    final confirmed = await showDialog<bool>(
+class _SettingsScreenState extends ConsumerState<SettingsScreen> {
+  bool? _remindersOn;
+
+  @override
+  void initState() {
+    super.initState();
+    NotificationService().areNotificationsEnabled().then((v) {
+      if (mounted) setState(() => _remindersOn = v);
+    }).catchError((_) {
+      if (mounted) setState(() => _remindersOn = false);
+    });
+  }
+
+  void _snack(String message) =>
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+
+  Future<void> _setReminders(bool on) async {
+    if (on) {
+      final granted = await NotificationService().requestPermissions();
+      if (!granted) {
+        _snack('Notifications are turned off for DueMate in system settings.');
+        return;
+      }
+    }
+    await NotificationService().setNotificationsEnabled(on);
+    if (mounted) setState(() => _remindersOn = on);
+  }
+
+  Future<void> _sendTestReminder() async {
+    final ok = await NotificationService().showTestNotification();
+    if (mounted) _snack(ok ? 'Test reminder sent. Check your notifications.' : "Couldn't send. Check notification permission.");
+  }
+
+  void _pickCurrency(String current) {
+    showModalBottomSheet<void>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: Row(
-          children: [
-            Icon(Icons.warning_amber_rounded, color: cs.error),
-            const SizedBox(width: 8),
-            Text('Erase All Data?', style: TextStyle(color: cs.error, fontWeight: FontWeight.bold)),
-          ],
-        ),
-        content: const Text(
-          'This action is irreversible.\n\n'
-          'All people, loan records, repayment transactions, and notes will be permanently deleted from this device.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('Cancel'),
+      useRootNavigator: true,
+      isScrollControlled: true,
+      builder: (ctx) => SafeArea(
+        child: RadioGroup<String>(
+          groupValue: current,
+          onChanged: (symbol) {
+            if (symbol != null) ref.read(currencySymbolProvider.notifier).setCurrency(symbol);
+            Navigator.of(ctx).pop();
+          },
+          child: ListView(
+            shrinkWrap: true,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(AppSpace.screenGutter, 0, AppSpace.screenGutter, AppSpace.sm),
+                child: Text('Currency', style: Theme.of(ctx).textTheme.titleMedium),
+              ),
+              for (final c in AppConstants.supportedCurrencies)
+                RadioListTile<String>(
+                  value: c.symbol,
+                  title: Text(c.name),
+                  subtitle: Text(c.code),
+                  secondary: Text(c.symbol, style: Theme.of(ctx).textTheme.titleMedium),
+                ),
+            ],
           ),
-          FilledButton(
-            style: FilledButton.styleFrom(
-              backgroundColor: cs.error,
-              foregroundColor: cs.onError,
-            ),
-            onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text('Permanently Delete'),
-          ),
-        ],
+        ),
       ),
     );
+  }
 
-    if (confirmed != true) return;
+  Future<void> _exportCsv() async {
+    final txs = await ref.read(allTransactionsProvider.future);
+    await CsvExporter.exportAndShareAllTransactions(
+      transactions: txs,
+      personsMap: ref.read(personsMapProvider),
+      currencySymbol: ref.read(currencySymbolProvider),
+    );
+  }
 
-    final db = ref.read(databaseProvider);
-    await db.delete(db.transactions).go();
-    await db.delete(db.persons).go();
-
-    if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          backgroundColor: cs.error,
-          content: Text(
-            'All vault data has been cleared from local storage.',
-            style: TextStyle(color: cs.onError, fontWeight: FontWeight.bold),
-          ),
-        ),
-      );
-    }
+  Future<void> _erase() async {
+    final ok = await showConfirmDialog(
+      context,
+      title: 'Erase all data?',
+      message: "Every person, transaction, EMI and expense on this phone will be deleted. "
+          "There's no undo. Make a backup first if you might need them.",
+      confirmLabel: 'Erase everything',
+      destructive: true,
+    );
+    if (!ok || !mounted) return;
+    await ref.read(databaseProvider).eraseAllData();
+    _snack('All data erased');
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
-    final currentCurrency = ref.watch(currencySymbolProvider);
-    final db = ref.watch(databaseProvider);
-    final allTxsAsync = ref.watch(allTransactionsProvider);
-    final personsMap = ref.watch(personsMapProvider);
+    final themeMode = ref.watch(themeModeProvider);
+    final symbol = ref.watch(currencySymbolProvider);
+    final budget = ref.watch(monthlyBudgetLimitProvider);
+    final currency = AppConstants.supportedCurrencies.where((c) => c.symbol == symbol).firstOrNull;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Settings'),
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(20, 8, 20, 40),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // App Identity Hero Card
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: cs.surfaceContainerLow,
-                borderRadius: BorderRadius.circular(24),
-              ),
-              child: Row(
-                children: [
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(16),
-                    child: Image.asset(
-                      'assets/images/app_logo.png',
-                      width: 54,
-                      height: 54,
-                      fit: BoxFit.cover,
-                      errorBuilder: (ctx, err, stack) => Container(
-                        width: 54,
-                        height: 54,
-                        decoration: BoxDecoration(
-                          color: cs.primaryContainer,
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: Icon(Icons.account_balance_wallet_rounded, color: cs.primary, size: 28),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          AppConstants.appName,
-                          style: theme.textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: -0.3,
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          AppConstants.appTagline,
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: cs.onSurfaceVariant,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                          decoration: BoxDecoration(
-                            color: cs.primary.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.shield_outlined, size: 12, color: cs.primary),
-                              const SizedBox(width: 4),
-                              Text(
-                                '100% Offline Vault',
-                                style: GoogleFonts.inter(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w700,
-                                  color: cs.primary,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
+      appBar: AppBar(title: const Text('Settings')),
+      body: ListView(
+        padding: const EdgeInsets.only(bottom: AppSpace.xxl),
+        children: [
+          const SectionHeader('Appearance', padding: EdgeInsets.fromLTRB(AppSpace.screenGutter, AppSpace.sm, AppSpace.sm, AppSpace.sm)),
+          GroupCard(
+            dividerIndent: AppSpace.screenGutter,
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(AppSpace.lg),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text('Theme', style: theme.textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w500)),
+                    const SizedBox(height: AppSpace.md),
+                    SegmentedButton<ThemeMode>(
+                      showSelectedIcon: false,
+                      segments: const [
+                        ButtonSegment(value: ThemeMode.system, label: Text('System'), icon: Icon(Icons.brightness_auto_outlined)),
+                        ButtonSegment(value: ThemeMode.light, label: Text('Light'), icon: Icon(Icons.light_mode_outlined)),
+                        ButtonSegment(value: ThemeMode.dark, label: Text('Dark'), icon: Icon(Icons.dark_mode_outlined)),
                       ],
+                      selected: {themeMode},
+                      onSelectionChanged: (s) => ref.read(themeModeProvider.notifier).setThemeMode(s.first),
                     ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 24),
-
-            // Section 1: Appearance
-            _sectionHeader('APPEARANCE', theme),
-            const ThemeSettingsCard(),
-            const SizedBox(height: 24),
-
-            // Section 2: Currency & Regional
-            _sectionHeader('CURRENCY & REGIONAL', theme),
-            const CurrencySettingsCard(),
-            const SizedBox(height: 24),
-
-            // Section 3: Reminders & Notifications
-            _sectionHeader('REMINDERS & NOTIFICATIONS', theme),
-            Container(
-              decoration: BoxDecoration(
-                color: cs.surfaceContainerLow,
-                borderRadius: BorderRadius.circular(24),
-              ),
-              child: const NotificationSettingsTile(),
-            ),
-            const SizedBox(height: 24),
-
-            // Section 4: Data Management
-            _sectionHeader('DATA MANAGEMENT', theme),
-            DataManagementTile(
-              allTransactions: allTxsAsync.value ?? [],
-              personsMap: personsMap,
-              currentCurrency: currentCurrency,
-              db: db,
-            ),
-            const SizedBox(height: 24),
-
-            // Section 5: Danger Zone
-            _sectionHeader('DANGER ZONE', theme),
-            Container(
-              decoration: BoxDecoration(
-                color: cs.errorContainer.withValues(alpha: 0.2),
-                borderRadius: BorderRadius.circular(24),
-              ),
-              child: ListTile(
-                contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
-                leading: Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: cs.errorContainer,
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Icon(Icons.delete_forever_rounded, color: cs.error, size: 20),
+                  ],
                 ),
-                title: Text(
-                  'Clear All Vault Data',
-                  style: theme.textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w700,
-                    color: cs.error,
+              ),
+              SwitchListTile(
+                contentPadding: const EdgeInsets.symmetric(horizontal: AppSpace.screenGutter),
+                title: const Text('Hide amounts'),
+                subtitle: const Text('Show dots instead of balances and totals, e.g. in public. Also on Home.'),
+                value: ref.watch(hideBalancesProvider),
+                onChanged: (v) => ref.read(hideBalancesProvider.notifier).set(v),
+              ),
+              ListTile(
+                title: const Text('Currency'),
+                subtitle: Text(currency == null ? symbol : '${currency.name} (${currency.code})'),
+                trailing: Text(symbol, style: theme.textTheme.titleMedium),
+                onTap: () => _pickCurrency(symbol),
+              ),
+            ],
+          ),
+
+          const SectionHeader('Money'),
+          GroupCard(
+            dividerIndent: AppSpace.screenGutter,
+            children: [
+              ListTile(
+                title: const Text('Monthly budget'),
+                subtitle: const Text('Used on Home and Expenses to show what\'s left'),
+                trailing: Text(ref.watch(displayMoneyProvider)(budget), style: theme.textTheme.titleSmall),
+                onTap: () => editMonthlyBudget(context, ref),
+              ),
+            ],
+          ),
+
+          const SectionHeader('Reminders'),
+          GroupCard(
+            dividerIndent: AppSpace.screenGutter,
+            children: [
+              SwitchListTile(
+                contentPadding: const EdgeInsets.symmetric(horizontal: AppSpace.screenGutter),
+                title: const Text('Notifications'),
+                subtitle: const Text('Allow DueMate to send you notifications'),
+                value: _remindersOn ?? false,
+                onChanged: _remindersOn == null ? null : _setReminders,
+              ),
+              ListTile(
+                enabled: _remindersOn ?? false,
+                title: const Text('Send a test notification'),
+                subtitle: const Text('Check that notifications reach you'),
+                onTap: _sendTestReminder,
+              ),
+              ListTile(
+                title: const Text('App permissions'),
+                subtitle: const Text('Contacts and notifications'),
+                trailing: const Icon(Icons.chevron_right_rounded),
+                onTap: () => PermissionManager.showPermissionsSheet(context),
+              ),
+            ],
+          ),
+
+          const SectionHeader('Your data'),
+          GroupCard(
+            dividerIndent: AppSpace.screenGutter,
+            children: [
+              ListTile(
+                title: const Text('Back up everything'),
+                subtitle: const Text('Saves one file you can keep in Drive or send to yourself'),
+                onTap: () => BackupHelper.exportBackup(ref.read(databaseProvider)),
+              ),
+              ListTile(
+                title: const Text('Export transactions'),
+                subtitle: const Text('CSV for Excel or Google Sheets'),
+                onTap: _exportCsv,
+              ),
+              ListTile(
+                title: Text('Erase all data', style: TextStyle(color: cs.error)),
+                subtitle: const Text('Removes everything from this phone'),
+                onTap: _erase,
+              ),
+            ],
+          ),
+
+          Padding(
+            padding: const EdgeInsets.fromLTRB(AppSpace.screenGutter, AppSpace.xxl, AppSpace.screenGutter, 0),
+            child: Row(
+              children: [
+                const AppLogo(size: 40),
+                const SizedBox(width: AppSpace.md),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('${AppConstants.appName} ${AppConstants.appVersionString}', style: theme.textTheme.titleSmall),
+                      Text(
+                        'Your data stays on this phone. No account, no tracking.',
+                        style: theme.textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+                      ),
+                    ],
                   ),
                 ),
-                subtitle: Text(
-                  'Permanently delete records & contacts',
-                  style: theme.textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
-                ),
-                trailing: Icon(Icons.chevron_right_rounded, color: cs.error),
-                onTap: () => _clearAllData(context, ref),
-              ),
+              ],
             ),
-            const SizedBox(height: 32),
-
-            // Version info footer
-            Center(
-              child: Column(
-                children: [
-                  Text(
-                    '${AppConstants.appName} ${AppConstants.appVersionString}',
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: cs.onSurfaceVariant,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    '100% Private • Zero Analytics • Local SQLite Vault',
-                    style: theme.textTheme.labelSmall?.copyWith(
-                      color: cs.outline,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _sectionHeader(String title, ThemeData theme) {
-    return Padding(
-      padding: const EdgeInsets.only(left: 4, bottom: 8),
-      child: Text(
-        title,
-        style: theme.textTheme.labelSmall?.copyWith(
-          fontWeight: FontWeight.w700,
-          letterSpacing: 1.0,
-          color: theme.colorScheme.onSurfaceVariant,
-        ),
+          ),
+        ],
       ),
     );
   }
