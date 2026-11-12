@@ -5,6 +5,7 @@ import 'package:duemate/core/constants/app_constants.dart';
 import 'package:duemate/core/theme/app_theme.dart';
 import 'package:duemate/core/utils/currency_formatter.dart';
 import 'package:duemate/core/utils/date_formatter.dart';
+import 'package:duemate/core/utils/display_money.dart';
 import 'package:duemate/core/widgets/amount_field.dart';
 import 'package:duemate/core/widgets/avatar_widget.dart';
 import 'package:duemate/core/widgets/person_picker_sheet.dart';
@@ -199,6 +200,7 @@ class _LedgerEntrySheetState extends ConsumerState<LedgerEntrySheet> {
                       summary: selected,
                       isGive: _isGive,
                       symbol: symbol,
+                      money: ref.watch(displayMoneyProvider),
                       accent: accent,
                       onPick: _openPersonPicker,
                       onSettle: _setAmount,
@@ -344,6 +346,7 @@ class _PersonPanel extends StatelessWidget {
   final PersonSummary? summary;
   final bool isGive;
   final String symbol;
+  final DisplayMoney money;
   final Color accent;
   final VoidCallback onPick;
   final ValueChanged<double> onSettle;
@@ -352,6 +355,7 @@ class _PersonPanel extends StatelessWidget {
     required this.summary,
     required this.isGive,
     required this.symbol,
+    required this.money,
     required this.accent,
     required this.onPick,
     required this.onSettle,
@@ -389,7 +393,6 @@ class _PersonPanel extends StatelessWidget {
       );
     }
 
-    String money(double v) => CurrencyFormatter.format(v, symbol: symbol);
     final balance = s.balance;
     final String status;
     final Color statusColor;

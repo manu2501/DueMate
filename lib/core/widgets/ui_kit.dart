@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:duemate/core/theme/app_theme.dart';
 import 'package:duemate/core/utils/currency_formatter.dart';
 import 'package:duemate/core/utils/date_formatter.dart';
+import 'package:duemate/core/utils/display_money.dart';
 import 'package:duemate/core/widgets/avatar_widget.dart';
+import 'package:duemate/data/providers/app_providers.dart';
 import 'package:duemate/domain/entities/person_summary.dart';
 
 /// Layout used by every top-level tab: a large title that collapses on
@@ -127,7 +130,7 @@ enum MoneyTone { neutral, positive, negative, muted }
 
 /// A formatted amount with an explicit sign and a colour that follows the
 /// app's money rules (see [LedgerColors]).
-class MoneyText extends StatelessWidget {
+class MoneyText extends ConsumerWidget {
   final double amount;
   final String symbol;
   final MoneyTone tone;
@@ -159,10 +162,12 @@ class MoneyText extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final base = style ?? Theme.of(context).textTheme.titleSmall;
+    final hidden = ref.watch(hideBalancesProvider);
     return Text(
-      '$sign${CurrencyFormatter.format(amount.abs(), symbol: symbol)}',
+      hidden ? '$symbol${DisplayMoney.mask}' : '$sign${CurrencyFormatter.format(amount.abs(), symbol: symbol)}',
+      semanticsLabel: hidden ? DisplayMoney.hiddenLabel : null,
       textAlign: textAlign,
       maxLines: 1,
       style: base?.copyWith(color: colorFor(context, tone)),

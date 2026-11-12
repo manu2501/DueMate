@@ -239,6 +239,12 @@ void main() {
       await tester.tap(find.text('Part payment').first);
       await shot('14_tx_details');
 
+      await home();
+      await tester.tap(find.byTooltip('Hide amounts'));
+      await shot('15_home_hidden');
+      await tester.tap(find.byTooltip('Show amounts'));
+      await settle();
+
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pump(const Duration(seconds: 1));
       await tester.runAsync(() => db.close());

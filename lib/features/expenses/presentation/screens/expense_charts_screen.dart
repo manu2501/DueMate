@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:duemate/core/constants/app_constants.dart';
 import 'package:duemate/core/constants/expense_category_x.dart';
 import 'package:duemate/core/theme/app_theme.dart';
-import 'package:duemate/core/utils/currency_formatter.dart';
+import 'package:duemate/core/utils/display_money.dart';
 import 'package:duemate/core/widgets/empty_state_widget.dart';
 import 'package:duemate/core/widgets/ui_kit.dart';
 import 'package:duemate/data/database/tables.dart';
@@ -37,7 +37,7 @@ class _ExpenseChartsScreenState extends ConsumerState<ExpenseChartsScreen> {
     final symbol = ref.watch(currencySymbolProvider);
     final budget = ref.watch(monthlyBudgetLimitProvider);
     final all = ref.watch(allExpensesProvider).value ?? const <PersonalExpense>[];
-    String money(double v) => CurrencyFormatter.format(v, symbol: symbol);
+    final money = ref.watch(displayMoneyProvider);
 
     // Years that actually have data, plus the current one.
     final years = {DateTime.now().year, ...all.map((e) => e.expenseDate.year)}.toList()..sort();
@@ -95,7 +95,7 @@ class _ExpenseChartsScreenState extends ConsumerState<ExpenseChartsScreen> {
               totals: totals,
               labels: _short,
               selected: _month - 1,
-              symbol: symbol,
+              money: money,
               onSelect: (i) => setState(() => _month = i + 1),
             ),
           ),
@@ -170,14 +170,14 @@ class _MonthBars extends StatelessWidget {
   final List<double> totals;
   final List<String> labels;
   final int selected;
-  final String symbol;
+  final DisplayMoney money;
   final ValueChanged<int> onSelect;
 
   const _MonthBars({
     required this.totals,
     required this.labels,
     required this.selected,
-    required this.symbol,
+    required this.money,
     required this.onSelect,
   });
 
@@ -198,7 +198,7 @@ class _MonthBars extends StatelessWidget {
               child: Semantics(
                 button: true,
                 selected: i == selected,
-                label: '${labels[i]}: ${CurrencyFormatter.format(totals[i], symbol: symbol)}',
+                label: '${labels[i]}: ${money.hidden ? DisplayMoney.hiddenLabel : money(totals[i])}',
                 child: InkWell(
                   onTap: () => onSelect(i),
                   borderRadius: BorderRadius.circular(AppRadius.sm),
@@ -208,7 +208,7 @@ class _MonthBars extends StatelessWidget {
                       if (i == selected && totals[i] > 0)
                         FittedBox(
                           child: Text(
-                            CurrencyFormatter.formatCompact(totals[i], symbol: symbol),
+                            money.compact(totals[i]),
                             style: theme.textTheme.labelSmall,
                           ),
                         ),

@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 import 'package:duemate/core/utils/contacts_helper.dart';
-import 'package:duemate/core/utils/currency_formatter.dart';
 import 'package:duemate/core/widgets/avatar_widget.dart';
+import 'package:duemate/core/widgets/ui_kit.dart';
 import 'package:duemate/data/providers/app_providers.dart';
 import 'package:duemate/domain/entities/person.dart';
 import 'package:duemate/domain/entities/person_summary.dart';
@@ -292,64 +292,34 @@ class _PersonPickerItem extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
-    final balance = summary.balance;
+    final wording = balanceWording(summary);
+    final hasBalance = summary.balance.abs() > 0.0001;
+    final phone = summary.person.phone;
 
-    Color badgeColor;
-    String badgeText;
-    if (balance > 0) {
-      badgeColor = cs.error;
-      badgeText = CurrencyFormatter.format(balance, symbol: currencySymbol);
-    } else if (balance < 0) {
-      badgeColor = cs.tertiary;
-      badgeText = 'Over ${CurrencyFormatter.format(balance.abs(), symbol: currencySymbol)}';
-    } else {
-      badgeColor = cs.primary;
-      badgeText = 'Settled';
-    }
-
-    return InkWell(
+    return ListTile(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-        decoration: BoxDecoration(
-          color: isSelected ? cs.primary.withValues(alpha: 0.1) : cs.surfaceContainer,
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Row(
-          children: [
-            AvatarWidget(name: summary.person.name, radius: 18),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    summary.person.name,
-                    style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
-                  ),
-                  if (summary.person.phone != null && summary.person.phone!.isNotEmpty)
-                    Text(
-                      summary.person.phone!,
-                      style: theme.textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
-                    ),
-                ],
-              ),
-            ),
-            Text(
-              badgeText,
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: badgeColor,
-              ),
-            ),
-            if (isSelected) ...[
-              const SizedBox(width: 8),
-              Icon(Icons.check_circle_rounded, color: cs.primary, size: 18),
+      selected: isSelected,
+      selectedTileColor: cs.primaryContainer.withValues(alpha: 0.5),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      leading: AvatarWidget(name: summary.person.name, radius: 18),
+      title: Text(summary.person.name, maxLines: 1, overflow: TextOverflow.ellipsis),
+      subtitle: (phone != null && phone.isNotEmpty) ? Text(phone) : null,
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              if (hasBalance) MoneyText(summary.balance, symbol: currencySymbol, tone: wording.tone),
+              Text(wording.label, style: theme.textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant)),
             ],
+          ),
+          if (isSelected) ...[
+            const SizedBox(width: 8),
+            Icon(Icons.check_circle_rounded, color: cs.primary, size: 20),
           ],
-        ),
+        ],
       ),
     );
   }

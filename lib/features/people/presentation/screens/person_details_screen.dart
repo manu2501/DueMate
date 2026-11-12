@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:duemate/core/theme/app_theme.dart';
 import 'package:duemate/core/utils/csv_exporter.dart';
-import 'package:duemate/core/utils/currency_formatter.dart';
 import 'package:duemate/core/utils/date_formatter.dart';
 import 'package:duemate/core/utils/pdf_exporter.dart';
 import 'package:duemate/core/utils/reminder_helper.dart';
@@ -142,7 +141,7 @@ class _PersonLedger extends ConsumerWidget {
     final emis = ref.watch(personEmisProvider(person.id)).value ?? const [];
     final hasPhone = person.phone?.trim().isNotEmpty ?? false;
     final canRemind = summary.owesMoney && hasPhone;
-    String money(double v) => CurrencyFormatter.format(v, symbol: symbol);
+    final money = ref.watch(displayMoneyProvider);
 
     final firstName = person.name.split(' ').first;
     final String headline;

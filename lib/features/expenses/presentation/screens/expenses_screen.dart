@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 import 'package:duemate/core/constants/app_constants.dart';
 import 'package:duemate/core/constants/expense_category_x.dart';
 import 'package:duemate/core/theme/app_theme.dart';
-import 'package:duemate/core/utils/currency_formatter.dart';
 import 'package:duemate/core/utils/date_formatter.dart';
 import 'package:duemate/core/widgets/empty_state_widget.dart';
 import 'package:duemate/core/widgets/ui_kit.dart';
@@ -199,7 +198,7 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
           child: Padding(
             padding: const EdgeInsets.fromLTRB(AppSpace.screenGutter, AppSpace.md, AppSpace.screenGutter, 0),
             child: Text(
-              '${CurrencyFormatter.format(monthlyOut, symbol: symbol)} goes out each month on active EMIs',
+              '${ref.watch(displayMoneyProvider)(monthlyOut)} goes out each month on active EMIs',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
@@ -251,7 +250,7 @@ class _MonthHeader extends ConsumerWidget {
     final cs = theme.colorScheme;
     final spent = ref.watch(monthlyExpenseTotalProvider);
     final budget = ref.watch(monthlyBudgetLimitProvider);
-    String money(double v) => CurrencyFormatter.format(v, symbol: symbol);
+    final money = ref.watch(displayMoneyProvider);
     final ratio = budget > 0 ? spent / budget : 0.0;
     final over = budget > 0 && spent > budget;
     final month = DateFormatter.formatMonthYear(DateTime.now()).split(' ').first;

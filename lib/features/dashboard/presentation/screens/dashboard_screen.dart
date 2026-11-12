@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:duemate/core/constants/app_constants.dart';
 import 'package:duemate/core/theme/app_theme.dart';
-import 'package:duemate/core/utils/currency_formatter.dart';
 import 'package:duemate/core/utils/date_formatter.dart';
 import 'package:duemate/core/utils/permission_manager.dart';
 import 'package:duemate/core/widgets/app_logo.dart';
@@ -68,6 +67,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 ],
               ),
               actions: [
+                const _HideAmountsButton(),
                 IconButton(
                   tooltip: 'Settings',
                   icon: const Icon(Icons.settings_outlined),
@@ -104,7 +104,7 @@ class _Position extends ConsumerWidget {
     final theme = Theme.of(context);
     final muted = theme.colorScheme.onSurfaceVariant;
     final t = ref.watch(dashboardTotalsProvider);
-    String money(double v) => CurrencyFormatter.format(v, symbol: symbol);
+    final money = ref.watch(displayMoneyProvider);
     String people(int n) => n == 1 ? '1 person' : '$n people';
 
     final net = t.netBalance;
@@ -216,7 +216,7 @@ class _EmisAndCards extends ConsumerWidget {
                     title: Text('${emis.length} active'),
                     subtitle: Text(
                       monthly > 0
-                          ? '${CurrencyFormatter.format(monthly, symbol: symbol)} goes out each month'
+                          ? '${ref.watch(displayMoneyProvider)(monthly)} goes out each month'
                           : 'Paid by others',
                     ),
                     trailing: const Icon(Icons.chevron_right_rounded),
@@ -246,7 +246,7 @@ class _MonthSpend extends ConsumerWidget {
     final cs = theme.colorScheme;
     final spent = ref.watch(monthlyExpenseTotalProvider);
     final budget = ref.watch(monthlyBudgetLimitProvider);
-    String money(double v) => CurrencyFormatter.format(v, symbol: symbol);
+    final money = ref.watch(displayMoneyProvider);
     final ratio = budget > 0 ? (spent / budget) : 0.0;
     final over = spent > budget && budget > 0;
     final month = DateFormatter.formatMonthYear(DateTime.now()).split(' ').first;
@@ -395,6 +395,23 @@ class _Welcome extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Eye toggle in the Home app bar: hide or show amounts everywhere.
+class _HideAmountsButton extends ConsumerWidget {
+  const _HideAmountsButton();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final hidden = ref.watch(hideBalancesProvider);
+    return IconButton(
+      tooltip: hidden ? 'Show amounts' : 'Hide amounts',
+      isSelected: hidden,
+      icon: const Icon(Icons.visibility_outlined),
+      selectedIcon: const Icon(Icons.visibility_off_outlined),
+      onPressed: () => ref.read(hideBalancesProvider.notifier).toggle(),
     );
   }
 }

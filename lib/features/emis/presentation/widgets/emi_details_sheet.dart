@@ -118,7 +118,7 @@ class EmiDetailsSheet extends ConsumerWidget {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
     final symbol = ref.watch(currencySymbolProvider);
-    String money(double v) => CurrencyFormatter.format(v, symbol: symbol);
+    final money = ref.watch(displayMoneyProvider);
 
     final done = emi.isCompleted;
     final isShared = !emi.isForSelf && person != null && person!.id != AppConstants.selfPersonId;

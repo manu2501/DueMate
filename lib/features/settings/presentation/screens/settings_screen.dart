@@ -5,7 +5,6 @@ import 'package:duemate/core/services/notification_service.dart';
 import 'package:duemate/core/theme/app_theme.dart';
 import 'package:duemate/core/utils/backup_helper.dart';
 import 'package:duemate/core/utils/csv_exporter.dart';
-import 'package:duemate/core/utils/currency_formatter.dart';
 import 'package:duemate/core/utils/permission_manager.dart';
 import 'package:duemate/core/widgets/app_logo.dart';
 import 'package:duemate/core/widgets/confirm_dialog.dart';
@@ -149,6 +148,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   ],
                 ),
               ),
+              SwitchListTile(
+                contentPadding: const EdgeInsets.symmetric(horizontal: AppSpace.screenGutter),
+                title: const Text('Hide amounts'),
+                subtitle: const Text('Show dots instead of balances and totals, e.g. in public. Also on Home.'),
+                value: ref.watch(hideBalancesProvider),
+                onChanged: (v) => ref.read(hideBalancesProvider.notifier).set(v),
+              ),
               ListTile(
                 title: const Text('Currency'),
                 subtitle: Text(currency == null ? symbol : '${currency.name} (${currency.code})'),
@@ -165,7 +171,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               ListTile(
                 title: const Text('Monthly budget'),
                 subtitle: const Text('Used on Home and Expenses to show what\'s left'),
-                trailing: Text(CurrencyFormatter.format(budget, symbol: symbol), style: theme.textTheme.titleSmall),
+                trailing: Text(ref.watch(displayMoneyProvider)(budget), style: theme.textTheme.titleSmall),
                 onTap: () => editMonthlyBudget(context, ref),
               ),
             ],

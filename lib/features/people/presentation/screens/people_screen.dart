@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 import 'package:uuid/uuid.dart';
 import 'package:duemate/core/theme/app_theme.dart';
 import 'package:duemate/core/utils/contacts_helper.dart';
-import 'package:duemate/core/utils/currency_formatter.dart';
 import 'package:duemate/core/utils/whatsapp_helper.dart';
 import 'package:duemate/core/widgets/avatar_widget.dart';
 import 'package:duemate/core/widgets/confirm_dialog.dart';
@@ -136,7 +135,7 @@ class _PeopleScreenState extends ConsumerState<PeopleScreen> {
               subtitle: Text(
                 s.balance.abs() < 0.0001
                     ? 'Settled'
-                    : '${balanceWording(s).label} ${CurrencyFormatter.format(s.balance.abs(), symbol: symbol)}',
+                    : '${balanceWording(s).label} ${ref.read(displayMoneyProvider)(s.balance.abs())}',
               ),
             ),
             const Divider(),
@@ -193,7 +192,7 @@ class _PeopleScreenState extends ConsumerState<PeopleScreen> {
     final people = ref.watch(filteredPersonSummariesProvider);
     final totals = ref.watch(dashboardTotalsProvider);
     final searching = _searchController.text.isNotEmpty;
-    String money(double v) => CurrencyFormatter.format(v, symbol: symbol);
+    final money = ref.watch(displayMoneyProvider);
 
     final summary = [
       if (totals.totalTheyOwe > 0) '${money(totals.totalTheyOwe)} to collect',

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:duemate/core/theme/app_theme.dart';
-import 'package:duemate/core/utils/currency_formatter.dart';
+import 'package:duemate/data/providers/app_providers.dart';
 import 'package:duemate/core/utils/date_formatter.dart';
 import 'package:duemate/core/widgets/ui_kit.dart';
 import 'package:duemate/domain/entities/credit_card_emi.dart';
@@ -9,7 +10,7 @@ import 'package:duemate/features/emis/presentation/widgets/emi_details_sheet.dar
 
 /// An EMI or loan as a list row: what, how far along, what's next.
 /// Designed to sit inside a [GroupCard].
-class EmiCard extends StatelessWidget {
+class EmiCard extends ConsumerWidget {
   final CreditCardEmi emi;
   final Person? person;
   final String currencySymbol;
@@ -32,7 +33,7 @@ class EmiCard extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
     final done = emi.isCompleted;
@@ -69,7 +70,7 @@ class EmiCard extends StatelessWidget {
                       ),
                       const SizedBox(width: AppSpace.sm),
                       Text(
-                        '${CurrencyFormatter.format(emi.monthlyInstallment, symbol: currencySymbol)}/mo',
+                        '${ref.watch(displayMoneyProvider)(emi.monthlyInstallment)}/mo',
                         style: theme.textTheme.titleSmall?.copyWith(
                           color: done ? cs.onSurfaceVariant : cs.onSurface,
                         ),
