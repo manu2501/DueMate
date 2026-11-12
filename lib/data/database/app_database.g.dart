@@ -1445,6 +1445,30 @@ class $CreditCardEmisTable extends CreditCardEmis
     requiredDuringInsert: false,
     defaultValue: const Constant('active'),
   );
+  static const VerificationMeta _interestRateMeta = const VerificationMeta(
+    'interestRate',
+  );
+  @override
+  late final GeneratedColumn<double> interestRate = GeneratedColumn<double>(
+    'interest_rate',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0.0),
+  );
+  static const VerificationMeta _interestTypeMeta = const VerificationMeta(
+    'interestType',
+  );
+  @override
+  late final GeneratedColumn<String> interestType = GeneratedColumn<String>(
+    'interest_type',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('reducing'),
+  );
   static const VerificationMeta _customScheduleJsonMeta =
       const VerificationMeta('customScheduleJson');
   @override
@@ -1513,6 +1537,8 @@ class $CreditCardEmisTable extends CreditCardEmis
     dueDayOfMonth,
     isPaidByMe,
     status,
+    interestRate,
+    interestType,
     customScheduleJson,
     notes,
     createdAt,
@@ -1636,6 +1662,24 @@ class $CreditCardEmisTable extends CreditCardEmis
         status.isAcceptableOrUnknown(data['status']!, _statusMeta),
       );
     }
+    if (data.containsKey('interest_rate')) {
+      context.handle(
+        _interestRateMeta,
+        interestRate.isAcceptableOrUnknown(
+          data['interest_rate']!,
+          _interestRateMeta,
+        ),
+      );
+    }
+    if (data.containsKey('interest_type')) {
+      context.handle(
+        _interestTypeMeta,
+        interestType.isAcceptableOrUnknown(
+          data['interest_type']!,
+          _interestTypeMeta,
+        ),
+      );
+    }
     if (data.containsKey('custom_schedule_json')) {
       context.handle(
         _customScheduleJsonMeta,
@@ -1733,6 +1777,14 @@ class $CreditCardEmisTable extends CreditCardEmis
         DriftSqlType.string,
         data['${effectivePrefix}status'],
       )!,
+      interestRate: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}interest_rate'],
+      )!,
+      interestType: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}interest_type'],
+      )!,
       customScheduleJson: attachedDatabase.typeMapping.read(
         DriftSqlType.string,
         data['${effectivePrefix}custom_schedule_json'],
@@ -1775,6 +1827,8 @@ class CreditCardEmi extends DataClass implements Insertable<CreditCardEmi> {
   final int dueDayOfMonth;
   final bool isPaidByMe;
   final String status;
+  final double interestRate;
+  final String interestType;
   final String? customScheduleJson;
   final String? notes;
   final DateTime createdAt;
@@ -1793,6 +1847,8 @@ class CreditCardEmi extends DataClass implements Insertable<CreditCardEmi> {
     required this.dueDayOfMonth,
     required this.isPaidByMe,
     required this.status,
+    required this.interestRate,
+    required this.interestType,
     this.customScheduleJson,
     this.notes,
     required this.createdAt,
@@ -1814,6 +1870,8 @@ class CreditCardEmi extends DataClass implements Insertable<CreditCardEmi> {
     map['due_day_of_month'] = Variable<int>(dueDayOfMonth);
     map['is_paid_by_me'] = Variable<bool>(isPaidByMe);
     map['status'] = Variable<String>(status);
+    map['interest_rate'] = Variable<double>(interestRate);
+    map['interest_type'] = Variable<String>(interestType);
     if (!nullToAbsent || customScheduleJson != null) {
       map['custom_schedule_json'] = Variable<String>(customScheduleJson);
     }
@@ -1842,6 +1900,8 @@ class CreditCardEmi extends DataClass implements Insertable<CreditCardEmi> {
       dueDayOfMonth: Value(dueDayOfMonth),
       isPaidByMe: Value(isPaidByMe),
       status: Value(status),
+      interestRate: Value(interestRate),
+      interestType: Value(interestType),
       customScheduleJson: customScheduleJson == null && nullToAbsent
           ? const Value.absent()
           : Value(customScheduleJson),
@@ -1876,6 +1936,8 @@ class CreditCardEmi extends DataClass implements Insertable<CreditCardEmi> {
       dueDayOfMonth: serializer.fromJson<int>(json['dueDayOfMonth']),
       isPaidByMe: serializer.fromJson<bool>(json['isPaidByMe']),
       status: serializer.fromJson<String>(json['status']),
+      interestRate: serializer.fromJson<double>(json['interestRate']),
+      interestType: serializer.fromJson<String>(json['interestType']),
       customScheduleJson: serializer.fromJson<String?>(
         json['customScheduleJson'],
       ),
@@ -1903,6 +1965,8 @@ class CreditCardEmi extends DataClass implements Insertable<CreditCardEmi> {
       'dueDayOfMonth': serializer.toJson<int>(dueDayOfMonth),
       'isPaidByMe': serializer.toJson<bool>(isPaidByMe),
       'status': serializer.toJson<String>(status),
+      'interestRate': serializer.toJson<double>(interestRate),
+      'interestType': serializer.toJson<String>(interestType),
       'customScheduleJson': serializer.toJson<String?>(customScheduleJson),
       'notes': serializer.toJson<String?>(notes),
       'createdAt': serializer.toJson<DateTime>(createdAt),
@@ -1924,6 +1988,8 @@ class CreditCardEmi extends DataClass implements Insertable<CreditCardEmi> {
     int? dueDayOfMonth,
     bool? isPaidByMe,
     String? status,
+    double? interestRate,
+    String? interestType,
     Value<String?> customScheduleJson = const Value.absent(),
     Value<String?> notes = const Value.absent(),
     DateTime? createdAt,
@@ -1942,6 +2008,8 @@ class CreditCardEmi extends DataClass implements Insertable<CreditCardEmi> {
     dueDayOfMonth: dueDayOfMonth ?? this.dueDayOfMonth,
     isPaidByMe: isPaidByMe ?? this.isPaidByMe,
     status: status ?? this.status,
+    interestRate: interestRate ?? this.interestRate,
+    interestType: interestType ?? this.interestType,
     customScheduleJson: customScheduleJson.present
         ? customScheduleJson.value
         : this.customScheduleJson,
@@ -1978,6 +2046,12 @@ class CreditCardEmi extends DataClass implements Insertable<CreditCardEmi> {
           ? data.isPaidByMe.value
           : this.isPaidByMe,
       status: data.status.present ? data.status.value : this.status,
+      interestRate: data.interestRate.present
+          ? data.interestRate.value
+          : this.interestRate,
+      interestType: data.interestType.present
+          ? data.interestType.value
+          : this.interestType,
       customScheduleJson: data.customScheduleJson.present
           ? data.customScheduleJson.value
           : this.customScheduleJson,
@@ -2005,6 +2079,8 @@ class CreditCardEmi extends DataClass implements Insertable<CreditCardEmi> {
           ..write('dueDayOfMonth: $dueDayOfMonth, ')
           ..write('isPaidByMe: $isPaidByMe, ')
           ..write('status: $status, ')
+          ..write('interestRate: $interestRate, ')
+          ..write('interestType: $interestType, ')
           ..write('customScheduleJson: $customScheduleJson, ')
           ..write('notes: $notes, ')
           ..write('createdAt: $createdAt, ')
@@ -2028,6 +2104,8 @@ class CreditCardEmi extends DataClass implements Insertable<CreditCardEmi> {
     dueDayOfMonth,
     isPaidByMe,
     status,
+    interestRate,
+    interestType,
     customScheduleJson,
     notes,
     createdAt,
@@ -2050,6 +2128,8 @@ class CreditCardEmi extends DataClass implements Insertable<CreditCardEmi> {
           other.dueDayOfMonth == this.dueDayOfMonth &&
           other.isPaidByMe == this.isPaidByMe &&
           other.status == this.status &&
+          other.interestRate == this.interestRate &&
+          other.interestType == this.interestType &&
           other.customScheduleJson == this.customScheduleJson &&
           other.notes == this.notes &&
           other.createdAt == this.createdAt &&
@@ -2070,6 +2150,8 @@ class CreditCardEmisCompanion extends UpdateCompanion<CreditCardEmi> {
   final Value<int> dueDayOfMonth;
   final Value<bool> isPaidByMe;
   final Value<String> status;
+  final Value<double> interestRate;
+  final Value<String> interestType;
   final Value<String?> customScheduleJson;
   final Value<String?> notes;
   final Value<DateTime> createdAt;
@@ -2089,6 +2171,8 @@ class CreditCardEmisCompanion extends UpdateCompanion<CreditCardEmi> {
     this.dueDayOfMonth = const Value.absent(),
     this.isPaidByMe = const Value.absent(),
     this.status = const Value.absent(),
+    this.interestRate = const Value.absent(),
+    this.interestType = const Value.absent(),
     this.customScheduleJson = const Value.absent(),
     this.notes = const Value.absent(),
     this.createdAt = const Value.absent(),
@@ -2109,6 +2193,8 @@ class CreditCardEmisCompanion extends UpdateCompanion<CreditCardEmi> {
     required int dueDayOfMonth,
     this.isPaidByMe = const Value.absent(),
     this.status = const Value.absent(),
+    this.interestRate = const Value.absent(),
+    this.interestType = const Value.absent(),
     this.customScheduleJson = const Value.absent(),
     this.notes = const Value.absent(),
     required DateTime createdAt,
@@ -2139,6 +2225,8 @@ class CreditCardEmisCompanion extends UpdateCompanion<CreditCardEmi> {
     Expression<int>? dueDayOfMonth,
     Expression<bool>? isPaidByMe,
     Expression<String>? status,
+    Expression<double>? interestRate,
+    Expression<String>? interestType,
     Expression<String>? customScheduleJson,
     Expression<String>? notes,
     Expression<DateTime>? createdAt,
@@ -2159,6 +2247,8 @@ class CreditCardEmisCompanion extends UpdateCompanion<CreditCardEmi> {
       if (dueDayOfMonth != null) 'due_day_of_month': dueDayOfMonth,
       if (isPaidByMe != null) 'is_paid_by_me': isPaidByMe,
       if (status != null) 'status': status,
+      if (interestRate != null) 'interest_rate': interestRate,
+      if (interestType != null) 'interest_type': interestType,
       if (customScheduleJson != null)
         'custom_schedule_json': customScheduleJson,
       if (notes != null) 'notes': notes,
@@ -2182,6 +2272,8 @@ class CreditCardEmisCompanion extends UpdateCompanion<CreditCardEmi> {
     Value<int>? dueDayOfMonth,
     Value<bool>? isPaidByMe,
     Value<String>? status,
+    Value<double>? interestRate,
+    Value<String>? interestType,
     Value<String?>? customScheduleJson,
     Value<String?>? notes,
     Value<DateTime>? createdAt,
@@ -2202,6 +2294,8 @@ class CreditCardEmisCompanion extends UpdateCompanion<CreditCardEmi> {
       dueDayOfMonth: dueDayOfMonth ?? this.dueDayOfMonth,
       isPaidByMe: isPaidByMe ?? this.isPaidByMe,
       status: status ?? this.status,
+      interestRate: interestRate ?? this.interestRate,
+      interestType: interestType ?? this.interestType,
       customScheduleJson: customScheduleJson ?? this.customScheduleJson,
       notes: notes ?? this.notes,
       createdAt: createdAt ?? this.createdAt,
@@ -2250,6 +2344,12 @@ class CreditCardEmisCompanion extends UpdateCompanion<CreditCardEmi> {
     if (status.present) {
       map['status'] = Variable<String>(status.value);
     }
+    if (interestRate.present) {
+      map['interest_rate'] = Variable<double>(interestRate.value);
+    }
+    if (interestType.present) {
+      map['interest_type'] = Variable<String>(interestType.value);
+    }
     if (customScheduleJson.present) {
       map['custom_schedule_json'] = Variable<String>(customScheduleJson.value);
     }
@@ -2286,6 +2386,8 @@ class CreditCardEmisCompanion extends UpdateCompanion<CreditCardEmi> {
           ..write('dueDayOfMonth: $dueDayOfMonth, ')
           ..write('isPaidByMe: $isPaidByMe, ')
           ..write('status: $status, ')
+          ..write('interestRate: $interestRate, ')
+          ..write('interestType: $interestType, ')
           ..write('customScheduleJson: $customScheduleJson, ')
           ..write('notes: $notes, ')
           ..write('createdAt: $createdAt, ')
@@ -3853,6 +3955,8 @@ typedef $$CreditCardEmisTableCreateCompanionBuilder =
       required int dueDayOfMonth,
       Value<bool> isPaidByMe,
       Value<String> status,
+      Value<double> interestRate,
+      Value<String> interestType,
       Value<String?> customScheduleJson,
       Value<String?> notes,
       required DateTime createdAt,
@@ -3874,6 +3978,8 @@ typedef $$CreditCardEmisTableUpdateCompanionBuilder =
       Value<int> dueDayOfMonth,
       Value<bool> isPaidByMe,
       Value<String> status,
+      Value<double> interestRate,
+      Value<String> interestType,
       Value<String?> customScheduleJson,
       Value<String?> notes,
       Value<DateTime> createdAt,
@@ -3969,6 +4075,16 @@ class $$CreditCardEmisTableFilterComposer
 
   ColumnFilters<String> get status => $composableBuilder(
     column: $table.status,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get interestRate => $composableBuilder(
+    column: $table.interestRate,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get interestType => $composableBuilder(
+    column: $table.interestType,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -4085,6 +4201,16 @@ class $$CreditCardEmisTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<double> get interestRate => $composableBuilder(
+    column: $table.interestRate,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get interestType => $composableBuilder(
+    column: $table.interestType,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<String> get customScheduleJson => $composableBuilder(
     column: $table.customScheduleJson,
     builder: (column) => ColumnOrderings(column),
@@ -4188,6 +4314,16 @@ class $$CreditCardEmisTableAnnotationComposer
   GeneratedColumn<String> get status =>
       $composableBuilder(column: $table.status, builder: (column) => column);
 
+  GeneratedColumn<double> get interestRate => $composableBuilder(
+    column: $table.interestRate,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get interestType => $composableBuilder(
+    column: $table.interestType,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<String> get customScheduleJson => $composableBuilder(
     column: $table.customScheduleJson,
     builder: (column) => column,
@@ -4273,6 +4409,8 @@ class $$CreditCardEmisTableTableManager
                 Value<int> dueDayOfMonth = const Value.absent(),
                 Value<bool> isPaidByMe = const Value.absent(),
                 Value<String> status = const Value.absent(),
+                Value<double> interestRate = const Value.absent(),
+                Value<String> interestType = const Value.absent(),
                 Value<String?> customScheduleJson = const Value.absent(),
                 Value<String?> notes = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
@@ -4292,6 +4430,8 @@ class $$CreditCardEmisTableTableManager
                 dueDayOfMonth: dueDayOfMonth,
                 isPaidByMe: isPaidByMe,
                 status: status,
+                interestRate: interestRate,
+                interestType: interestType,
                 customScheduleJson: customScheduleJson,
                 notes: notes,
                 createdAt: createdAt,
@@ -4313,6 +4453,8 @@ class $$CreditCardEmisTableTableManager
                 required int dueDayOfMonth,
                 Value<bool> isPaidByMe = const Value.absent(),
                 Value<String> status = const Value.absent(),
+                Value<double> interestRate = const Value.absent(),
+                Value<String> interestType = const Value.absent(),
                 Value<String?> customScheduleJson = const Value.absent(),
                 Value<String?> notes = const Value.absent(),
                 required DateTime createdAt,
@@ -4332,6 +4474,8 @@ class $$CreditCardEmisTableTableManager
                 dueDayOfMonth: dueDayOfMonth,
                 isPaidByMe: isPaidByMe,
                 status: status,
+                interestRate: interestRate,
+                interestType: interestType,
                 customScheduleJson: customScheduleJson,
                 notes: notes,
                 createdAt: createdAt,

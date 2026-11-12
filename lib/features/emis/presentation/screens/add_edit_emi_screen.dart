@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -52,6 +53,7 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
   late final TextEditingController _cardController;
   late final TextEditingController _baseAmountController;
   late final TextEditingController _chargesController;
+  late final TextEditingController _interestRateController;
   late final TextEditingController _installmentsPaidController;
   late final TextEditingController _notesController;
   late final TextEditingController _tenureController;
@@ -62,6 +64,7 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
   bool _isPaidByMe = true;
   int _tenureMonths = 6;
   int _installmentsPaid = 0;
+  String _interestType = 'reducing';
   DateTime _startDate = DateTime.now();
   int _dueDayOfMonth = DateTime.now().day;
   bool _isSaving = false;
@@ -77,7 +80,23 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
 
   double get _baseAmount => double.tryParse(_baseAmountController.text.trim()) ?? 0.0;
   double get _charges => double.tryParse(_chargesController.text.trim()) ?? 0.0;
-  double get _totalPayable => _baseAmount + _charges;
+  double get _interestRate => double.tryParse(_interestRateController.text.trim()) ?? 0.0;
+
+  double get _calculatedInterest {
+    if (_baseAmount <= 0 || _interestRate <= 0 || _tenureMonths <= 0) return 0.0;
+    if (_interestType == 'flat') {
+      return (_baseAmount * (_interestRate / 100.0) * (_tenureMonths / 12.0)).roundToDouble();
+    } else {
+      final r = (_interestRate / 12.0) / 100.0;
+      final powFactor = math.pow(1 + r, _tenureMonths);
+      final emi = _baseAmount * r * powFactor / (powFactor - 1);
+      final totalPayable = emi * _tenureMonths;
+      return (totalPayable - _baseAmount).clamp(0.0, double.infinity).roundToDouble();
+    }
+  }
+
+  double get _totalPayable => _baseAmount + _charges + _calculatedInterest;
+
   double get _monthlyInstallment {
     if (_totalPayable <= 0 || _tenureMonths <= 0) return 0.0;
     final raw = _totalPayable / _tenureMonths;
@@ -92,6 +111,7 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
     if (emi != null) {
       _isForSelf = emi.isForSelf;
       _selectedPersonId = emi.personId;
+      _interestType = emi.interestType;
       if (emi.customScheduleJson != null && emi.customScheduleJson!.isNotEmpty) {
         try {
           final Map<String, dynamic> parsed = jsonDecode(emi.customScheduleJson!);
@@ -111,6 +131,9 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
       text: emi != null ? emi.totalAmount.toStringAsFixed(0) : '',
     );
     _chargesController = TextEditingController(text: '');
+    _interestRateController = TextEditingController(
+      text: emi != null && emi.interestRate > 0 ? emi.interestRate.toString() : '',
+    );
     _installmentsPaidController = TextEditingController(
       text: emi != null ? emi.installmentsPaid.toString() : '0',
     );
@@ -137,6 +160,7 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
 
     _baseAmountController.addListener(_onAmountChanged);
     _chargesController.addListener(_onAmountChanged);
+    _interestRateController.addListener(_onAmountChanged);
     _itemController.addListener(_onTextChanged);
     _cardController.addListener(_onTextChanged);
   }
@@ -151,8 +175,10 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
     _cardController.dispose();
     _baseAmountController.removeListener(_onAmountChanged);
     _chargesController.removeListener(_onAmountChanged);
+    _interestRateController.removeListener(_onAmountChanged);
     _baseAmountController.dispose();
     _chargesController.dispose();
+    _interestRateController.dispose();
     _installmentsPaidController.removeListener(_onInstallmentsPaidChanged);
     _installmentsPaidController.dispose();
     _notesController.dispose();
@@ -290,6 +316,8 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
           startDate: _startDate,
           dueDayOfMonth: _dueDayOfMonth,
           isPaidByMe: _isForSelf ? true : _isPaidByMe,
+          interestRate: _interestRate,
+          interestType: _interestType,
           customScheduleJson: customScheduleStr,
           notes: finalNotes,
           updatedAt: DateTime.now(),
@@ -309,6 +337,8 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
           dueDayOfMonth: _dueDayOfMonth,
           isPaidByMe: _isForSelf ? true : _isPaidByMe,
           status: 'active',
+          interestRate: _interestRate,
+          interestType: _interestType,
           customScheduleJson: customScheduleStr,
           notes: finalNotes,
           createdAt: DateTime.now(),
@@ -1177,6 +1207,85 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
                     onPressed: () => _applyGstCharge(18),
                     visualDensity: VisualDensity.compact,
                   ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 16),
+
+            // Interest Rate & Mode Card
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: cs.surfaceContainerLow,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: cs.outlineVariant),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.percent_rounded, size: 18, color: cs.primary),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Interest Rate & Calculation',
+                        style: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w700, color: cs.onSurface),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextFormField(
+                          controller: _interestRateController,
+                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                          decoration: InputDecoration(
+                            labelText: 'Interest Rate (% p.a.)',
+                            hintText: 'e.g. 12.0',
+                            suffixText: '% p.a.',
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: DropdownButtonFormField<String>(
+                          initialValue: _interestType,
+                          decoration: InputDecoration(
+                            labelText: 'Interest Mode',
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
+                          items: const [
+                            DropdownMenuItem(value: 'reducing', child: Text('Reducing Bal.', style: TextStyle(fontSize: 12.5))),
+                            DropdownMenuItem(value: 'flat', child: Text('Flat Rate', style: TextStyle(fontSize: 12.5))),
+                          ],
+                          onChanged: (val) {
+                            if (val != null) setState(() => _interestType = val);
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  if (_calculatedInterest > 0) ...[
+                    const SizedBox(height: 10),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Calculated Interest:',
+                          style: GoogleFonts.inter(fontSize: 11.5, color: cs.onSurfaceVariant),
+                        ),
+                        Text(
+                          '+${CurrencyFormatter.format(_calculatedInterest, symbol: currencySymbol)}',
+                          style: GoogleFonts.dmSans(fontSize: 13.5, fontWeight: FontWeight.w800, color: cs.error),
+                        ),
+                      ],
+                    ),
+                  ],
                 ],
               ),
             ),

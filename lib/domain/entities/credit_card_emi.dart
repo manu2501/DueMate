@@ -14,6 +14,8 @@ class CreditCardEmi {
   final int dueDayOfMonth;
   final bool isPaidByMe;
   final String status; // 'active', 'completed', 'cancelled'
+  final double interestRate; // % per annum
+  final String interestType; // 'reducing', 'flat'
   final String? customScheduleJson;
   final String? notes;
   final DateTime createdAt;
@@ -33,6 +35,8 @@ class CreditCardEmi {
     required this.dueDayOfMonth,
     this.isPaidByMe = true,
     this.status = 'active',
+    this.interestRate = 0.0,
+    this.interestType = 'reducing',
     this.customScheduleJson,
     this.notes,
     required this.createdAt,
@@ -101,6 +105,8 @@ class CreditCardEmi {
     int? dueDayOfMonth,
     bool? isPaidByMe,
     String? status,
+    double? interestRate,
+    String? interestType,
     String? customScheduleJson,
     String? notes,
     DateTime? createdAt,
@@ -120,6 +126,8 @@ class CreditCardEmi {
       dueDayOfMonth: dueDayOfMonth ?? this.dueDayOfMonth,
       isPaidByMe: isPaidByMe ?? this.isPaidByMe,
       status: status ?? this.status,
+      interestRate: interestRate ?? this.interestRate,
+      interestType: interestType ?? this.interestType,
       customScheduleJson: customScheduleJson ?? this.customScheduleJson,
       notes: notes ?? this.notes,
       createdAt: createdAt ?? this.createdAt,

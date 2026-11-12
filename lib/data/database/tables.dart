@@ -71,6 +71,8 @@ class CreditCardEmis extends Table {
   IntColumn get dueDayOfMonth => integer()();
   BoolColumn get isPaidByMe => boolean().withDefault(const Constant(true))();
   TextColumn get status => text().withDefault(const Constant('active'))();
+  RealColumn get interestRate => real().withDefault(const Constant(0.0))();
+  TextColumn get interestType => text().withDefault(const Constant('reducing'))();
   TextColumn get customScheduleJson => text().nullable()();
   TextColumn get notes => text().nullable()();
   DateTimeColumn get createdAt => dateTime()();
