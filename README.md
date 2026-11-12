@@ -19,6 +19,19 @@
 
 ---
 
+<p align="center">
+  <img src="docs/screenshots/01_home.png" width="200" alt="Home" />
+  <img src="docs/screenshots/03_person.png" width="200" alt="A person's ledger" />
+  <img src="docs/screenshots/04_expenses.png" width="200" alt="Expenses" />
+  <img src="docs/screenshots/13_emi_details_dark.png" width="200" alt="EMI schedule, dark theme" />
+</p>
+
+<p align="center">
+  <sub>Home · a person's ledger · expenses · an EMI schedule (dark). Every screen, in light and dark, is in <a href="docs/SCREENS.md"><b>docs/SCREENS.md</b></a>.</sub>
+</p>
+
+---
+
 ## What it does
 
 Everything stays on the phone. There is no account, no server and no analytics.
@@ -45,6 +58,7 @@ Everything stays on the phone. There is no account, no server and no analytics.
 - Spending trends: month-by-month bars for any year, where the money went by category, and every expense of a past month (editable).
 
 **Everything else**
+- **Home**: where you stand overall, Give / Receive / Expense buttons, an *EMIs & cards* shortcut (active count, monthly outgo, next due installments), this month's spending against budget, largest balances and recent activity.
 - **Activity**: one timeline of ledger entries and expenses, grouped by day, with search and filters for type, period and payment method; export as PDF or CSV.
 - **Notifications**: permission and a test notification in Settings. Scheduled EMI due-date reminders are not wired up yet (see [TODO](TODO.md)).
 - **Settings**: theme (system / light / dark), currency (₹, $, €, £, AED, S$, A$, C$), monthly budget, notifications, backup, CSV export, erase all data.
@@ -124,6 +138,12 @@ flutter test test_screens/screens_test.dart --update-goldens
 ```
 
 Seeds a realistic ledger and renders every main screen, sheet and form in light and dark to `test_screens/out/` (not committed).
+
+The screenshots in this README and [docs/SCREENS.md](docs/SCREENS.md) come from the same harness. After a UI change, refresh them:
+
+```bash
+flutter test test_screens/screens_test.dart --update-goldens --dart-define=DOCS=true   # writes docs/screenshots/
+```
 
 ### Regenerating the launcher icons
 

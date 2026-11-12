@@ -4,6 +4,9 @@
 //
 // Output: test_screens/out/<name>.png (git-ignored). Not part of `flutter test`
 // (which only runs test/), and it never fails on pixel diffs; it only writes.
+//
+// README screenshots (committed, half resolution, docs/screenshots/):
+//   flutter test test_screens/screens_test.dart --update-goldens --dart-define=DOCS=true
 // ignore_for_file: invalid_use_of_visible_for_testing_member
 import 'dart:io';
 
@@ -28,7 +31,14 @@ import 'package:duemate/domain/entities/person.dart';
 import 'package:duemate/domain/entities/personal_expense.dart';
 import 'package:duemate/main.dart';
 
-const _fontDir = 'C:/flutter/bin/cache/artifacts/material_fonts/';
+/// Real Roboto + Material Icons from the Flutter SDK (FLUTTER_ROOT is set
+/// by `flutter test`).
+final _fontDir =
+    '${Platform.environment['FLUTTER_ROOT'] ?? 'C:/flutter'}/bin/cache/artifacts/material_fonts/';
+
+/// `--dart-define=DOCS=true` renders the committed README screenshots:
+/// half resolution, written to docs/screenshots/.
+const _docs = bool.fromEnvironment('DOCS');
 
 Future<void> _loadFonts() async {
   Future<ByteData> f(String name) async =>
@@ -149,8 +159,9 @@ void main() {
         'duemate_last_run_version': AppConstants.appVersionString,
         'duemate_theme_mode': dark ? 'dark' : 'light',
       });
-      tester.view.physicalSize = const Size(1080, 2340);
-      tester.view.devicePixelRatio = 2.625;
+      // Same logical size (≈411×891 dp) either way; docs mode halves the pixels.
+      tester.view.physicalSize = _docs ? const Size(540, 1170) : const Size(1080, 2340);
+      tester.view.devicePixelRatio = _docs ? 1.3125 : 2.625;
       addTearDown(tester.view.reset);
 
       final db = AppDatabase(NativeDatabase.memory());
@@ -169,7 +180,8 @@ void main() {
 
       Future<void> shot(String name) async {
         await settle();
-        await expectLater(find.byType(MaterialApp), matchesGoldenFile('out/$name$suffix.png'));
+        final path = _docs ? '../docs/screenshots/$name$suffix.png' : 'out/$name$suffix.png';
+        await expectLater(find.byType(MaterialApp), matchesGoldenFile(path));
       }
 
       final router = ProviderScope.containerOf(tester.element(find.byType(DueMateApp)))
