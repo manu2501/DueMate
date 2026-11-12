@@ -5,8 +5,8 @@
 </p>
 
 <p align="center">
-  <b>Personal Lending & Repayment Tracker</b><br>
-  A modern, private, and fluid offline-first ledger for tracking personal debts, loans, and shared expenses.
+  <b>Personal Lending & Credit Card EMI Ledger Vault</b><br>
+  A modern, private, and fluid offline-first ledger for tracking personal debts, loans, and monthly credit card EMIs.
 </p>
 
 <p align="center">
@@ -22,57 +22,65 @@
 
 ## 🌟 Key Features
 
-- **🔒 100% Offline & Private**: Zero accounts, zero ads, and no external cloud servers. All transactions and contacts remain strictly on your device.
-- **💸 Intuitive Lending & Repayment**:
+- **🔒 100% Offline & Private Vault**: Zero accounts, zero ads, and no external cloud servers. All transactions, loans, and contacts remain strictly on your local SQLite storage.
+- **💸 Intuitive Lending & Repayments**:
   - Record **Money Given** (_You're owed_) and **Payment Received** with one tap.
   - Tag payment methods: Cash, UPI, Bank Transfer, Cheque, or Other.
-  - Add optional reference notes and dates.
+  - Add optional reference notes, dates, and custom notes.
+- **💳 Credit Card EMI & Monthly Loan Schedules**:
+  - Multi-month installment tracking with automated background posting.
+  - Flexible tenure selector (custom number entry or quick preset chips).
+  - Live breakdown card displaying principal, extra charges, and monthly installments.
 - **👥 Contact-Linked People Directory**:
-  - Filter ledger instantly: _Active_, _Settled_, _Archived_, or _All Directory_.
-  - Import borrower names and phone numbers directly from your device contacts.
-  - Visual color-coded repayment progress bars.
+  - Filter ledger instantly: _All_, _Owes You_, _Settled_, or _Archived_.
+  - Duplicate contact protection with phone number normalization (`_normalizePhone` matching exact 10 digits).
+  - One-tap phone contacts import (`ContactsHelper.pickContact()`).
+  - Live real-time avatar preview (`AvatarWidget`) and relationship quick tags (_Friend_, _Colleague_, _Family_, _Roommate_, _Business_).
 - **📊 Reports & Financial Analytics**:
-  - Overview tabs breaking down total given, total received, and net differences.
-  - Time filters: _All Time_, _This Month_, _Last Month_, and _This Year_.
-  - Per-person debt breakdown.
-- **📤 Easy Sharing & Reminders**:
-  - One-tap formatted WhatsApp / SMS friendly reminder messages.
-  - Export complete statements as structured CSV files.
-- **🎨 Modern Human-Centric UI**:
-  - Warm Material 3 palette (Indigo `#4F46E5`, Amber `#F59E0B`, Emerald, and Rose).
-  - Clean typography featuring Google Fonts (DM Sans and Inter).
-  - Smooth scale/fade page transitions, Hero avatar animations, and animated counter switchers.
+  - Overview cards breaking down total given, total received, and net differences.
+  - Date range filters: _All Time_, _This Month_, _Last Month_, _This Year_, and _Custom Range_.
+  - Activity timeline feed & per-person debt breakdown.
+- **📤 Easy Sharing & Smart Reminders**:
+  - One-tap formatted WhatsApp payment reminders with custom templates and native SVG vector icon (`WhatsAppIcon`).
+  - Automated local push notifications for upcoming EMI due dates with Settings toggle and test alert trigger (`flutter_local_notifications`).
+  - Export complete statements as structured CSV or PDF files.
+- **🎨 Modern Material 3 UI & Motion Design**:
+  - Time-aware greeting header (*Good Morning / Afternoon / Evening*).
+  - High-contrast Net Ledger Position hero card with settlement recovery progress bar.
+  - Expanding pill capsule floating dock navbar (`_FloatingDockNavBar`).
+  - **Animated Currency Rollups** (`AnimatedCurrencyText`), **Staggered Entrance Motion** (`FadeSlideTransition`), and **Tactile Spring Feedback** (`PressableScale`).
   - Full system Dark & Light mode support.
   - Multi-currency support (₹ INR, $ USD, € EUR, £ GBP, AED, S$, A$, C$).
 
 ---
 
-## 🏗️ Architecture & Optimizations
+## 🏗️ Architecture & Component Structure
 
-DueMate is structured using a clean, layered architecture separating domain logic, data persistence, and presentation:
+DueMate is structured using Clean Architecture separating domain logic, data persistence, and presentation:
 
 ```
 lib/
 ├── core/
 │   ├── constants/       # App metadata, currency options, default tokens
-│   ├── navigation/      # GoRouter configuration with custom animations
+│   ├── navigation/      # GoRouter configuration & root navigator routes
+│   ├── services/        # NotificationService (local push notifications)
 │   ├── theme/           # Material 3 light/dark themes & typography
-│   ├── utils/           # Cached currency & date formatters, permissions
-│   └── widgets/         # Shared UI (AvatarWidget, TransactionTile, etc.)
+│   ├── utils/           # WhatsAppHelper, ContactsHelper, BackupHelper, Exporters
+│   └── widgets/         # Shared UI (AnimatedCurrencyText, FadeSlideTransition, PressableScale, etc.)
 ├── data/
 │   ├── database/        # Drift SQLite schema, migrations & WAL tuning
 │   ├── providers/       # Riverpod providers & SharedPreferences
 │   └── repositories/   # SQLite concrete repository implementations
 ├── domain/
-│   ├── entities/        # Pure immutable business models (Person, Transaction)
+│   ├── entities/        # Pure immutable business models (Person, Transaction, CreditCardEmi)
 │   └── repositories/   # Abstract repository contracts
 └── features/
-    ├── dashboard/       # Balance summary, top debtors, quick actions
-    ├── people/          # Directory, person details, repayment progress
-    ├── reports/         # Overview cards, activity logs, date filtering
-    ├── settings/        # Preferences, theme selector, currency picker
-    ├── transactions/    # Transaction details modal & edit flow
-    └── welcome/         # Onboarding & permission introduction
+    ├── dashboard/       # Time greeting, Net Ledger card, quick actions, dues carousel
+    ├── emis/            # EMI creation, tenure selector, breakdown card, details sheet
+    ├── people/          # Directory, PersonDirectoryTile, AddEditPersonScreen, details
+    ├── reports/         # ReportsScreen, cashflow overview, date filters, activity feed
+    ├── settings/        # Theme picker, currency selector, notifications, data export
+    └── transactions/    # TransactionDetailsDialog modal flow
 ```
 
 ### Performance Enhancements
@@ -80,7 +88,7 @@ lib/
 - **SQLite WAL Mode**: Configured `PRAGMA journal_mode = WAL` and `PRAGMA synchronous = NORMAL` for non-blocking concurrent reads and fast commits.
 - **Composite Indexing**: Added database indexes (`idx_transactions_person_id`, `idx_transactions_date`) to ensure fast aggregations over large transaction histories.
 - **Zero-Allocation Formatting**: Static singleton caching for `NumberFormat` and `DateFormat` instances, eliminating runtime garbage-collection overhead during rapid list scrolling.
-- **Preferences Caching**: Instant startup with persistent local preferences using `shared_preferences`.
+- **Root Navigator Modals**: Modal sheets and create/edit forms open on the root navigator, cleanly hiding the floating dock navbar across sub-routes.
 
 ---
 
@@ -97,8 +105,8 @@ lib/
 1. **Clone the repository:**
 
    ```bash
-   https://github.com/manu2501/DueMate.git
-   cd duemate
+   git clone https://github.com/manu2501/DueMate.git
+   cd DueMate
    ```
 
 2. **Install dependencies:**
@@ -114,6 +122,7 @@ lib/
    ```
 
 4. **Run on a connected device:**
+
    ```bash
    flutter run
    ```
@@ -122,7 +131,7 @@ lib/
 
 ## 🧪 Testing & Verification
 
-Run the test suite to verify unit calculations and UI widgets:
+Run static analysis and test suite:
 
 ```bash
 # Run static analysis
