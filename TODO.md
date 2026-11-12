@@ -6,6 +6,12 @@ DueMate is a personal ledger, lending, and credit card EMI tracking application.
 
 ## ✅ Completed Features
 
+- [x] **Redesigned Core UI Pages:**
+  - **Dashboard Page:** Time-aware greeting header, high-contrast Net Ledger Hero card, quick actions dock bar, and horizontal top dues carousel with instant WhatsApp reminders.
+  - **Directory Page:** Active contacts summary metrics, status filter chips (*All*, *Owes You*, *Settled*, *Archived*), and `PersonDirectoryTile` cards with quick receive/pay actions.
+  - **Transactions Page:** Total transaction volume summary, cashflow overview card (*Total Given*, *Total Received*, *Net Difference*), date range filter chips, activity timeline, and person breakdown.
+  - **Modal Navigation:** Root-navigator modal sheets hiding the bottom dock navbar and inline "Post Early" installment UX.
+- [x] **Codebase Modularization:** Decomposed large monolithic screens into clean, single-responsibility, reusable widget components.
 - [x] **Ledger Management:** Record money given and payments received per person with balance calculation.
 - [x] **Credit Card EMI & Monthly Loans:** Track multi-month installment schedules with automated background posting.
 - [x] **Custom Tenure Input:** Flexible number-of-months entry (e.g. 1, 5, 14, 60 months) with live breakdown recalculation and quick preset chips.
