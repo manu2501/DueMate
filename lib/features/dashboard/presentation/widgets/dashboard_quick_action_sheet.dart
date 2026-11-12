@@ -14,6 +14,7 @@ class DashboardQuickActionSheet extends StatelessWidget {
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
+      useRootNavigator: true,
       showDragHandle: true,
       builder: (ctx) => SafeArea(
         child: Padding(

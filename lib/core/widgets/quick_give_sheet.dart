@@ -25,6 +25,7 @@ class QuickGiveSheet extends ConsumerStatefulWidget {
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
+      useRootNavigator: true,
       backgroundColor: Colors.transparent,
       builder: (ctx) => QuickGiveSheet(initialPersonId: personId),
     );

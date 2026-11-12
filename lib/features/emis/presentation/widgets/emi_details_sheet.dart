@@ -25,6 +25,7 @@ class EmiDetailsSheet extends ConsumerWidget {
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
+      useRootNavigator: true,
       backgroundColor: Colors.transparent,
       builder: (_) => EmiDetailsSheet(emi: emi, person: person),
     );
@@ -85,6 +86,8 @@ class EmiDetailsSheet extends ConsumerWidget {
         ? cs.primary
         : (isLoan ? const Color(0xFF0D9488) : Colors.purple);
 
+    final bottomPadding = MediaQuery.of(context).padding.bottom;
+
     return Container(
       decoration: BoxDecoration(
         color: cs.surface,
@@ -109,7 +112,7 @@ class EmiDetailsSheet extends ConsumerWidget {
           Flexible(
             child: ListView(
               shrinkWrap: true,
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+              padding: EdgeInsets.fromLTRB(20, 0, 20, 24 + bottomPadding),
               children: [
                 // Header with icon and title
                 Row(
@@ -327,6 +330,7 @@ class EmiDetailsSheet extends ConsumerWidget {
                     itemBuilder: (ctx, index) {
                       final installmentNum = index + 1;
                       final isPaid = installmentNum <= emi.installmentsPaid;
+                      final isNextToPay = installmentNum == emi.installmentsPaid + 1;
                       final dueDate = emi.getDueDateForInstallment(installmentNum);
 
                       return Padding(
@@ -389,14 +393,56 @@ class EmiDetailsSheet extends ConsumerWidget {
                                     color: isPaid ? cs.primary : cs.onSurface,
                                   ),
                                 ),
-                                Text(
-                                  isPaid ? 'Recorded' : 'Scheduled',
-                                  style: GoogleFonts.inter(
-                                    fontSize: 10.5,
-                                    fontWeight: FontWeight.w600,
-                                    color: isPaid ? cs.primary : cs.outline,
+                                const SizedBox(height: 2),
+                                if (isPaid)
+                                  Text(
+                                    'Recorded',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 10.5,
+                                      fontWeight: FontWeight.w600,
+                                      color: cs.primary,
+                                    ),
+                                  )
+                                else if (isNextToPay)
+                                  SizedBox(
+                                    height: 28,
+                                    child: FilledButton.icon(
+                                      onPressed: () async {
+                                        final processor = ref.read(emiProcessorServiceProvider);
+                                        final success = await processor.postNextInstallment(emi);
+                                        if (context.mounted) {
+                                          Navigator.of(context).pop();
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            SnackBar(
+                                              content: Text(
+                                                success
+                                                    ? 'Installment $installmentNum recorded in ledger!'
+                                                    : 'Could not record installment',
+                                              ),
+                                            ),
+                                          );
+                                        }
+                                      },
+                                      icon: const Icon(Icons.bolt_rounded, size: 12),
+                                      label: const Text('Post Early', style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold)),
+                                      style: FilledButton.styleFrom(
+                                        backgroundColor: accentColor,
+                                        foregroundColor: Colors.white,
+                                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                                        visualDensity: VisualDensity.compact,
+                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                      ),
+                                    ),
+                                  )
+                                else
+                                  Text(
+                                    'Scheduled',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 10.5,
+                                      fontWeight: FontWeight.w600,
+                                      color: cs.outline,
+                                    ),
                                   ),
-                                ),
                               ],
                             ),
                           ],
@@ -407,40 +453,6 @@ class EmiDetailsSheet extends ConsumerWidget {
                 ),
 
                 const SizedBox(height: 20),
-
-                // Actions
-                if (!isCompleted) ...[
-                  FilledButton.icon(
-                    onPressed: () async {
-                      final processor = ref.read(emiProcessorServiceProvider);
-                      final success = await processor.postNextInstallment(emi);
-                      if (context.mounted) {
-                        Navigator.of(context).pop();
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(
-                              success
-                                  ? 'Installment ${emi.installmentsPaid + 1} recorded in ledger!'
-                                  : 'Could not record installment',
-                            ),
-                          ),
-                        );
-                      }
-                    },
-                    icon: const Icon(Icons.bolt_rounded, size: 18),
-                    label: Text(
-                      'Post Installment ${emi.installmentsPaid + 1} Early',
-                      style: GoogleFonts.dmSans(fontWeight: FontWeight.w700),
-                    ),
-                    style: FilledButton.styleFrom(
-                      backgroundColor: accentColor,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                ],
 
                 if (!isCompleted && person != null) ...[
                   OutlinedButton.icon(

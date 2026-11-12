@@ -30,6 +30,7 @@ class PersonInfoSheet extends StatelessWidget {
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
+      useRootNavigator: true,
       showDragHandle: true,
       builder: (_) => PersonInfoSheet(
         person: person,

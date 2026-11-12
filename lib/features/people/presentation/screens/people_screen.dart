@@ -100,6 +100,9 @@ class _PeopleScreenState extends ConsumerState<PeopleScreen> {
 
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      useRootNavigator: true,
       showDragHandle: true,
       builder: (ctx) => SafeArea(
         child: Padding(

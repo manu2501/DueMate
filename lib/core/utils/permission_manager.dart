@@ -152,6 +152,8 @@ class PermissionManager {
     return showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
+      useSafeArea: true,
+      useRootNavigator: true,
       backgroundColor: Colors.transparent,
       builder: (ctx) => _PermissionsRationaleSheet(isUpdate: isUpdate),
     );

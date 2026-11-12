@@ -22,6 +22,7 @@ class PersonPickerSheet extends ConsumerStatefulWidget {
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
+      useRootNavigator: true,
       backgroundColor: Colors.transparent,
       builder: (ctx) => PersonPickerSheet(currentSelectedPersonId: currentSelectedPersonId),
     );

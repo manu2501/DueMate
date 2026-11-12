@@ -10,6 +10,9 @@ class ExportOptionsSheet {
   }) {
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      useRootNavigator: true,
       showDragHandle: true,
       builder: (ctx) {
         final theme = Theme.of(ctx);
