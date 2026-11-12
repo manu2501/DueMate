@@ -1,5 +1,6 @@
 import 'package:drift/drift.dart';
 import 'package:drift_flutter/drift_flutter.dart';
+import 'package:duemate/core/constants/app_constants.dart';
 import 'tables.dart';
 
 part 'app_database.g.dart';
@@ -30,6 +31,14 @@ class AppDatabase extends _$AppDatabase {
       await customStatement('PRAGMA foreign_keys = ON');
       await customStatement('PRAGMA journal_mode = WAL');
       await customStatement('PRAGMA synchronous = NORMAL');
+
+      // Ensure Self / Personal Vault record exists in persons table so FK checks pass 100%
+      final nowSec = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+      await customStatement(
+        "INSERT OR IGNORE INTO persons (id, name, created_at, updated_at) "
+        "VALUES ('${AppConstants.selfPersonId}', 'Myself (Personal)', $nowSec, $nowSec)"
+      );
+
       await customStatement('CREATE INDEX IF NOT EXISTS idx_transactions_person_id ON transactions(person_id)');
       await customStatement('CREATE INDEX IF NOT EXISTS idx_transactions_date ON transactions(transaction_date DESC)');
       await customStatement('CREATE INDEX IF NOT EXISTS idx_transactions_emi_id ON transactions(emi_id)');

@@ -177,10 +177,17 @@ final allTransactionsProvider = StreamProvider<List<LedgerTransaction>>((ref) {
 // Persons Map Provider (for fast lookup by ID)
 final personsMapProvider = Provider<Map<String, domain.Person>>((ref) {
   final summariesAsync = ref.watch(allPersonSummariesProvider);
-  return summariesAsync.maybeWhen(
+  final map = summariesAsync.maybeWhen(
     data: (list) => {for (var s in list) s.person.id: s.person},
-    orElse: () => {},
+    orElse: () => <String, domain.Person>{},
   );
+  map[AppConstants.selfPersonId] = domain.Person(
+    id: AppConstants.selfPersonId,
+    name: AppConstants.selfPersonName,
+    createdAt: DateTime(2020),
+    updatedAt: DateTime(2020),
+  );
+  return map;
 });
 
 // Dashboard Top Debtors Provider (ordered by highest outstanding balance)
@@ -319,6 +326,8 @@ final filteredPersonSummariesProvider = Provider<List<PersonSummary>>((ref) {
   return summariesAsync.maybeWhen(
     data: (list) {
       var filtered = list.where((item) {
+        if (item.person.id == AppConstants.selfPersonId) return false;
+
         // Apply Archive / Status Filter
         switch (filter) {
           case PeopleFilter.all:
