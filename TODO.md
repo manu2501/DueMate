@@ -6,6 +6,9 @@ DueMate is a personal ledger, lending, and credit card EMI tracking application.
 
 ## ✅ Completed Features
 
+- [x] **Duplicate Contact Protection:** Phone number normalization (`_normalizePhone` matching last 10 digits) preventing duplicate contact creation or re-importing identical phone numbers/names with option to open existing ledger.
+- [x] **Redesigned New Person / Edit Person Page:** Live real-time avatar preview (`AvatarWidget`), one-tap phone contacts import hero card (`ContactsHelper.pickContact()`), preset relationship quick chips (*Friend*, *Colleague*, *Family*, *Roommate*, *Business*), and grouped input cards.
+- [x] **Redesigned Floating Dock Navbar:** Expanding pill capsules with inline active section labels, primary accent highlights, and smooth layout transitions (`_FloatingDockNavBar`).
 - [x] **Direct App Startup:** Removed onboarding welcome screen completely; app launches directly into the interactive Dashboard.
 - [x] **Intuitive Motion & Animations:**
   - **Animated Currency Rollup:** Smooth `AnimatedCurrencyText` counter rollups when financial balances update or load.
