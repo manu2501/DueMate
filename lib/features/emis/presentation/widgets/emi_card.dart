@@ -40,10 +40,11 @@ class EmiCard extends StatelessWidget {
         ? cs.primary
         : (isLoan ? const Color(0xFF0D9488) : Colors.purple);
 
-    return InkWell(
-      onTap: onTap ?? () => EmiDetailsSheet.show(context, emi: emi, person: person),
-      borderRadius: BorderRadius.circular(18),
-      child: Container(
+    return RepaintBoundary(
+      child: InkWell(
+        onTap: onTap ?? () => EmiDetailsSheet.show(context, emi: emi, person: person),
+        borderRadius: BorderRadius.circular(18),
+        child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: cs.surfaceContainerLow,
@@ -237,6 +238,7 @@ class EmiCard extends StatelessWidget {
           ],
         ),
       ),
-    );
+    ),
+  );
   }
 }

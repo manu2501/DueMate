@@ -38,10 +38,11 @@ class TransactionTile extends StatelessWidget {
 
     final accentColor = isReceived ? cs.primary : cs.error;
 
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
-      child: Padding(
+    return RepaintBoundary(
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         child: Row(
           children: [
@@ -151,6 +152,7 @@ class TransactionTile extends StatelessWidget {
           ],
         ),
       ),
-    );
+    ),
+  );
   }
 }

@@ -44,10 +44,11 @@ class PersonDirectoryTile extends StatelessWidget {
       badgeTitle = 'Settled';
     }
 
-    return InkWell(
-      onTap: () => context.push('/people/${person.id}'),
-      borderRadius: BorderRadius.circular(20),
-      child: Container(
+    return RepaintBoundary(
+      child: InkWell(
+        onTap: () => context.push('/people/${person.id}'),
+        borderRadius: BorderRadius.circular(20),
+        child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: cs.surfaceContainerLow,
@@ -212,6 +213,7 @@ class PersonDirectoryTile extends StatelessWidget {
           ],
         ),
       ),
-    );
+    ),
+  );
   }
 }

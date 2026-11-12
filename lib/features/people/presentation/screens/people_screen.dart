@@ -28,8 +28,10 @@ class _PeopleScreenState extends ConsumerState<PeopleScreen> {
     super.dispose();
   }
 
+  static final _nonDigitsRegex = RegExp(r'\D');
+
   String _normalizePhone(String raw) {
-    final digitsOnly = raw.replaceAll(RegExp(r'\D'), '');
+    final digitsOnly = raw.replaceAll(_nonDigitsRegex, '');
     if (digitsOnly.length > 10) {
       return digitsOnly.substring(digitsOnly.length - 10);
     }

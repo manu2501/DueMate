@@ -8,14 +8,17 @@ import 'package:duemate/domain/entities/person.dart';
 import 'package:duemate/domain/entities/person_summary.dart';
 
 class WhatsAppHelper {
+  static final _nonDigitsPlusRegex = RegExp(r'[^\d+]');
+  static final _indianPhonePrefixRegex = RegExp(r'^[6-9]');
+
   /// Clean phone number for WhatsApp wa.me API format
   static String cleanPhoneNumber(String rawPhone) {
-    String cleaned = rawPhone.replaceAll(RegExp(r'[^\d+]'), '');
+    String cleaned = rawPhone.replaceAll(_nonDigitsPlusRegex, '');
     if (cleaned.startsWith('+')) {
       return cleaned.substring(1);
     }
     // If standard 10-digit Indian number without country code, prepend 91
-    if (cleaned.length == 10 && RegExp(r'^[6-9]').hasMatch(cleaned)) {
+    if (cleaned.length == 10 && _indianPhonePrefixRegex.hasMatch(cleaned)) {
       return '91$cleaned';
     }
     return cleaned;
