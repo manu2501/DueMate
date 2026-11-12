@@ -8,6 +8,7 @@ import 'package:duemate/core/utils/display_money.dart';
 import 'package:duemate/core/widgets/avatar_widget.dart';
 import 'package:duemate/data/providers/app_providers.dart';
 import 'package:duemate/domain/entities/person_summary.dart';
+import 'package:duemate/domain/loan_dues.dart';
 
 /// Layout used by every top-level tab: a large title that collapses on
 /// scroll, optional actions, then the page content as slivers.
@@ -228,6 +229,51 @@ class RepaymentBar extends ConsumerWidget {
   }
 }
 
+/// "₹5,000 due back by 15 Dec" or, once the date has passed, "₹5,000
+/// overdue since 15 Dec" in the warning colour with an icon (overdue money is
+/// owed *to* you, so it's never red). Amounts follow "Hide amounts".
+class DueBackLine extends ConsumerWidget {
+  final LoanDueStatus status;
+  final TextStyle? style;
+
+  const DueBackLine(this.status, {super.key, this.style});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final cs = Theme.of(context).colorScheme;
+    final money = ref.watch(displayMoneyProvider);
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final overdue = status.isOverdue(today);
+    final next = status.next;
+    final days = next.date.difference(today).inDays;
+    final when = days == 0
+        ? 'today'
+        : days == 1
+            ? 'tomorrow'
+            : 'by ${DateFormatter.formatShortDate(next.date)}';
+    final text = overdue
+        ? '${money(status.overdueAmount(today))} overdue since ${DateFormatter.formatShortDate(next.date)}'
+        : '${money(next.amount)} due back $when';
+    final color = overdue ? cs.tertiary : cs.onSurfaceVariant;
+    final base = style ?? Theme.of(context).textTheme.bodySmall;
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(overdue ? Icons.error_outline_rounded : Icons.schedule_rounded, size: (base?.fontSize ?? 12) + 2, color: color),
+        const SizedBox(width: AppSpace.xs),
+        Flexible(
+          child: Text(text,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: base?.copyWith(color: color, fontWeight: overdue ? FontWeight.w600 : null)),
+        ),
+      ],
+    );
+  }
+}
+
 /// One person in a list: who, when you last dealt with them, and the balance.
 /// With [showRepayment], also how much has been paid back.
 class PersonRow extends StatelessWidget {
@@ -237,6 +283,9 @@ class PersonRow extends StatelessWidget {
   final VoidCallback? onLongPress;
   final bool showRepayment;
 
+  /// Dated loans not yet repaid: replaces "last activity" with when it's due.
+  final LoanDueStatus? due;
+
   const PersonRow({
     super.key,
     required this.summary,
@@ -244,6 +293,7 @@ class PersonRow extends StatelessWidget {
     this.onTap,
     this.onLongPress,
     this.showRepayment = false,
+    this.due,
   });
 
   @override
@@ -265,7 +315,7 @@ class PersonRow extends StatelessWidget {
       onLongPress: repayment == null ? onLongPress : null,
       leading: AvatarWidget(name: p.name, radius: 20, heroTag: 'avatar-${p.id}'),
       title: Text(p.name, maxLines: 1, overflow: TextOverflow.ellipsis),
-      subtitle: Text(subtitle, maxLines: 1, overflow: TextOverflow.ellipsis),
+      subtitle: due != null ? DueBackLine(due!) : Text(subtitle, maxLines: 1, overflow: TextOverflow.ellipsis),
       trailing: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         crossAxisAlignment: CrossAxisAlignment.end,

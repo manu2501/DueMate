@@ -31,6 +31,7 @@ class _PeopleScreenState extends ConsumerState<PeopleScreen> {
   static const _filters = {
     PeopleFilter.all: 'All',
     PeopleFilter.active: 'Open balance',
+    PeopleFilter.overdue: 'Overdue',
     PeopleFilter.settled: 'Settled',
     PeopleFilter.archived: 'Archived',
   };
@@ -191,6 +192,7 @@ class _PeopleScreenState extends ConsumerState<PeopleScreen> {
     final symbol = ref.watch(currencySymbolProvider);
     final filter = ref.watch(peopleFilterProvider);
     final people = ref.watch(filteredPersonSummariesProvider);
+    final dues = ref.watch(loanDuesProvider);
     final totals = ref.watch(dashboardTotalsProvider);
     final searching = _searchController.text.isNotEmpty;
     final money = ref.watch(displayMoneyProvider);
@@ -283,14 +285,19 @@ class _PeopleScreenState extends ConsumerState<PeopleScreen> {
               icon: searching ? Icons.search_off_rounded : Icons.people_outline_rounded,
               title: searching
                   ? 'No one matches "${_searchController.text}"'
-                  : filter == PeopleFilter.all
-                      ? 'No one here yet'
-                      : 'No one in ${_filters[filter]!.toLowerCase()}',
+                  : switch (filter) {
+                      PeopleFilter.all => 'No one here yet',
+                      PeopleFilter.overdue => 'Nothing overdue',
+                      _ => 'No one in ${_filters[filter]!.toLowerCase()}',
+                    },
               description: searching
                   ? 'Try a different name or number.'
-                  : 'Add someone you lend to, borrow from, or share EMIs with.',
-              actionLabel: searching ? null : 'Add person',
-              onActionPressed: searching ? null : () => AddEditPersonScreen.show(context),
+                  : filter == PeopleFilter.overdue
+                      ? 'Set a "Return by" date when you give money; anyone late shows up here.'
+                      : 'Add someone you lend to, borrow from, or share EMIs with.',
+              actionLabel: searching || filter == PeopleFilter.overdue ? null : 'Add person',
+              onActionPressed:
+                  searching || filter == PeopleFilter.overdue ? null : () => AddEditPersonScreen.show(context),
             ),
           )
         else
@@ -303,6 +310,7 @@ class _PeopleScreenState extends ConsumerState<PeopleScreen> {
                     symbol: symbol,
                     onLongPress: () => _showQuickActions(s, symbol),
                     showRepayment: true,
+                    due: dues[s.person.id],
                   ),
               ],
             ),

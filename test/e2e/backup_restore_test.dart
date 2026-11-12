@@ -35,6 +35,7 @@ Future<void> _seed(AppDatabase db, {String prefix = ''}) async {
     transactionDate: _t,
     paymentMethod: PaymentMethod.upi,
     note: 'Dinner',
+    dueDate: DateTime(2026, 12, 1),
     createdAt: _t,
     updatedAt: _t,
   ));

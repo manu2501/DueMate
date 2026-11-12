@@ -17,6 +17,7 @@ import 'package:duemate/core/widgets/transaction_tile.dart';
 import 'package:duemate/core/widgets/ui_kit.dart';
 import 'package:duemate/data/providers/app_providers.dart';
 import 'package:duemate/domain/entities/ledger_transaction.dart';
+import 'package:duemate/domain/loan_dues.dart';
 import 'package:duemate/domain/entities/person_summary.dart';
 import 'package:duemate/features/emis/presentation/screens/add_edit_emi_screen.dart';
 import 'package:duemate/features/emis/presentation/widgets/emi_card.dart';
@@ -139,6 +140,8 @@ class _PersonLedger extends ConsumerWidget {
     final person = summary.person;
     final transactions = ref.watch(personTransactionsProvider(person.id)).value ?? const <LedgerTransaction>[];
     final emis = ref.watch(personEmisProvider(person.id)).value ?? const [];
+    final dueList = LoanDues.outstanding(transactions);
+    final due = dueList.isEmpty ? null : LoanDueStatus(dueList);
     final hasPhone = person.phone?.trim().isNotEmpty ?? false;
     final canRemind = summary.owesMoney && hasPhone;
 
@@ -274,6 +277,10 @@ class _PersonLedger extends ConsumerWidget {
                   if (summary.repayment case final repayment?) ...[
                     const SizedBox(height: AppSpace.md),
                     RepaymentBar(repayment, thickness: 8),
+                  ],
+                  if (due != null) ...[
+                    const SizedBox(height: AppSpace.sm),
+                    DueBackLine(due, style: theme.textTheme.bodyMedium),
                   ],
                 ],
               ),

@@ -56,6 +56,12 @@ of ₹15,000 · 16%* (green when it's money coming back to you; *You paid back �
 you owe them). The percentage rounds down, so 100% means fully paid. Search by name, phone or notes; filter by open balance, settled or
 archived; sort from the top bar; add from contacts; the chart icon opens **Lending trends**.
 
+**Due back.** When you give money with a *Return by* date, the row says when it's due
+(*₹800 due back by 18 Nov*, *tomorrow*, *today*) in place of last activity. Once the date passes
+it turns to *₹12,500 overdue since 7 Nov* in amber with a warning icon (overdue money is owed to you,
+so it's never red). Repayments pay off the oldest loans first, so only the unpaid part counts. The
+**Overdue** filter lists everyone who's late; Home's Balances show the same line.
+
 - **Tap** a person to open their ledger.
 - **Long-press** for shortcuts: give, receive, WhatsApp reminder.
 
@@ -112,7 +118,8 @@ exports the filtered entries as PDF or CSV.
   <img src="screenshots/03_person_dark.png" width="260" alt="Person ledger, dark" />
 </p>
 
-Who owes whom and how much, a larger repayment bar (*Paid ₹2,500 of ₹15,000 · 16%*), then **Give** / **Receive** for this
+Who owes whom and how much, a larger repayment bar (*Paid ₹2,500 of ₹15,000 · 16%*), when money
+is due back (or overdue), then **Give** / **Receive** for this
 person. Their EMIs follow, then history by month. The top bar has a WhatsApp reminder (when they
 owe you and have a number) and a menu: share statement, share balance as text, contact details,
 edit, add EMI or loan, archive, delete.
@@ -187,7 +194,10 @@ phone's screen lock is removed, App Lock turns itself off rather than locking yo
 </p>
 
 Choose a person (their balance shows, with a one-tap *settle full balance* / *pay back all* when
-it applies), the amount with quick adds, payment method, date and note.
+it applies), the amount with quick adds, payment method, date and note. Giving also has
+**Return by (optional)**: no date, 1 week, 2 weeks, 1 month, or any date. You get a reminder the
+day before (tap it to open that person), and the person shows as overdue once it passes. An entry's
+date can be changed or cleared later from its details (*Edit*).
 
 **UPI** (only when the currency is ₹). Giving to someone whose UPI ID is saved shows **Pay with
 UPI app**: it opens your UPI app with their ID and the amount filled in. UPI apps don't tell

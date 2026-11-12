@@ -10,7 +10,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? e]) : super(e ?? driftDatabase(name: 'duemate_db'));
 
   @override
-  int get schemaVersion => 9;
+  int get schemaVersion => 10;
 
   /// Deletes every person, transaction, EMI, expense and recurring expense,
   /// in one transaction.
@@ -67,6 +67,9 @@ class AppDatabase extends _$AppDatabase {
       if (from < 9) {
         await m.createTable(recurringExpenses);
         await m.addColumn(expenses, expenses.recurringId);
+      }
+      if (from < 10) {
+        await m.addColumn(transactions, transactions.dueDate);
       }
     },
     beforeOpen: (details) async {

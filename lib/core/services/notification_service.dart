@@ -5,9 +5,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 import 'package:flutter/foundation.dart';
-import 'package:duemate/domain/emi_reminder_planner.dart';
+import 'package:duemate/domain/reminder.dart';
 
-class NotificationService implements EmiReminderScheduler {
+class NotificationService implements ReminderScheduler {
   static final NotificationService _instance = NotificationService._internal();
   factory NotificationService() => _instance;
   NotificationService._internal();
@@ -15,17 +15,17 @@ class NotificationService implements EmiReminderScheduler {
   final FlutterLocalNotificationsPlugin _notificationsPlugin = FlutterLocalNotificationsPlugin();
   bool _isInitialized = false;
 
-  final _emiReminderTaps = StreamController<String>.broadcast();
+  final _reminderTaps = StreamController<ReminderTarget>.broadcast();
 
-  /// EMI ids from reminders tapped while the app is running.
-  Stream<String> get emiReminderTaps => _emiReminderTaps.stream;
+  /// What tapped reminders point at, while the app is running.
+  Stream<ReminderTarget> get reminderTaps => _reminderTaps.stream;
 
-  /// The EMI id of the reminder that launched the app, if one did.
-  Future<String?> emiReminderThatLaunchedApp() async {
+  /// What the reminder that launched the app points at, if one did.
+  Future<ReminderTarget?> reminderThatLaunchedApp() async {
     try {
       final details = await _notificationsPlugin.getNotificationAppLaunchDetails();
       if (details == null || !details.didNotificationLaunchApp) return null;
-      return EmiReminder.emiIdFromPayload(details.notificationResponse?.payload);
+      return ReminderTarget.parse(details.notificationResponse?.payload);
     } catch (_) {
       return null;
     }
@@ -58,8 +58,8 @@ class NotificationService implements EmiReminderScheduler {
       await _notificationsPlugin.initialize(
         settings: initSettings,
         onDidReceiveNotificationResponse: (details) {
-          final emiId = EmiReminder.emiIdFromPayload(details.payload);
-          if (emiId != null) _emiReminderTaps.add(emiId);
+          final target = ReminderTarget.parse(details.payload);
+          if (target != null) _reminderTaps.add(target);
         },
       );
 
@@ -93,8 +93,8 @@ class NotificationService implements EmiReminderScheduler {
   Future<void> setNotificationsEnabled(bool enabled) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_kNotificationsEnabledKey, enabled);
-    // Off: EMI reminders are cancelled. On: the latest plan is scheduled.
-    await replaceEmiReminders(_requested);
+    // Off: reminders are cancelled. On: the latest plan is scheduled.
+    await replaceReminders(_requested);
   }
 
   /// Request notification permissions from OS if not already granted
@@ -150,29 +150,29 @@ class NotificationService implements EmiReminderScheduler {
     }
   }
 
-  List<EmiReminder> _requested = const [];
-  List<EmiReminder>? _scheduled;
+  List<Reminder> _requested = const [];
+  List<Reminder>? _scheduled;
   Future<void> _applying = Future.value();
 
-  /// Makes the scheduled EMI reminders match [plan] (what
-  /// [EmiReminderPlanner] says should be scheduled). Runs one at a time and
+  /// Makes the scheduled reminders (EMIs, money due back) match [plan] (what
+  /// the planners say should be scheduled). Runs one at a time and
   /// does nothing when the plan hasn't changed, so it's cheap to call on
   /// every EMI change.
   @override
-  Future<void> replaceEmiReminders(List<EmiReminder> plan) {
+  Future<void> replaceReminders(List<Reminder> plan) {
     _requested = plan;
     return _applying = _applying.then((_) => _apply());
   }
 
   Future<void> _apply() async {
-    final plan = await areNotificationsEnabled() ? _requested : const <EmiReminder>[];
+    final plan = await areNotificationsEnabled() ? _requested : const <Reminder>[];
     if (listEquals(plan, _scheduled)) return;
     await initialize();
     try {
-      // Only DueMate's EMI reminders are replaced; anything else stays.
+      // Only DueMate reminders are replaced; anything else stays.
       final pending = await _notificationsPlugin.pendingNotificationRequests();
       for (final p in pending) {
-        if (p.payload?.startsWith(EmiReminder.payloadPrefix) ?? false) {
+        if (Reminder.isReminderPayload(p.payload)) {
           await _notificationsPlugin.cancel(id: p.id);
         }
       }
@@ -191,7 +191,7 @@ class NotificationService implements EmiReminderScheduler {
       }
       _scheduled = plan;
     } catch (e) {
-      debugPrint('Could not schedule EMI reminders: $e');
+      debugPrint('Could not schedule reminders: $e');
     }
   }
 
@@ -209,7 +209,7 @@ class NotificationService implements EmiReminderScheduler {
   );
 }
 
-/// Schedules EMI reminders; [NotificationService] in the app, a fake in tests.
-abstract interface class EmiReminderScheduler {
-  Future<void> replaceEmiReminders(List<EmiReminder> plan);
+/// Schedules reminders; [NotificationService] in the app, a fake in tests.
+abstract interface class ReminderScheduler {
+  Future<void> replaceReminders(List<Reminder> plan);
 }

@@ -61,6 +61,7 @@ What's done, what's known to be missing, and what's next.
 
 ### Insight
 - [x] **Lending cashflow chart:** Lending trends (People › chart icon), lent vs collected per month.
+- [x] **Due dates on money you lend:** "Return by" on Give (schema v10), due/overdue on People and Home, Overdue filter, reminder the day before.
 - [ ] **Repayment reliability:** an on-time percentage per person.
 
 ### Privacy and convenience
@@ -72,5 +73,5 @@ What's done, what's known to be missing, and what's next.
 
 ## 📌 Technical notes
 - Android only. `compileSdk` 37; min / target SDK follow Flutter's defaults.
-- Clean architecture with Riverpod 3 and Drift (SQLite, schema v9, WAL).
+- Clean architecture with Riverpod 3 and Drift (SQLite, schema v10, WAL).
 - Design rules and the screenshot workflow are documented in `CLAUDE.md`.

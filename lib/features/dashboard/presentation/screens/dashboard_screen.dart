@@ -307,6 +307,7 @@ class _Balances extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final top = ref.watch(topPeopleByBalanceProvider);
+    final dues = ref.watch(loanDuesProvider);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -321,7 +322,7 @@ class _Balances extends ConsumerWidget {
                     onTap: () => context.go('/people'),
                   ),
                 ]
-              : [for (final s in top) PersonRow(summary: s, symbol: symbol)],
+              : [for (final s in top) PersonRow(summary: s, symbol: symbol, due: dues[s.person.id])],
         ),
       ],
     );

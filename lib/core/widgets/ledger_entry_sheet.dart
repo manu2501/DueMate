@@ -10,6 +10,7 @@ import 'package:duemate/core/widgets/amount_field.dart';
 import 'package:duemate/core/widgets/avatar_widget.dart';
 import 'package:duemate/core/widgets/confirm_dialog.dart';
 import 'package:duemate/core/widgets/person_picker_sheet.dart';
+import 'package:duemate/core/widgets/return_by_field.dart';
 import 'package:duemate/core/widgets/upi_widgets.dart';
 import 'package:duemate/data/database/tables.dart';
 import 'package:duemate/data/providers/app_providers.dart';
@@ -57,6 +58,9 @@ class _LedgerEntrySheetState extends ConsumerState<LedgerEntrySheet> with Widget
   String? _selectedPersonId;
   PaymentMethod _paymentMethod = PaymentMethod.upi;
   DateTime _date = DateTime.now();
+
+  /// Give only: when it should be back.
+  DateTime? _dueDate;
   bool _isSaving = false;
 
   /// Who "Pay with UPI app" was opened for; cleared once we've asked.
@@ -213,6 +217,7 @@ class _LedgerEntrySheetState extends ConsumerState<LedgerEntrySheet> with Widget
               transactionDate: DateTime(
                   _date.year, _date.month, _date.day, now.hour, now.minute, now.second),
               paymentMethod: _paymentMethod,
+              dueDate: _isGive ? _dueDate : null,
               note: note.isEmpty ? null : note,
               createdAt: now,
               updatedAt: now,
@@ -355,6 +360,10 @@ class _LedgerEntrySheetState extends ConsumerState<LedgerEntrySheet> with Widget
                         ),
                       ],
                     ),
+                    if (_isGive) ...[
+                      const SizedBox(height: AppSpace.lg),
+                      ReturnByField(value: _dueDate, from: _date, onChanged: (d) => setState(() => _dueDate = d)),
+                    ],
                     const SizedBox(height: 24),
                     if (upiAction != null) ...[
                       upiAction,

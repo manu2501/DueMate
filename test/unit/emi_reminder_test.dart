@@ -8,6 +8,9 @@ import 'package:duemate/data/database/app_database.dart' hide Person, CreditCard
 import 'package:duemate/data/providers/app_providers.dart';
 import 'package:duemate/data/repositories/emi_repository_impl.dart';
 import 'package:duemate/data/repositories/person_repository_impl.dart';
+import 'package:duemate/data/repositories/transaction_repository_impl.dart';
+import 'package:duemate/data/database/tables.dart';
+import 'package:duemate/domain/entities/ledger_transaction.dart';
 import 'package:duemate/domain/emi_reminder_planner.dart';
 import 'package:duemate/domain/entities/credit_card_emi.dart';
 import 'package:duemate/domain/entities/person.dart';
@@ -41,10 +44,10 @@ CreditCardEmi _emi({
   );
 }
 
-class _FakeScheduler implements EmiReminderScheduler {
-  final plans = <List<EmiReminder>>[];
+class _FakeScheduler implements ReminderScheduler {
+  final plans = <List<Reminder>>[];
   @override
-  Future<void> replaceEmiReminders(List<EmiReminder> plan) async => plans.add(plan);
+  Future<void> replaceReminders(List<Reminder> plan) async => plans.add(plan);
 }
 
 void main() {
@@ -103,7 +106,7 @@ void main() {
     });
   });
 
-  group('emiReminderSyncProvider', () {
+  group('reminderSyncProvider', () {
     test('reschedules when EMIs change, and hides amounts when asked', () async {
       SharedPreferences.setMockInitialValues({});
       final prefs = await SharedPreferences.getInstance();
@@ -112,15 +115,15 @@ void main() {
       final c = ProviderContainer(overrides: [
         databaseProvider.overrideWithValue(db),
         sharedPreferencesProvider.overrideWithValue(prefs),
-        emiReminderSchedulerProvider.overrideWithValue(scheduler),
+        reminderSchedulerProvider.overrideWithValue(scheduler),
       ]);
       addTearDown(() async {
         c.dispose();
         await db.close();
       });
-      c.listen(emiReminderSyncProvider, (_, _) {});
+      c.listen(reminderSyncProvider, (_, _) {});
 
-      Future<List<EmiReminder>> settled() async {
+      Future<List<Reminder>> settled() async {
         for (var i = 0; i < 10; i++) {
           await Future<void>.delayed(const Duration(milliseconds: 20));
         }
@@ -143,6 +146,51 @@ void main() {
 
       await EmiRepositoryImpl(db).deleteEmi('e1');
       expect(await settled(), isEmpty, reason: 'deleted EMI: reminders cancelled');
+    });
+
+    test('money due back is reminded too, and repaying cancels it', () async {
+      SharedPreferences.setMockInitialValues({});
+      final prefs = await SharedPreferences.getInstance();
+      final db = AppDatabase(NativeDatabase.memory());
+      final scheduler = _FakeScheduler();
+      final c = ProviderContainer(overrides: [
+        databaseProvider.overrideWithValue(db),
+        sharedPreferencesProvider.overrideWithValue(prefs),
+        reminderSchedulerProvider.overrideWithValue(scheduler),
+      ]);
+      addTearDown(() async {
+        c.dispose();
+        await db.close();
+      });
+      c.listen(reminderSyncProvider, (_, _) {});
+      Future<List<Reminder>> settled() async {
+        for (var i = 0; i < 10; i++) {
+          await Future<void>.delayed(const Duration(milliseconds: 20));
+        }
+        return scheduler.plans.last;
+      }
+
+      final t = DateTime.now();
+      await PersonRepositoryImpl(db).createPerson(Person(id: 'p', name: 'Asha', createdAt: t, updatedAt: t));
+      LedgerTransaction tx(String id, TransactionType type, {DateTime? due}) => LedgerTransaction(
+            id: id,
+            personId: 'p',
+            type: type,
+            amount: 2000,
+            transactionDate: t,
+            paymentMethod: PaymentMethod.cash,
+            dueDate: due,
+            createdAt: t,
+            updatedAt: t,
+          );
+      await TransactionRepositoryImpl(db)
+          .addTransaction(tx('g', TransactionType.moneyGiven, due: t.add(const Duration(days: 10))));
+      final plan = await settled();
+      expect(plan.single.target, const PersonTarget('p'));
+      expect(plan.single.title, contains('due back from Asha'));
+
+      await TransactionRepositoryImpl(db).addTransaction(tx('r', TransactionType.paymentReceived));
+      expect(await settled(), isEmpty, reason: 'paid back: nothing left to remind');
     });
   });
 }

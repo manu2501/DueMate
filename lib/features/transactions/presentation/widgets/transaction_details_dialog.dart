@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:duemate/core/widgets/return_by_field.dart';
 import 'package:duemate/core/theme/app_theme.dart';
 import 'package:duemate/core/constants/app_constants.dart';
 import 'package:duemate/core/widgets/confirm_dialog.dart';
@@ -74,6 +75,7 @@ class TransactionDetailsDialog extends ConsumerWidget {
     final noteController = TextEditingController(text: transaction.note ?? '');
     DateTime selectedDate = transaction.transactionDate;
     PaymentMethod selectedMethod = transaction.paymentMethod;
+    DateTime? dueDate = transaction.dueDate;
 
     showDialog(
       context: context,
@@ -136,6 +138,10 @@ class TransactionDetailsDialog extends ConsumerWidget {
                       if (picked != null) setState(() => selectedDate = picked);
                     },
                   ),
+                  if (transaction.isMoneyGiven && !transaction.isEmi) ...[
+                    const SizedBox(height: 8),
+                    ReturnByField(value: dueDate, from: selectedDate, onChanged: (d) => setState(() => dueDate = d)),
+                  ],
                   const SizedBox(height: 8),
                   TextField(
                     controller: noteController,
@@ -161,6 +167,8 @@ class TransactionDetailsDialog extends ConsumerWidget {
                     amount: newAmount,
                     paymentMethod: selectedMethod,
                     transactionDate: selectedDate,
+                    dueDate: dueDate,
+                    clearDueDate: dueDate == null,
                     note: noteController.text.trim().isEmpty ? null : noteController.text.trim(),
                     updatedAt: DateTime.now(),
                   );
@@ -301,6 +309,10 @@ class TransactionDetailsDialog extends ConsumerWidget {
                   _infoRow('Time', DateFormatter.formatTime(transaction.transactionDate), theme),
                   Divider(height: 16, color: cs.outlineVariant),
                   _infoRow('Paid with', transaction.paymentMethod.label, theme),
+                  if (transaction.dueDate != null) ...[
+                    Divider(height: 16, color: cs.outlineVariant),
+                    _infoRow('Return by', DateFormatter.formatDate(transaction.dueDate!), theme),
+                  ],
                   if (transaction.note != null && transaction.note!.trim().isNotEmpty) ...[
                     Divider(height: 16, color: cs.outlineVariant),
                     _infoRow('Note', transaction.note!.trim(), theme),

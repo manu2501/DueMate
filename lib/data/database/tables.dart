@@ -53,6 +53,9 @@ class Transactions extends Table {
   TextColumn get emiId => text().nullable()();
   IntColumn get installmentNumber => integer().nullable()();
   BoolColumn get isSettled => boolean().withDefault(const Constant(false))();
+
+  /// For money given: when it should be back. Since schema v10.
+  DateTimeColumn get dueDate => dateTime().nullable()();
   DateTimeColumn get createdAt => dateTime()();
   DateTimeColumn get updatedAt => dateTime()();
 

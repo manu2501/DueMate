@@ -86,7 +86,7 @@ Future<void> _seed(AppDatabase db) async {
 
   var n = 0;
   Future<void> t(String person, TransactionType type, double amount, int days, String note,
-      [PaymentMethod m = PaymentMethod.upi]) async {
+      [PaymentMethod m = PaymentMethod.upi, int? dueInDays]) async {
     await tx.addTransaction(LedgerTransaction(
       id: 't${n++}',
       personId: person,
@@ -95,6 +95,7 @@ Future<void> _seed(AppDatabase db) async {
       transactionDate: ago(days),
       paymentMethod: m,
       note: note,
+      dueDate: dueInDays == null ? null : DateTime(now.year, now.month, now.day + dueInDays),
       createdAt: ago(days),
       updatedAt: ago(days),
     ));
@@ -102,12 +103,13 @@ Future<void> _seed(AppDatabase db) async {
 
   const give = TransactionType.moneyGiven;
   const got = TransactionType.paymentReceived;
-  await t('rahul', give, 15000, 45, 'Rent advance');
+  // Rahul is late paying back the rent advance; Meera's is due soon.
+  await t('rahul', give, 15000, 45, 'Rent advance', PaymentMethod.upi, -5);
   await t('rahul', got, 2500, 12, 'Part payment');
   await t('priya', got, 3000, 8, 'Concert tickets she paid for', PaymentMethod.cash);
   await t('arjun', give, 1200, 30, 'Dinner split');
   await t('arjun', got, 1200, 25, 'Settled dinner');
-  await t('meera', give, 800, 2, 'Cab fare');
+  await t('meera', give, 800, 2, 'Cab fare', PaymentMethod.upi, 6);
 
   await emis.createEmi(CreditCardEmi(
     id: 'emi-phone',

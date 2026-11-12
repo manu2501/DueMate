@@ -53,6 +53,7 @@ class TransactionTile extends StatelessWidget {
       if (showPerson && !isSelf && hasNote) note,
       if (t.isEmi) 'EMI ${t.installmentNumber ?? ''}'.trim(),
       t.paymentMethod.label,
+      if (t.dueDate != null) 'return by ${DateFormatter.formatShortDate(t.dueDate!)}',
       if (showDate) DateFormatter.formatRelative(t.transactionDate),
     ];
 

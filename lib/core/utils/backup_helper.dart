@@ -105,6 +105,7 @@ class BackupContents {
         emiId: Value(t['emiId'] as String?),
         installmentNumber: Value(t['installmentNumber'] as int?),
         isSettled: Value((t['isSettled'] as bool?) ?? false),
+        dueDate: Value(_dateOrNull(t['dueDate'])),
         createdAt: Value(_date(t['createdAt'])),
         updatedAt: Value(_date(t['updatedAt'])),
       );
@@ -210,6 +211,7 @@ class BackupHelper {
                 'emiId': t.emiId,
                 'installmentNumber': t.installmentNumber,
                 'isSettled': t.isSettled,
+                'dueDate': t.dueDate?.toIso8601String(),
                 'createdAt': t.createdAt.toIso8601String(),
                 'updatedAt': t.updatedAt.toIso8601String(),
               })

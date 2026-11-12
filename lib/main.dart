@@ -8,6 +8,7 @@ import 'core/navigation/app_router.dart';
 import 'core/services/notification_service.dart';
 import 'core/theme/app_theme.dart';
 import 'data/providers/app_providers.dart';
+import 'domain/reminder.dart';
 import 'features/emis/presentation/widgets/emi_details_sheet.dart';
 import 'features/settings/presentation/screens/app_lock_screen.dart';
 
@@ -41,26 +42,34 @@ class _DueMateAppState extends ConsumerState<DueMateApp> with WidgetsBindingObse
     // Registered before the router's back-button dispatcher, so
     // [didPopRoute] gets the back press first.
     WidgetsBinding.instance.addObserver(this);
-    // Keeps EMI due reminders scheduled for as long as the app runs.
-    ref.listenManual(emiReminderSyncProvider, (_, _) {});
-    // Tapping a reminder opens its EMI, whether the app was running or the
-    // tap launched it. With App Lock on, it opens behind the lock screen.
-    _reminderTaps = ref.read(emiReminderTapsProvider).listen(_openEmi);
+    // Keeps reminders (EMIs, money due back) scheduled while the app runs.
+    ref.listenManual(reminderSyncProvider, (_, _) {});
+    // Tapping a reminder opens what it's about, whether the app was running
+    // or the tap launched it. With App Lock on, it opens behind the lock.
+    _reminderTaps = ref.read(reminderTapsProvider).listen(_open);
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      final id = await ref.read(emiReminderLaunchProvider)();
-      if (id != null) _openEmi(id);
+      final target = await ref.read(reminderLaunchProvider)();
+      if (target != null) _open(target);
     });
   }
 
-  StreamSubscription<String>? _reminderTaps;
+  StreamSubscription<ReminderTarget>? _reminderTaps;
 
-  Future<void> _openEmi(String emiId) async {
-    final emi = await ref.read(emiRepositoryProvider).getEmiById(emiId);
-    if (emi == null || !mounted) return; // Deleted since the reminder was set.
-    final person = emi.isForSelf ? null : ref.read(personsMapProvider)[emi.personId];
-    final navContext = ref.read(appRouterProvider).routerDelegate.navigatorKey.currentContext;
-    if (navContext == null || !navContext.mounted) return;
-    EmiDetailsSheet.show(navContext, emi: emi, person: person);
+  Future<void> _open(ReminderTarget target) async {
+    final router = ref.read(appRouterProvider);
+    switch (target) {
+      case PersonTarget(:final personId):
+        if (await ref.read(personRepositoryProvider).getPersonById(personId) != null) {
+          router.push('/people/$personId');
+        }
+      case EmiTarget(:final emiId):
+        final emi = await ref.read(emiRepositoryProvider).getEmiById(emiId);
+        if (emi == null || !mounted) return; // Deleted since the reminder was set.
+        final person = emi.isForSelf ? null : ref.read(personsMapProvider)[emi.personId];
+        final navContext = router.routerDelegate.navigatorKey.currentContext;
+        if (navContext == null || !navContext.mounted) return;
+        EmiDetailsSheet.show(navContext, emi: emi, person: person);
+    }
   }
 
   @override
