@@ -36,8 +36,32 @@ class Transactions extends Table {
   DateTimeColumn get transactionDate => dateTime()();
   IntColumn get paymentMethod => intEnum<PaymentMethod>()();
   TextColumn get note => text().nullable()();
+  TextColumn get emiId => text().nullable()();
+  IntColumn get installmentNumber => integer().nullable()();
   DateTimeColumn get createdAt => dateTime()();
   DateTimeColumn get updatedAt => dateTime()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
+class CreditCardEmis extends Table {
+  TextColumn get id => text()();
+  TextColumn get personId => text().references(Persons, #id, onDelete: KeyAction.cascade)();
+  TextColumn get itemName => text().withLength(min: 1, max: 150)();
+  TextColumn get cardName => text().withLength(min: 1, max: 100)();
+  RealColumn get totalAmount => real()();
+  RealColumn get monthlyInstallment => real()();
+  IntColumn get totalTenureMonths => integer()();
+  IntColumn get installmentsPaid => integer().withDefault(const Constant(0))();
+  DateTimeColumn get startDate => dateTime()();
+  IntColumn get dueDayOfMonth => integer()();
+  BoolColumn get isPaidByMe => boolean().withDefault(const Constant(true))();
+  TextColumn get status => text().withDefault(const Constant('active'))();
+  TextColumn get notes => text().nullable()();
+  DateTimeColumn get createdAt => dateTime()();
+  DateTimeColumn get updatedAt => dateTime()();
+  DateTimeColumn get lastProcessedDate => dateTime().nullable()();
 
   @override
   Set<Column> get primaryKey => {id};

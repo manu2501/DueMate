@@ -1,14 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:duemate/core/widgets/dock_nav_icon.dart';
 import 'package:duemate/features/dashboard/presentation/screens/dashboard_screen.dart';
+import 'package:duemate/features/emis/presentation/screens/add_edit_emi_screen.dart';
 import 'package:duemate/features/people/presentation/screens/add_edit_person_screen.dart';
 import 'package:duemate/features/people/presentation/screens/people_screen.dart';
 import 'package:duemate/features/people/presentation/screens/person_details_screen.dart';
 import 'package:duemate/features/reports/presentation/screens/reports_screen.dart';
 import 'package:duemate/features/settings/presentation/screens/settings_screen.dart';
-import 'package:duemate/features/welcome/presentation/screens/welcome_screen.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
 final _shellNavigatorKey = GlobalKey<NavigatorState>();
@@ -70,16 +71,8 @@ CustomTransitionPage<void> _buildSlideTransition({
 final appRouterProvider = Provider<GoRouter>((ref) {
   return GoRouter(
     navigatorKey: _rootNavigatorKey,
-    initialLocation: '/welcome',
+    initialLocation: '/',
     routes: [
-      GoRoute(
-        path: '/welcome',
-        pageBuilder: (context, state) => _buildSlideTransition(
-          context: context,
-          state: state,
-          child: const WelcomeScreen(),
-        ),
-      ),
       ShellRoute(
         navigatorKey: _shellNavigatorKey,
         builder: (context, state, child) {
@@ -141,6 +134,18 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           state: state,
           child: const AddEditPersonScreen(),
         ),
+      ),
+      GoRoute(
+        parentNavigatorKey: _rootNavigatorKey,
+        path: '/add-emi',
+        pageBuilder: (context, state) {
+          final personId = state.uri.queryParameters['personId'];
+          return _buildSlideTransition(
+            context: context,
+            state: state,
+            child: AddEditEmiScreen(initialPersonId: personId),
+          );
+        },
       ),
     ],
   );
@@ -216,18 +221,19 @@ class _FloatingDockNavBar extends StatelessWidget {
 
     final labels = const [
       'Dashboard',
-      'Ledger',
+      'Directory',
       'Transactions',
     ];
 
     return SafeArea(
       top: false,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
         child: Container(
-          height: 66,
+          height: 64,
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
           decoration: BoxDecoration(
-            color: cs.surfaceContainerLow,
+            color: isDark ? const Color(0xFF1E1B4B) : cs.surfaceContainerLow,
             borderRadius: BorderRadius.circular(32),
             border: Border.all(
               color: cs.outlineVariant.withValues(alpha: 0.9),
@@ -236,7 +242,7 @@ class _FloatingDockNavBar extends StatelessWidget {
             boxShadow: [
               BoxShadow(
                 color: (isDark ? Colors.black : const Color(0xFF101124))
-                    .withValues(alpha: isDark ? 0.35 : 0.08),
+                    .withValues(alpha: isDark ? 0.4 : 0.1),
                 blurRadius: 20,
                 offset: const Offset(0, 8),
               ),
@@ -248,45 +254,59 @@ class _FloatingDockNavBar extends StatelessWidget {
               final isSelected = selectedIndex == index;
               final label = labels[index];
 
+              final activeBgColor = isDark
+                  ? cs.primary
+                  : const Color(0xFF131438);
+              final activeTextColor = Colors.white;
+
               return Tooltip(
                 message: label,
                 child: InkWell(
                   onTap: () => onItemSelected(index),
-                  borderRadius: BorderRadius.circular(20),
+                  borderRadius: BorderRadius.circular(24),
                   child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 250),
+                    duration: const Duration(milliseconds: 280),
                     curve: Curves.easeOutCubic,
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                    padding: EdgeInsets.symmetric(
+                      horizontal: isSelected ? 18 : 14,
+                      vertical: 10,
+                    ),
                     decoration: BoxDecoration(
-                      color: isSelected
-                          ? (isDark
-                              ? cs.surfaceContainerHigh
-                              : const Color(0xFFEFF1FB))
-                          : Colors.transparent,
-                      borderRadius: BorderRadius.circular(20),
-                      border: isSelected
-                          ? Border.all(
-                              color: cs.outlineVariant.withValues(alpha: 0.9),
-                              width: 1,
-                            )
-                          : null,
-                      boxShadow: isSelected && !isDark
+                      color: isSelected ? activeBgColor : Colors.transparent,
+                      borderRadius: BorderRadius.circular(24),
+                      boxShadow: isSelected
                           ? [
                               BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.04),
-                                blurRadius: 6,
-                                offset: const Offset(0, 2),
+                                color: activeBgColor.withValues(alpha: 0.25),
+                                blurRadius: 10,
+                                offset: const Offset(0, 4),
                               ),
                             ]
                           : null,
                     ),
-                    child: DockNavIcon(
-                      index: index,
-                      isSelected: isSelected,
-                      color: isSelected
-                          ? (isDark ? Colors.white : const Color(0xFF131438))
-                          : cs.onSurfaceVariant.withValues(alpha: 0.75),
-                      size: 22,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        DockNavIcon(
+                          index: index,
+                          isSelected: isSelected,
+                          color: isSelected
+                              ? activeTextColor
+                              : cs.onSurfaceVariant.withValues(alpha: 0.8),
+                          size: 20,
+                        ),
+                        if (isSelected) ...[
+                          const SizedBox(width: 8),
+                          Text(
+                            label,
+                            style: GoogleFonts.inter(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              color: activeTextColor,
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                   ),
                 ),

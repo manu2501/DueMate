@@ -4,14 +4,12 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:uuid/uuid.dart';
 import 'package:duemate/core/utils/contacts_helper.dart';
-import 'package:duemate/core/utils/currency_formatter.dart';
-import 'package:duemate/core/utils/date_formatter.dart';
-import 'package:duemate/core/widgets/avatar_widget.dart';
 import 'package:duemate/core/widgets/empty_state_widget.dart';
-import 'package:duemate/core/widgets/quick_receive_sheet.dart';
+import 'package:duemate/core/widgets/fade_slide_transition.dart';
 import 'package:duemate/data/providers/app_providers.dart';
 import 'package:duemate/domain/entities/person.dart';
 import 'package:duemate/features/people/presentation/screens/add_edit_person_screen.dart';
+import 'package:duemate/features/people/presentation/widgets/person_directory_tile.dart';
 
 class PeopleScreen extends ConsumerStatefulWidget {
   const PeopleScreen({super.key});
@@ -30,6 +28,14 @@ class _PeopleScreenState extends ConsumerState<PeopleScreen> {
     super.dispose();
   }
 
+  String _normalizePhone(String raw) {
+    final digitsOnly = raw.replaceAll(RegExp(r'\D'), '');
+    if (digitsOnly.length > 10) {
+      return digitsOnly.substring(digitsOnly.length - 10);
+    }
+    return digitsOnly;
+  }
+
   Future<void> _importFromContacts() async {
     setState(() => _isImporting = true);
     try {
@@ -40,23 +46,44 @@ class _PeopleScreenState extends ConsumerState<PeopleScreen> {
       }
 
       final allPersons = await ref.read(allPersonSummariesProvider.future);
+      final contactName = contact.name.trim();
+      final contactPhone = contact.phone != null ? contact.phone!.trim() : '';
+      final normPhone = contactPhone.isNotEmpty ? _normalizePhone(contactPhone) : '';
+
       final existing = allPersons.where((s) {
-        final sameName = s.person.name.toLowerCase() == contact.name.toLowerCase();
-        final samePhone = contact.phone != null &&
-            s.person.phone != null &&
-            s.person.phone!.replaceAll(RegExp(r'\s+'), '') ==
-                contact.phone!.replaceAll(RegExp(r'\s+'), '');
+        final sameName = s.person.name.trim().toLowerCase() == contactName.toLowerCase();
+        bool samePhone = false;
+        if (normPhone.isNotEmpty && s.person.phone != null && s.person.phone!.trim().isNotEmpty) {
+          final existingNorm = _normalizePhone(s.person.phone!);
+          samePhone = existingNorm.isNotEmpty && existingNorm == normPhone;
+        }
         return sameName || samePhone;
       }).firstOrNull;
 
       if (existing != null) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('${existing.person.name} is already in your ledger'),
+          showDialog(
+            context: context,
+            builder: (ctx) => AlertDialog(
+              title: const Text('Contact Already Exists'),
+              content: Text(
+                '${existing.person.name} (${existing.person.phone ?? 'No phone'}) is already in your ledger.',
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(ctx).pop(),
+                  child: const Text('Cancel'),
+                ),
+                FilledButton(
+                  onPressed: () {
+                    Navigator.of(ctx).pop();
+                    context.push('/people/${existing.person.id}');
+                  },
+                  child: const Text('Open Ledger'),
+                ),
+              ],
             ),
           );
-          context.push('/people/${existing.person.id}');
         }
         return;
       }
@@ -100,6 +127,9 @@ class _PeopleScreenState extends ConsumerState<PeopleScreen> {
 
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      useRootNavigator: true,
       showDragHandle: true,
       builder: (ctx) => SafeArea(
         child: Padding(
@@ -159,43 +189,74 @@ class _PeopleScreenState extends ConsumerState<PeopleScreen> {
     final currencySymbol = ref.watch(currencySymbolProvider);
     final currentFilter = ref.watch(peopleFilterProvider);
     final people = ref.watch(filteredPersonSummariesProvider);
+    final allSummariesAsync = ref.watch(allPersonSummariesProvider);
+    final allPersons = allSummariesAsync.value ?? [];
+
+    final totalCount = allPersons.length;
+    final activeDuesCount = allPersons.where((s) => s.owesMoney || s.isOverpaid).length;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Ledger'),
-        actions: [
-          _isImporting
-              ? const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 16.0),
-                  child: Center(
-                    child: SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    ),
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(68),
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        'Directory',
+                        style: GoogleFonts.dmSans(
+                          fontSize: 22,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: -0.4,
+                          color: theme.brightness == Brightness.dark ? Colors.white : const Color(0xFF131438),
+                        ),
+                      ),
+                      Text(
+                        '$totalCount Contacts • $activeDuesCount Active Dues',
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                          color: cs.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
                   ),
-                )
-              : IconButton(
-                  tooltip: 'Import from Contacts',
-                  icon: const Icon(Icons.contacts_rounded),
-                  onPressed: _importFromContacts,
                 ),
-          IconButton(
-            tooltip: 'Sort',
-            icon: const Icon(Icons.sort_rounded),
-            onPressed: () => _showSortMenu(context),
+                _isImporting
+                    ? const Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 12.0),
+                        child: SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                      )
+                    : IconButton.filledTonal(
+                        tooltip: 'Import from Contacts',
+                        icon: const Icon(Icons.contacts_rounded, size: 18),
+                        onPressed: _importFromContacts,
+                      ),
+                const SizedBox(width: 8),
+                IconButton.filledTonal(
+                  tooltip: 'Sort',
+                  icon: const Icon(Icons.sort_rounded, size: 18),
+                  onPressed: () => _showSortMenu(context),
+                ),
+              ],
+            ),
           ),
-          const SizedBox(width: 4),
-        ],
+        ),
       ),
       floatingActionButton: Padding(
-        padding: const EdgeInsets.only(bottom: 80),
+        padding: const EdgeInsets.only(bottom: 84),
         child: FloatingActionButton.extended(
-          onPressed: () {
-            Navigator.of(context).push(
-              MaterialPageRoute(builder: (ctx) => const AddEditPersonScreen()),
-            );
-          },
+          onPressed: () => AddEditPersonScreen.show(context),
           icon: const Icon(Icons.person_add_rounded, size: 20),
           label: Text('Add Person', style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
         ),
@@ -242,19 +303,19 @@ class _PeopleScreenState extends ConsumerState<PeopleScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
             child: Row(
               children: [
-                _filterChip('Active', PeopleFilter.active, currentFilter),
+                _filterChip('All', PeopleFilter.all, currentFilter),
+                const SizedBox(width: 8),
+                _filterChip('Owes You', PeopleFilter.active, currentFilter),
                 const SizedBox(width: 8),
                 _filterChip('Settled', PeopleFilter.settled, currentFilter),
                 const SizedBox(width: 8),
                 _filterChip('Archived', PeopleFilter.archived, currentFilter),
-                const SizedBox(width: 8),
-                _filterChip('All', PeopleFilter.all, currentFilter),
               ],
             ),
           ),
           const SizedBox(height: 8),
 
-          // People List with AnimatedSwitcher
+          // People List
           Expanded(
             child: AnimatedSwitcher(
               duration: const Duration(milliseconds: 300),
@@ -267,119 +328,19 @@ class _PeopleScreenState extends ConsumerState<PeopleScreen> {
                           ? 'Try searching with another name or phone number.'
                           : 'Add someone to track balances and payments.',
                       actionLabel: _searchController.text.isNotEmpty ? null : 'Add Person',
-                      onActionPressed: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(builder: (ctx) => const AddEditPersonScreen()),
-                        );
-                      },
+                      onActionPressed: () => AddEditPersonScreen.show(context),
                     )
                   : ListView.separated(
                       key: ValueKey('list_${currentFilter.name}'),
-                      padding: const EdgeInsets.fromLTRB(20, 4, 20, 96),
+                      padding: const EdgeInsets.fromLTRB(20, 4, 20, 160),
                       itemCount: people.length,
-                      separatorBuilder: (_, _) => const SizedBox(height: 8),
+                      separatorBuilder: (_, _) => const SizedBox(height: 10),
                       itemBuilder: (ctx, index) {
-                        final summary = people[index];
-                        final person = summary.person;
-                        final balance = summary.balance;
-                        final owes = summary.owesMoney;
-                        final overpaid = summary.isOverpaid;
-
-                        Color badgeColor;
-                        String badgeText;
-                        if (owes) {
-                          badgeColor = cs.error;
-                          badgeText = CurrencyFormatter.format(balance, symbol: currencySymbol);
-                        } else if (overpaid) {
-                          badgeColor = cs.tertiary;
-                          badgeText = 'Over ${CurrencyFormatter.format(balance.abs(), symbol: currencySymbol)}';
-                        } else {
-                          badgeColor = cs.primary;
-                          badgeText = 'Settled';
-                        }
-
-                        return InkWell(
-                          onTap: () => context.push('/people/${person.id}'),
-                          borderRadius: BorderRadius.circular(18),
-                          child: Container(
-                            padding: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              color: cs.surfaceContainerLow,
-                              borderRadius: BorderRadius.circular(20),
-                              border: Border.all(color: cs.outlineVariant),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withValues(alpha: theme.brightness == Brightness.dark ? 0.15 : 0.03),
-                                  blurRadius: 10,
-                                  offset: const Offset(0, 3),
-                                ),
-                              ],
-                            ),
-                            child: Row(
-                              children: [
-                                AvatarWidget(
-                                  name: person.name,
-                                  radius: 22,
-                                  heroTag: 'avatar-${person.id}',
-                                ),
-                                const SizedBox(width: 14),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        person.name,
-                                        style: theme.textTheme.titleSmall?.copyWith(
-                                          fontWeight: FontWeight.w700,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 2),
-                                      Text(
-                                        summary.lastTransaction != null
-                                          ? 'Last: ${DateFormatter.formatRelative(summary.lastTransaction!.transactionDate)}'
-                                          : (person.phone != null && person.phone!.isNotEmpty)
-                                              ? person.phone!
-                                              : 'Added ${DateFormatter.formatShortDate(person.createdAt)}',
-                                        style: theme.textTheme.bodySmall?.copyWith(
-                                          color: cs.onSurfaceVariant,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                Column(
-                                  crossAxisAlignment: CrossAxisAlignment.end,
-                                  children: [
-                                    Text(
-                                      badgeText,
-                                      style: GoogleFonts.inter(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w800,
-                                        color: badgeColor,
-                                      ),
-                                    ),
-                                    if (owes) ...[
-                                      const SizedBox(height: 4),
-                                      InkWell(
-                                        onTap: () => QuickReceiveSheet.show(context, personId: person.id),
-                                        borderRadius: BorderRadius.circular(8),
-                                        child: Padding(
-                                          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                                          child: Text(
-                                            'Receive',
-                                            style: TextStyle(
-                                              fontSize: 11,
-                                              fontWeight: FontWeight.w700,
-                                              color: cs.primary,
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ],
-                                ),
-                              ],
-                            ),
+                        return FadeSlideTransition(
+                          index: index,
+                          child: PersonDirectoryTile(
+                            summary: people[index],
+                            currencySymbol: currencySymbol,
                           ),
                         );
                       },

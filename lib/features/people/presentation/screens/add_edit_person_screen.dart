@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:uuid/uuid.dart';
 import 'package:duemate/core/utils/contacts_helper.dart';
+import 'package:duemate/core/widgets/avatar_widget.dart';
+import 'package:duemate/core/widgets/pressable_scale.dart';
 import 'package:duemate/data/providers/app_providers.dart';
 import 'package:duemate/domain/entities/person.dart';
 
@@ -11,6 +13,14 @@ class AddEditPersonScreen extends ConsumerStatefulWidget {
   final Person? personToEdit;
 
   const AddEditPersonScreen({super.key, this.personToEdit});
+
+  static Future<bool?> show(BuildContext context, {Person? personToEdit}) {
+    return Navigator.of(context, rootNavigator: true).push<bool>(
+      MaterialPageRoute(
+        builder: (_) => AddEditPersonScreen(personToEdit: personToEdit),
+      ),
+    );
+  }
 
   @override
   ConsumerState<AddEditPersonScreen> createState() => _AddEditPersonScreenState();
@@ -34,10 +44,17 @@ class _AddEditPersonScreenState extends ConsumerState<AddEditPersonScreen> {
     _phoneController = TextEditingController(text: widget.personToEdit?.phone ?? '');
     _emailController = TextEditingController(text: widget.personToEdit?.email ?? '');
     _notesController = TextEditingController(text: widget.personToEdit?.notes ?? '');
+
+    _nameController.addListener(_onNameChanged);
+  }
+
+  void _onNameChanged() {
+    setState(() {});
   }
 
   @override
   void dispose() {
+    _nameController.removeListener(_onNameChanged);
     _nameController.dispose();
     _phoneController.dispose();
     _emailController.dispose();
@@ -45,11 +62,65 @@ class _AddEditPersonScreenState extends ConsumerState<AddEditPersonScreen> {
     super.dispose();
   }
 
+  String _normalizePhone(String raw) {
+    final digitsOnly = raw.replaceAll(RegExp(r'\D'), '');
+    if (digitsOnly.length > 10) {
+      return digitsOnly.substring(digitsOnly.length - 10);
+    }
+    return digitsOnly;
+  }
+
   Future<void> _importFromContacts() async {
     setState(() => _isImporting = true);
     try {
       final contact = await ContactsHelper.pickContact();
-      if (contact != null && mounted) {
+      if (contact == null) return;
+
+      final allPersons = await ref.read(allPersonSummariesProvider.future);
+      final contactName = contact.name.trim();
+      final contactPhone = contact.phone != null ? contact.phone!.trim() : '';
+      final normPhone = contactPhone.isNotEmpty ? _normalizePhone(contactPhone) : '';
+
+      final existing = allPersons.where((s) {
+        if (isEditing && s.person.id == widget.personToEdit!.id) return false;
+
+        final sameName = s.person.name.trim().toLowerCase() == contactName.toLowerCase();
+        bool samePhone = false;
+        if (normPhone.isNotEmpty && s.person.phone != null && s.person.phone!.trim().isNotEmpty) {
+          final existingNorm = _normalizePhone(s.person.phone!);
+          samePhone = existingNorm.isNotEmpty && existingNorm == normPhone;
+        }
+        return sameName || samePhone;
+      }).firstOrNull;
+
+      if (existing != null && mounted) {
+        showDialog(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: const Text('Contact Already Exists'),
+            content: Text(
+              '${existing.person.name} (${existing.person.phone ?? 'No phone'}) is already in your ledger.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(),
+                child: const Text('Cancel'),
+              ),
+              FilledButton(
+                onPressed: () {
+                  Navigator.of(ctx).pop();
+                  _navigateBack();
+                  context.push('/people/${existing.person.id}');
+                },
+                child: const Text('Open Ledger'),
+              ),
+            ],
+          ),
+        );
+        return;
+      }
+
+      if (mounted) {
         _nameController.text = contact.name;
         if (contact.phone != null && contact.phone!.isNotEmpty) {
           _phoneController.text = contact.phone!;
@@ -89,14 +160,64 @@ class _AddEditPersonScreenState extends ConsumerState<AddEditPersonScreen> {
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
 
+    final inputName = _nameController.text.trim();
+    final inputPhone = _phoneController.text.trim();
+    final normPhone = inputPhone.isNotEmpty ? _normalizePhone(inputPhone) : '';
+
+    final allPersons = await ref.read(allPersonSummariesProvider.future);
+    final existingPerson = allPersons.where((s) {
+      if (isEditing && s.person.id == widget.personToEdit!.id) return false;
+
+      final sameName = s.person.name.trim().toLowerCase() == inputName.toLowerCase();
+      bool samePhone = false;
+      if (normPhone.isNotEmpty && s.person.phone != null && s.person.phone!.trim().isNotEmpty) {
+        final existingNorm = _normalizePhone(s.person.phone!);
+        samePhone = existingNorm.isNotEmpty && existingNorm == normPhone;
+      }
+      return sameName || samePhone;
+    }).firstOrNull;
+
+    if (existingPerson != null && mounted) {
+      final isSamePhone = normPhone.isNotEmpty &&
+          existingPerson.person.phone != null &&
+          _normalizePhone(existingPerson.person.phone!) == normPhone;
+
+      final message = isSamePhone
+          ? 'A contact with phone number "${existingPerson.person.phone}" already exists in your ledger (${existingPerson.person.name}).'
+          : 'A contact named "${existingPerson.person.name}" already exists in your ledger.';
+
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Duplicate Contact Found'),
+          content: Text('$message\n\nWould you like to open their ledger instead?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () {
+                Navigator.of(ctx).pop();
+                _navigateBack();
+                context.push('/people/${existingPerson.person.id}');
+              },
+              child: const Text('Open Ledger'),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
     setState(() => _isSaving = true);
     final now = DateTime.now();
 
     try {
       if (isEditing) {
         final updated = widget.personToEdit!.copyWith(
-          name: _nameController.text.trim(),
-          phone: _phoneController.text.trim().isEmpty ? null : _phoneController.text.trim(),
+          name: inputName,
+          phone: inputPhone.isEmpty ? null : inputPhone,
           email: _emailController.text.trim().isEmpty ? null : _emailController.text.trim(),
           notes: _notesController.text.trim().isEmpty ? null : _notesController.text.trim(),
           updatedAt: now,
@@ -105,8 +226,8 @@ class _AddEditPersonScreenState extends ConsumerState<AddEditPersonScreen> {
       } else {
         final newPerson = Person(
           id: const Uuid().v4(),
-          name: _nameController.text.trim(),
-          phone: _phoneController.text.trim().isEmpty ? null : _phoneController.text.trim(),
+          name: inputName,
+          phone: inputPhone.isEmpty ? null : inputPhone,
           email: _emailController.text.trim().isEmpty ? null : _emailController.text.trim(),
           notes: _notesController.text.trim().isEmpty ? null : _notesController.text.trim(),
           createdAt: now,
@@ -138,6 +259,11 @@ class _AddEditPersonScreenState extends ConsumerState<AddEditPersonScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+
+    final displayName = _nameController.text.trim().isEmpty
+        ? (isEditing ? widget.personToEdit!.name : 'New Contact')
+        : _nameController.text.trim();
 
     return PopScope(
       canPop: false,
@@ -152,144 +278,251 @@ class _AddEditPersonScreenState extends ConsumerState<AddEditPersonScreen> {
           ),
           title: Text(isEditing ? 'Edit Details' : 'New Person'),
         ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // Import from contacts button
-              InkWell(
-                onTap: _isImporting ? null : _importFromContacts,
-                borderRadius: BorderRadius.circular(16),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                  decoration: BoxDecoration(
-                    color: cs.primary.withValues(alpha: 0.08),
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Row(
+        body: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Live Avatar Preview Badge
+                Center(
+                  child: Column(
                     children: [
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: cs.primary.withValues(alpha: 0.12),
-                          shape: BoxShape.circle,
-                        ),
-                        child: _isImporting
-                            ? SizedBox(
-                                width: 18,
-                                height: 18,
-                                child: CircularProgressIndicator(strokeWidth: 2, color: cs.primary),
-                              )
-                            : Icon(Icons.contacts_rounded, color: cs.primary, size: 18),
+                      AvatarWidget(
+                        name: displayName,
+                        radius: 36,
                       ),
-                      const SizedBox(width: 14),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Import from Phone Contacts',
-                              style: theme.textTheme.titleSmall?.copyWith(
-                                color: cs.primary,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                            Text(
-                              'Auto-fill name & phone number',
-                              style: theme.textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
-                            ),
-                          ],
+                      const SizedBox(height: 10),
+                      Text(
+                        displayName,
+                        style: GoogleFonts.dmSans(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w800,
+                          color: isDark ? Colors.white : const Color(0xFF131438),
                         ),
                       ),
-                      Icon(Icons.chevron_right_rounded, color: cs.primary),
+                      Text(
+                        'Live Contact Preview',
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          color: cs.onSurfaceVariant,
+                        ),
+                      ),
                     ],
                   ),
                 ),
-              ),
-              const SizedBox(height: 24),
+                const SizedBox(height: 20),
 
-              // Form fields in clean surface container
-              Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: cs.surfaceContainerLow,
-                  borderRadius: BorderRadius.circular(24),
-                ),
-                child: Column(
-                  children: [
-                    TextFormField(
-                      controller: _nameController,
-                      decoration: const InputDecoration(
-                        labelText: 'Full Name *',
-                        hintText: 'e.g. Rahul Kumar',
-                        prefixIcon: Icon(Icons.person_outline_rounded, size: 20),
-                      ),
-                      validator: (value) {
-                        if (value == null || value.trim().isEmpty) {
-                          return 'Please enter a name';
-                        }
-                        return null;
-                      },
-                      textCapitalization: TextCapitalization.words,
+                // Import from contacts hero card
+                PressableScale(
+                  onTap: _isImporting ? null : _importFromContacts,
+                  borderRadius: BorderRadius.circular(20),
+                  child: Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: cs.primary.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: cs.primary.withValues(alpha: 0.2)),
                     ),
-                    const SizedBox(height: 16),
-                    TextFormField(
-                      controller: _phoneController,
-                      decoration: const InputDecoration(
-                        labelText: 'Phone Number (Optional)',
-                        hintText: 'e.g. +91 98765 43210',
-                        prefixIcon: Icon(Icons.phone_outlined, size: 20),
-                      ),
-                      keyboardType: TextInputType.phone,
-                    ),
-                    const SizedBox(height: 16),
-                    TextFormField(
-                      controller: _emailController,
-                      decoration: const InputDecoration(
-                        labelText: 'Email Address (Optional)',
-                        hintText: 'e.g. rahul@example.com',
-                        prefixIcon: Icon(Icons.email_outlined, size: 20),
-                      ),
-                      keyboardType: TextInputType.emailAddress,
-                    ),
-                    const SizedBox(height: 16),
-                    TextFormField(
-                      controller: _notesController,
-                      decoration: const InputDecoration(
-                        labelText: 'Notes (Optional)',
-                        hintText: 'e.g. Roommate, colleague, friend',
-                        prefixIcon: Icon(Icons.notes_rounded, size: 20),
-                      ),
-                      maxLines: 3,
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 28),
-
-              SizedBox(
-                height: 54,
-                child: FilledButton(
-                  onPressed: _isSaving ? null : _save,
-                  child: _isSaving
-                      ? SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2, color: cs.onPrimary),
-                        )
-                      : Text(
-                          isEditing ? 'Save Changes' : 'Create Person',
-                          style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w700),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: cs.primary,
+                            shape: BoxShape.circle,
+                          ),
+                          child: _isImporting
+                              ? const SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                )
+                              : const Icon(Icons.contacts_rounded, color: Colors.white, size: 20),
                         ),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Import from Phone Contacts',
+                                style: GoogleFonts.inter(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w700,
+                                  color: cs.primary,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                'Auto-fill contact name & phone in one tap',
+                                style: GoogleFonts.inter(
+                                  fontSize: 12,
+                                  color: cs.onSurfaceVariant,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Icon(Icons.chevron_right_rounded, color: cs.primary),
+                      ],
+                    ),
+                  ),
                 ),
-              ),
-            ],
+                const SizedBox(height: 20),
+
+                // Section 1: Contact Details Card
+                _sectionHeader('CONTACT DETAILS', theme),
+                Container(
+                  padding: const EdgeInsets.all(18),
+                  decoration: BoxDecoration(
+                    color: cs.surfaceContainerLow,
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(color: cs.outlineVariant),
+                  ),
+                  child: Column(
+                    children: [
+                      TextFormField(
+                        controller: _nameController,
+                        decoration: const InputDecoration(
+                          labelText: 'Full Name *',
+                          hintText: 'e.g. Rahul Kumar',
+                          prefixIcon: Icon(Icons.person_outline_rounded, size: 20),
+                        ),
+                        validator: (value) {
+                          if (value == null || value.trim().isEmpty) {
+                            return 'Please enter a name';
+                          }
+                          return null;
+                        },
+                        textCapitalization: TextCapitalization.words,
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _phoneController,
+                        decoration: const InputDecoration(
+                          labelText: 'Phone Number (Optional)',
+                          hintText: 'e.g. +91 98765 43210',
+                          prefixIcon: Icon(Icons.phone_outlined, size: 20),
+                        ),
+                        keyboardType: TextInputType.phone,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 20),
+
+                // Section 2: Additional Information Card
+                _sectionHeader('ADDITIONAL INFORMATION', theme),
+                Container(
+                  padding: const EdgeInsets.all(18),
+                  decoration: BoxDecoration(
+                    color: cs.surfaceContainerLow,
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(color: cs.outlineVariant),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      TextFormField(
+                        controller: _emailController,
+                        decoration: const InputDecoration(
+                          labelText: 'Email Address (Optional)',
+                          hintText: 'e.g. rahul@example.com',
+                          prefixIcon: Icon(Icons.email_outlined, size: 20),
+                        ),
+                        keyboardType: TextInputType.emailAddress,
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _notesController,
+                        decoration: const InputDecoration(
+                          labelText: 'Notes & Relationship (Optional)',
+                          hintText: 'e.g. Roommate, colleague, friend',
+                          prefixIcon: Icon(Icons.notes_rounded, size: 20),
+                        ),
+                        maxLines: 2,
+                      ),
+                      const SizedBox(height: 14),
+
+                      Text(
+                        'Quick Relationship Tags:',
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: cs.onSurfaceVariant,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 6,
+                        children: ['Friend', 'Colleague', 'Family', 'Roommate', 'Business'].map((tag) {
+                          final contains = _notesController.text.contains(tag);
+                          return FilterChip(
+                            label: Text(tag, style: const TextStyle(fontSize: 12)),
+                            selected: contains,
+                            onSelected: (selected) {
+                              if (selected && !contains) {
+                                final current = _notesController.text.trim();
+                                _notesController.text = current.isEmpty ? tag : '$current, $tag';
+                              }
+                              setState(() {});
+                            },
+                          );
+                        }).toList(),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 28),
+
+                // Save Action Button
+                PressableScale(
+                  onTap: _isSaving ? null : _save,
+                  borderRadius: BorderRadius.circular(16),
+                  child: SizedBox(
+                    height: 54,
+                    width: double.infinity,
+                    child: FilledButton(
+                      onPressed: _isSaving ? null : _save,
+                      style: FilledButton.styleFrom(
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      ),
+                      child: _isSaving
+                          ? SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2, color: cs.onPrimary),
+                            )
+                          : Text(
+                              isEditing ? 'Save Changes' : 'Create Person',
+                              style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w700),
+                            ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 32),
+              ],
+            ),
           ),
         ),
       ),
+    );
+  }
+
+  Widget _sectionHeader(String title, ThemeData theme) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 4, bottom: 8),
+      child: Text(
+        title,
+        style: theme.textTheme.labelSmall?.copyWith(
+          fontWeight: FontWeight.w700,
+          letterSpacing: 1.0,
+          color: theme.colorScheme.onSurfaceVariant,
+        ),
       ),
     );
   }

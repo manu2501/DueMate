@@ -8,6 +8,8 @@ class LedgerTransaction {
   final DateTime transactionDate;
   final PaymentMethod paymentMethod;
   final String? note;
+  final String? emiId;
+  final int? installmentNumber;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -19,12 +21,15 @@ class LedgerTransaction {
     required this.transactionDate,
     required this.paymentMethod,
     this.note,
+    this.emiId,
+    this.installmentNumber,
     required this.createdAt,
     required this.updatedAt,
   });
 
   bool get isMoneyGiven => type == TransactionType.moneyGiven;
   bool get isPaymentReceived => type == TransactionType.paymentReceived;
+  bool get isEmi => emiId != null;
 
   LedgerTransaction copyWith({
     String? id,
@@ -34,6 +39,8 @@ class LedgerTransaction {
     DateTime? transactionDate,
     PaymentMethod? paymentMethod,
     String? note,
+    String? emiId,
+    int? installmentNumber,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -45,6 +52,8 @@ class LedgerTransaction {
       transactionDate: transactionDate ?? this.transactionDate,
       paymentMethod: paymentMethod ?? this.paymentMethod,
       note: note ?? this.note,
+      emiId: emiId ?? this.emiId,
+      installmentNumber: installmentNumber ?? this.installmentNumber,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );

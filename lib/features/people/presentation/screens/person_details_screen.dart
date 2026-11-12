@@ -2,18 +2,21 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:duemate/core/theme/app_theme.dart';
 import 'package:duemate/core/utils/csv_exporter.dart';
-import 'package:duemate/core/utils/currency_formatter.dart';
-import 'package:duemate/core/utils/date_formatter.dart';
+import 'package:duemate/core/utils/pdf_exporter.dart';
 import 'package:duemate/core/utils/reminder_helper.dart';
-import 'package:duemate/core/widgets/avatar_widget.dart';
+import 'package:duemate/core/utils/whatsapp_helper.dart';
 import 'package:duemate/core/widgets/empty_state_widget.dart';
+import 'package:duemate/core/widgets/export_options_sheet.dart';
 import 'package:duemate/core/widgets/quick_give_sheet.dart';
-import 'package:duemate/core/widgets/quick_receive_sheet.dart';
 import 'package:duemate/core/widgets/transaction_tile.dart';
+import 'package:duemate/core/widgets/whatsapp_icon.dart';
 import 'package:duemate/data/providers/app_providers.dart';
+import 'package:duemate/features/emis/presentation/screens/add_edit_emi_screen.dart';
 import 'package:duemate/features/people/presentation/screens/add_edit_person_screen.dart';
+import 'package:duemate/features/people/presentation/widgets/person_active_emis_section.dart';
+import 'package:duemate/features/people/presentation/widgets/person_header_card.dart';
+import 'package:duemate/features/people/presentation/widgets/person_info_sheet.dart';
 import 'package:duemate/features/transactions/presentation/widgets/transaction_details_dialog.dart';
 
 class PersonDetailsScreen extends ConsumerWidget {
@@ -110,6 +113,7 @@ class PersonDetailsScreen extends ConsumerWidget {
     final currencySymbol = ref.watch(currencySymbolProvider);
     final summaryAsync = ref.watch(personSummaryProvider(personId));
     final transactionsAsync = ref.watch(personTransactionsProvider(personId));
+    final emisAsync = ref.watch(personEmisProvider(personId));
 
     return summaryAsync.when(
       data: (summary) {
@@ -132,15 +136,6 @@ class PersonDetailsScreen extends ConsumerWidget {
         }
 
         final person = summary.person;
-        final balance = summary.balance;
-        final owes = summary.owesMoney;
-        final overpaid = summary.isOverpaid;
-
-        // Progress calculation
-        final double progress = summary.totalGiven > 0
-            ? (summary.totalReceived / summary.totalGiven).clamp(0.0, 1.0)
-            : (balance == 0 ? 1.0 : 0.0);
-
         final transactions = transactionsAsync.value ?? [];
 
         return PopScope(
@@ -184,20 +179,51 @@ class PersonDetailsScreen extends ConsumerWidget {
                       ),
                     const Spacer(),
 
-                    // Action buttons (Share reminder + Menu)
+                    // Action buttons (WhatsApp + Share reminder + Person Info + Options)
+                    IconButton(
+                      tooltip: 'WhatsApp Reminder',
+                      icon: const WhatsAppIcon(size: 22),
+                      onPressed: () {
+                        final msg = WhatsAppHelper.generateLedgerReminderMessage(summary, currencySymbol: currencySymbol);
+                        WhatsAppHelper.sendWhatsAppMessage(
+                          phoneNumber: person.phone,
+                          message: msg,
+                          context: context,
+                        );
+                      },
+                    ),
+                    IconButton(
+                      tooltip: 'Person Information',
+                      icon: const Icon(Icons.info_outline_rounded),
+                      onPressed: () => PersonInfoSheet.show(
+                        context,
+                        person: person,
+                        summary: summary,
+                        currencySymbol: currencySymbol,
+                      ),
+                    ),
                     IconButton(
                       tooltip: 'Share Reminder',
                       icon: const Icon(Icons.share_outlined),
                       onPressed: () => ReminderHelper.shareReminder(summary, currencySymbol: currencySymbol),
                     ),
                     IconButton(
-                      tooltip: 'Export Statement',
+                      tooltip: 'Share Statement',
                       icon: const Icon(Icons.receipt_long_outlined),
                       onPressed: () {
-                        CsvExporter.exportAndSharePersonStatement(
-                          summary: summary,
-                          transactions: transactions,
-                          currencySymbol: currencySymbol,
+                        ExportOptionsSheet.show(
+                          context: context,
+                          title: 'Statement for ${person.name}',
+                          onSharePdf: () => PdfExporter.exportAndSharePersonStatement(
+                            summary: summary,
+                            transactions: transactions,
+                            currencySymbol: currencySymbol,
+                          ),
+                          onShareCsv: () => CsvExporter.exportAndSharePersonStatement(
+                            summary: summary,
+                            transactions: transactions,
+                            currencySymbol: currencySymbol,
+                          ),
                         );
                       },
                     ),
@@ -205,12 +231,22 @@ class PersonDetailsScreen extends ConsumerWidget {
                     // Help / Options button in rounded white box (Screen 2 from screenshot)
                     PopupMenuButton<String>(
                       onSelected: (value) {
-                        if (value == 'edit') {
-                          Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (ctx) => AddEditPersonScreen(personToEdit: person),
-                            ),
+                        if (value == 'pdf') {
+                          PdfExporter.exportAndSharePersonStatement(
+                            summary: summary,
+                            transactions: transactions,
+                            currencySymbol: currencySymbol,
                           );
+                        } else if (value == 'csv') {
+                          CsvExporter.exportAndSharePersonStatement(
+                            summary: summary,
+                            transactions: transactions,
+                            currencySymbol: currencySymbol,
+                          );
+                        } else if (value == 'edit') {
+                          AddEditPersonScreen.show(context, personToEdit: person);
+                        } else if (value == 'add_emi') {
+                          AddEditEmiScreen.show(context, personId: personId);
                         } else if (value == 'archive') {
                           _confirmArchive(context, ref, person.isArchived, person.name);
                         } else if (value == 'delete') {
@@ -218,6 +254,37 @@ class PersonDetailsScreen extends ConsumerWidget {
                         }
                       },
                       itemBuilder: (ctx) => [
+                        const PopupMenuItem(
+                          value: 'pdf',
+                          child: Row(
+                            children: [
+                              Icon(Icons.picture_as_pdf_outlined, size: 20, color: Colors.red),
+                              SizedBox(width: 12),
+                              Text('Share PDF Statement'),
+                            ],
+                          ),
+                        ),
+                        const PopupMenuItem(
+                          value: 'csv',
+                          child: Row(
+                            children: [
+                              Icon(Icons.table_chart_outlined, size: 20, color: Colors.green),
+                              SizedBox(width: 12),
+                              Text('Export CSV Statement'),
+                            ],
+                          ),
+                        ),
+                        const PopupMenuDivider(),
+                        const PopupMenuItem(
+                          value: 'add_emi',
+                          child: Row(
+                            children: [
+                              Icon(Icons.event_repeat_rounded, size: 20, color: Colors.purple),
+                              SizedBox(width: 12),
+                              Text('Add EMI / Loan'),
+                            ],
+                          ),
+                        ),
                         const PopupMenuItem(
                           value: 'edit',
                           child: Row(
@@ -265,7 +332,7 @@ class PersonDetailsScreen extends ConsumerWidget {
                           ],
                         ),
                         child: Icon(
-                          Icons.help_outline_rounded,
+                          Icons.more_vert_rounded,
                           size: 20,
                           color: cs.onSurface,
                         ),
@@ -283,427 +350,28 @@ class PersonDetailsScreen extends ConsumerWidget {
               children: [
                 const SizedBox(height: 12),
 
-                // Title: "Active loan" / Contact Heading from screenshot
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  child: Row(
-                    children: [
-                      AvatarWidget(
-                        name: person.name,
-                        radius: 22,
-                        heroTag: 'avatar-${person.id}',
-                      ),
-                      const SizedBox(width: 14),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Active ledger',
-                              style: GoogleFonts.inter(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w500,
-                                color: AppTheme.mutedLabel,
-                              ),
-                            ),
-                            Text(
-                              person.name,
-                              style: GoogleFonts.dmSans(
-                                fontSize: 24,
-                                fontWeight: FontWeight.w800,
-                                letterSpacing: -0.4,
-                                color: isDark ? Colors.white : const Color(0xFF131438),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      if (person.isArchived)
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: cs.surfaceContainerHigh,
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: Text(
-                            'Archived',
-                            style: GoogleFonts.inter(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: cs.onSurfaceVariant,
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
+                // Person Header Summary Card
+                PersonHeaderCard(
+                  person: person,
+                  summary: summary,
+                  currencySymbol: currencySymbol,
                 ),
 
                 const SizedBox(height: 20),
 
-                // 1. Soft Peach / Coral Alert Card ("Penalty accrued" style in screenshot)
-                if (owes || overpaid)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    child: Container(
-                      padding: const EdgeInsets.all(18),
-                      decoration: BoxDecoration(
-                        color: isDark ? const Color(0xFF2C1919) : AppTheme.peachAccent,
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(
-                          color: isDark
-                              ? const Color(0xFF5A2C2C)
-                              : const Color(0xFFF7D1C6),
-                        ),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                owes ? 'Payment due' : 'Overpaid balance',
-                                style: GoogleFonts.dmSans(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w700,
-                                  color: isDark ? const Color(0xFFFFB4AB) : AppTheme.peachAccentText,
-                                ),
-                              ),
-                              Text(
-                                CurrencyFormatter.format(balance.abs(), symbol: currencySymbol),
-                                style: GoogleFonts.dmSans(
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.w800,
-                                  color: isDark ? Colors.white : const Color(0xFF131438),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            owes
-                                ? 'Outstanding debt in your ledger. Use the action button below to record received payments.'
-                                : 'Borrower has paid more than the initial principal. Credit available in your ledger.',
-                            style: GoogleFonts.inter(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w400,
-                              color: isDark ? const Color(0xFFE5B5B5) : const Color(0xFF6B433C),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
+                // Credit Card EMIs section
+                emisAsync.when(
+                  data: (emis) => PersonActiveEmisSection(
+                    personId: personId,
+                    person: person,
+                    emis: emis,
+                    currencySymbol: currencySymbol,
                   ),
-
-                const SizedBox(height: 16),
-
-                // 2. Main White Payment Card with Progress Bar (The signature card in Screenshot 2)
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  child: Container(
-                    padding: const EdgeInsets.all(22),
-                    decoration: BoxDecoration(
-                      color: cs.surfaceContainerLow,
-                      borderRadius: BorderRadius.circular(22),
-                      border: Border.all(color: cs.outlineVariant),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.04),
-                          blurRadius: 14,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Row 1: "Paid" and "Rs 500 / 2515"
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              'Paid',
-                              style: GoogleFonts.inter(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w500,
-                                color: AppTheme.mutedLabel,
-                              ),
-                            ),
-                            Text(
-                              '${CurrencyFormatter.format(summary.totalReceived, symbol: currencySymbol)} / ${CurrencyFormatter.format(summary.totalGiven, symbol: currencySymbol)}',
-                              style: GoogleFonts.dmSans(
-                                fontSize: 15,
-                                fontWeight: FontWeight.w700,
-                                color: isDark ? Colors.white : const Color(0xFF131438),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-
-                        // Progress Bar (Sleek linear bar matching screenshot)
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(6),
-                          child: TweenAnimationBuilder<double>(
-                            tween: Tween<double>(begin: 0.0, end: progress),
-                            duration: const Duration(milliseconds: 700),
-                            curve: Curves.easeOutCubic,
-                            builder: (context, val, _) {
-                              return LinearProgressIndicator(
-                                value: val,
-                                minHeight: 6,
-                                backgroundColor: isDark
-                                    ? cs.surfaceContainerHighest
-                                    : const Color(0xFFEDEDF5),
-                                valueColor: AlwaysStoppedAnimation<Color>(cs.primary),
-                              );
-                            },
-                          ),
-                        ),
-
-                        const SizedBox(height: 24),
-
-                        // Row 2: "Pay" label with "Overdue" / "Active" badge
-                        Row(
-                          children: [
-                            Text(
-                              owes ? 'Pay' : 'Balance',
-                              style: GoogleFonts.inter(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w500,
-                                color: AppTheme.mutedLabel,
-                              ),
-                            ),
-                            const Spacer(),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: owes
-                                    ? (isDark ? const Color(0xFF4C1D1D) : AppTheme.peachBadge)
-                                    : cs.surfaceContainer,
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Text(
-                                owes
-                                    ? 'Overdue'
-                                    : (overpaid ? 'Credit' : 'Settled'),
-                                style: GoogleFonts.inter(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w700,
-                                  color: owes
-                                      ? (isDark ? const Color(0xFFFFB4AB) : AppTheme.peachBadgeText)
-                                      : cs.primary,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-
-                        const SizedBox(height: 6),
-
-                        // Huge Bold Amount: "Rs 265"
-                        Text(
-                          CurrencyFormatter.format(balance.abs(), symbol: currencySymbol),
-                          style: GoogleFonts.dmSans(
-                            fontSize: 32,
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: -0.6,
-                            color: isDark ? Colors.white : const Color(0xFF131438),
-                          ),
-                        ),
-
-                        const SizedBox(height: 12),
-
-                        // Breakdown lines: e.g. "Rs 250 — Monthly payment"
-                        Text(
-                          '${CurrencyFormatter.format(summary.totalGiven, symbol: currencySymbol)} — Total money lent',
-                          style: GoogleFonts.inter(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w400,
-                            color: cs.onSurfaceVariant,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          '${CurrencyFormatter.format(summary.totalReceived, symbol: currencySymbol)} — Total repayments collected',
-                          style: GoogleFonts.inter(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w400,
-                            color: cs.onSurfaceVariant,
-                          ),
-                        ),
-
-                        const SizedBox(height: 20),
-                        Divider(color: cs.outlineVariant.withValues(alpha: 0.6), height: 1),
-                        const SizedBox(height: 14),
-
-                        // Billing details / Statement link
-                        InkWell(
-                          onTap: () {
-                            CsvExporter.exportAndSharePersonStatement(
-                              summary: summary,
-                              transactions: transactions,
-                              currencySymbol: currencySymbol,
-                            );
-                          },
-                          child: Row(
-                            children: [
-                              Text(
-                                'Billing details & statement',
-                                style: GoogleFonts.inter(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w600,
-                                  color: cs.primary,
-                                ),
-                              ),
-                              const Spacer(),
-                              Icon(Icons.arrow_forward_rounded, size: 18, color: cs.primary),
-                            ],
-                          ),
-                        ),
-
-                        const SizedBox(height: 20),
-
-                        // Full-width Primary Action Button: "Pay Rs 265" / "Receive Rs 265"
-                        SizedBox(
-                          width: double.infinity,
-                          height: 52,
-                          child: FilledButton(
-                            onPressed: () {
-                              if (owes) {
-                                QuickReceiveSheet.show(context, personId: personId);
-                              } else {
-                                QuickGiveSheet.show(context, personId: personId);
-                              }
-                            },
-                            style: FilledButton.styleFrom(
-                              backgroundColor: cs.primary,
-                              foregroundColor: Colors.white,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(16),
-                              ),
-                            ),
-                            child: Text(
-                              owes
-                                  ? 'Record Repayment ${CurrencyFormatter.format(balance.abs(), symbol: currencySymbol)}'
-                                  : 'Give Advance / Loan',
-                              style: GoogleFonts.inter(
-                                fontSize: 15,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+                  loading: () => const SizedBox.shrink(),
+                  error: (_, _) => const SizedBox.shrink(),
                 ),
 
-                const SizedBox(height: 16),
-
-                // 3. Date / Reminder Card (matching Screen 2 from screenshot)
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  child: Container(
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: cs.surfaceContainerLow,
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: cs.outlineVariant),
-                    ),
-                    child: Column(
-                      children: [
-                        Row(
-                          children: [
-                            // Calendar Icon Tile (Lavender square with "12")
-                            Container(
-                              width: 48,
-                              height: 48,
-                              decoration: BoxDecoration(
-                                color: isDark
-                                    ? cs.surfaceContainerHigh
-                                    : const Color(0xFFEEF0FA),
-                                borderRadius: BorderRadius.circular(14),
-                              ),
-                              child: Center(
-                                child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    const Icon(
-                                      Icons.calendar_month_rounded,
-                                      size: 18,
-                                      color: Color(0xFF4F46E5),
-                                    ),
-                                    Text(
-                                      '${DateTime.now().day}',
-                                      style: GoogleFonts.dmSans(
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.w800,
-                                        color: const Color(0xFF4F46E5),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 14),
-
-                            // Column with Date Info
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    '${DateFormatter.formatRelative(DateTime.now())} — Due date',
-                                    style: GoogleFonts.dmSans(
-                                      fontSize: 15,
-                                      fontWeight: FontWeight.w700,
-                                      color: isDark ? Colors.white : const Color(0xFF131438),
-                                    ),
-                                  ),
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    'Send a friendly reminder message via WhatsApp or SMS.',
-                                    style: GoogleFonts.inter(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w400,
-                                      color: cs.onSurfaceVariant,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-
-                        const SizedBox(height: 16),
-                        Divider(color: cs.outlineVariant.withValues(alpha: 0.6), height: 1),
-                        const SizedBox(height: 12),
-
-                        // Action: "Move the payment date" / "Send reminder"
-                        InkWell(
-                          onTap: () => ReminderHelper.shareReminder(summary, currencySymbol: currencySymbol),
-                          child: Row(
-                            children: [
-                              Text(
-                                'Send payment reminder',
-                                style: GoogleFonts.inter(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w600,
-                                  color: cs.primary,
-                                ),
-                              ),
-                              const Spacer(),
-                              Icon(Icons.arrow_forward_rounded, size: 18, color: cs.primary),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-
-                const SizedBox(height: 24),
+                const SizedBox(height: 20),
 
                 // 4. Transaction History Header
                 Padding(
@@ -741,7 +409,7 @@ class PersonDetailsScreen extends ConsumerWidget {
                     child: EmptyStateWidget(
                       icon: Icons.receipt_long_outlined,
                       title: 'No transactions yet',
-                      description: 'Tap the button above to record your first transaction with ${person.name}.',
+                      description: 'Tap Give Money or Repayment above to record your first transaction with ${person.name}.',
                       actionLabel: 'Give Money',
                       onActionPressed: () => QuickGiveSheet.show(context, personId: personId),
                     ),
