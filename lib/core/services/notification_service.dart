@@ -174,7 +174,9 @@ class NotificationService {
       await _notificationsPlugin.zonedSchedule(
         id: id,
         title: '⏰ Upcoming EMI Due: ${emi.itemName}',
-        body: '$personName owes $monthlyStr (${emi.installmentsPaid + 1}/${emi.totalTenureMonths} mo due today)',
+        body: emi.isForSelf
+            ? 'Personal EMI $monthlyStr (${emi.installmentsPaid + 1}/${emi.totalTenureMonths} mo due today)'
+            : '$personName • Installment ${emi.installmentsPaid + 1}/${emi.totalTenureMonths} ($monthlyStr) due today',
         scheduledDate: tzScheduled,
         notificationDetails: notificationDetails,
         androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,

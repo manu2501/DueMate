@@ -554,123 +554,126 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
 
             const SizedBox(height: 20),
 
-            // 2. Direction Toggle (Who paid with whose card / Who gave loan?)
-            Text(
-              isLoan ? 'Lending & Repayment Flow' : 'Card Ownership & Repayment Flow',
-              style: GoogleFonts.inter(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: cs.onSurfaceVariant,
+            // 2. Direction Toggle (Only shown when For Someone Else is selected)
+            if (!_isForSelf) ...[
+              Text(
+                isLoan ? 'Lending & Repayment Flow' : 'Card Ownership & Repayment Flow',
+                style: GoogleFonts.inter(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: cs.onSurfaceVariant,
+                ),
               ),
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                Expanded(
-                  child: InkWell(
-                    onTap: () => setState(() => _isPaidByMe = true),
-                    borderRadius: BorderRadius.circular(14),
-                    child: Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: _isPaidByMe ? cs.primary.withValues(alpha: 0.1) : cs.surfaceContainerLow,
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(
-                          color: _isPaidByMe ? cs.primary : cs.outlineVariant,
-                          width: _isPaidByMe ? 1.5 : 1,
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: InkWell(
+                      onTap: () => setState(() => _isPaidByMe = true),
+                      borderRadius: BorderRadius.circular(14),
+                      child: Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: _isPaidByMe ? cs.primary.withValues(alpha: 0.1) : cs.surfaceContainerLow,
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(
+                            color: _isPaidByMe ? cs.primary : cs.outlineVariant,
+                            width: _isPaidByMe ? 1.5 : 1,
+                          ),
                         ),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Icon(
-                                isLoan ? Icons.payments_outlined : Icons.credit_card_rounded,
-                                size: 18,
-                                color: _isPaidByMe ? cs.primary : cs.onSurfaceVariant,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Icon(
+                                  isLoan ? Icons.payments_outlined : Icons.credit_card_rounded,
+                                  size: 18,
+                                  color: _isPaidByMe ? cs.primary : cs.onSurfaceVariant,
+                                ),
+                                const Spacer(),
+                                if (_isPaidByMe)
+                                  Icon(Icons.check_circle_rounded, size: 16, color: cs.primary),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              isLoan ? 'I Lent Money' : 'My Card',
+                              style: GoogleFonts.dmSans(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w700,
+                                color: _isPaidByMe ? cs.primary : cs.onSurface,
                               ),
-                              const Spacer(),
-                              if (_isPaidByMe)
-                                Icon(Icons.check_circle_rounded, size: 16, color: cs.primary),
-                            ],
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            isLoan ? 'I Lent Money' : 'My Card',
-                            style: GoogleFonts.dmSans(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w700,
-                              color: _isPaidByMe ? cs.primary : cs.onSurface,
                             ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            isLoan ? 'Friend repays me monthly' : 'Friend owes me monthly',
-                            style: GoogleFonts.inter(
-                              fontSize: 11,
-                              color: cs.onSurfaceVariant,
+                            const SizedBox(height: 2),
+                            Text(
+                              isLoan ? 'Contact repays in installments' : 'Contact repays monthly installment',
+                              style: GoogleFonts.inter(
+                                fontSize: 11,
+                                color: cs.onSurfaceVariant,
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
                   ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: InkWell(
-                    onTap: () => setState(() => _isPaidByMe = false),
-                    borderRadius: BorderRadius.circular(14),
-                    child: Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: !_isPaidByMe ? cs.error.withValues(alpha: 0.1) : cs.surfaceContainerLow,
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(
-                          color: !_isPaidByMe ? cs.error : cs.outlineVariant,
-                          width: !_isPaidByMe ? 1.5 : 1,
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: InkWell(
+                      onTap: () => setState(() => _isPaidByMe = false),
+                      borderRadius: BorderRadius.circular(14),
+                      child: Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: !_isPaidByMe ? cs.error.withValues(alpha: 0.1) : cs.surfaceContainerLow,
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(
+                            color: !_isPaidByMe ? cs.error : cs.outlineVariant,
+                            width: !_isPaidByMe ? 1.5 : 1,
+                          ),
                         ),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Icon(
-                                isLoan ? Icons.handshake_outlined : Icons.payment_rounded,
-                                size: 18,
-                                color: !_isPaidByMe ? cs.error : cs.onSurfaceVariant,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Icon(
+                                  isLoan ? Icons.handshake_outlined : Icons.payment_rounded,
+                                  size: 18,
+                                  color: !_isPaidByMe ? cs.error : cs.onSurfaceVariant,
+                                ),
+                                const Spacer(),
+                                if (!_isPaidByMe)
+                                  Icon(Icons.check_circle_rounded, size: 16, color: cs.error),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              isLoan ? 'I Borrowed' : "Friend's Card",
+                              style: GoogleFonts.dmSans(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w700,
+                                color: !_isPaidByMe ? cs.error : cs.onSurface,
                               ),
-                              const Spacer(),
-                              if (!_isPaidByMe)
-                                Icon(Icons.check_circle_rounded, size: 16, color: cs.error),
-                            ],
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            isLoan ? 'I Borrowed' : "Friend's Card",
-                            style: GoogleFonts.dmSans(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w700,
-                              color: !_isPaidByMe ? cs.error : cs.onSurface,
                             ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            isLoan ? 'I repay friend monthly' : 'I owe friend monthly',
-                            style: GoogleFonts.inter(
-                              fontSize: 11,
-                              color: cs.onSurfaceVariant,
+                            const SizedBox(height: 2),
+                            Text(
+                              isLoan ? 'I repay in monthly installments' : 'I repay monthly installment',
+                              style: GoogleFonts.inter(
+                                fontSize: 11,
+                                color: cs.onSurfaceVariant,
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
                   ),
-                ),
-              ],
-            ),
+                ],
+              ),
+              const SizedBox(height: 20),
+            ],
 
             const SizedBox(height: 20),
 

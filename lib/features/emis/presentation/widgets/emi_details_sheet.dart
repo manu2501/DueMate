@@ -198,15 +198,15 @@ class EmiDetailsSheet extends ConsumerWidget {
                         child: Text(
                           emi.isForSelf
                               ? (isLoan
-                                  ? 'Personal Loan (Your monthly repayment schedule)'
-                                  : 'Personal Credit Card EMI (Your monthly payment schedule)')
+                                  ? 'Personal Loan Schedule'
+                                  : 'Personal Credit Card EMI Schedule')
                               : (isLoan
                                   ? (emi.isPaidByMe
-                                      ? 'You gave the loan ($personName repays you monthly)'
-                                      : 'You took the loan (You repay $personName monthly)')
+                                      ? 'Shared Loan • $personName repays you in monthly installments'
+                                      : 'Shared Loan • You repay $personName in monthly installments')
                                   : (emi.isPaidByMe
-                                      ? 'Paid with your card ($personName owes you monthly)'
-                                      : "Paid with $personName's card (You owe monthly)")),
+                                      ? 'Shared EMI • $personName repays you in monthly installments'
+                                      : "Shared EMI • You repay $personName in monthly installments")),
                           style: GoogleFonts.inter(
                             fontSize: 12.5,
                             fontWeight: FontWeight.w600,
