@@ -7,7 +7,6 @@ import 'package:duemate/core/utils/permission_manager.dart';
 import 'package:duemate/core/widgets/empty_state_widget.dart';
 import 'package:duemate/core/widgets/transaction_tile.dart';
 import 'package:duemate/data/providers/app_providers.dart';
-import 'package:duemate/features/dashboard/presentation/widgets/dashboard_quick_action_sheet.dart';
 import 'package:duemate/features/dashboard/presentation/widgets/dashboard_quick_actions_bar.dart';
 import 'package:duemate/features/dashboard/presentation/widgets/dashboard_stats_card.dart';
 import 'package:duemate/features/dashboard/presentation/widgets/dashboard_top_dues_card.dart';
@@ -122,19 +121,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         ),
       ),
 
-      // FAB comfortably above floating dock navbar
-      floatingActionButton: Padding(
-        padding: const EdgeInsets.only(bottom: 84),
-        child: FloatingActionButton.extended(
-          onPressed: () => DashboardQuickActionSheet.show(context),
-          icon: const Icon(Icons.add_rounded, size: 22),
-          label: Text(
-            'New Entry',
-            style: GoogleFonts.inter(fontWeight: FontWeight.w700),
-          ),
-        ),
-      ),
-
       body: RefreshIndicator(
         onRefresh: () async {
           ref.invalidate(allPersonSummariesProvider);
@@ -142,7 +128,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         },
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.only(bottom: 160),
+          padding: const EdgeInsets.only(bottom: 100),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -200,9 +186,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 
               if (topPeople.isNotEmpty)
                 SizedBox(
-                  height: 145,
+                  height: 168,
                   child: ListView.separated(
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
                     scrollDirection: Axis.horizontal,
                     itemCount: topPeople.length,
                     separatorBuilder: (_, _) => const SizedBox(width: 12),

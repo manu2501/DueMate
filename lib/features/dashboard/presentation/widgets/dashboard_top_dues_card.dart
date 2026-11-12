@@ -31,8 +31,8 @@ class DashboardTopDuesCard extends StatelessWidget {
         : cs.error;
 
     return Container(
-      width: 220,
-      padding: const EdgeInsets.all(16),
+      width: 230,
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: cs.surfaceContainerLow,
         borderRadius: BorderRadius.circular(20),
@@ -40,7 +40,7 @@ class DashboardTopDuesCard extends StatelessWidget {
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: isDark ? 0.15 : 0.03),
-            blurRadius: 10,
+            blurRadius: 8,
             offset: const Offset(0, 3),
           ),
         ],
@@ -53,7 +53,7 @@ class DashboardTopDuesCard extends StatelessWidget {
             children: [
               AvatarWidget(
                 name: person.name,
-                radius: 18,
+                radius: 16,
                 heroTag: 'avatar-dash-${person.id}',
               ),
               const SizedBox(width: 10),
@@ -64,7 +64,7 @@ class DashboardTopDuesCard extends StatelessWidget {
                     Text(
                       person.name,
                       style: GoogleFonts.dmSans(
-                        fontSize: 15,
+                        fontSize: 14.5,
                         fontWeight: FontWeight.w700,
                         color: isDark ? Colors.white : const Color(0xFF131438),
                       ),
@@ -85,7 +85,7 @@ class DashboardTopDuesCard extends StatelessWidget {
             ],
           ),
 
-          const SizedBox(height: 12),
+          const SizedBox(height: 8),
 
           Text(
             CurrencyFormatter.format(summary.balance.abs(), symbol: currencySymbol),
@@ -97,37 +97,51 @@ class DashboardTopDuesCard extends StatelessWidget {
             ),
           ),
 
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
 
           Row(
             children: [
               Expanded(
-                child: OutlinedButton(
-                  onPressed: () => context.push('/people/${person.id}'),
-                  style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                child: SizedBox(
+                  height: 36,
+                  child: OutlinedButton(
+                    onPressed: () => context.push('/people/${person.id}'),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 10),
+                      visualDensity: VisualDensity.compact,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                    child: Text(
+                      'View Ledger',
+                      style: GoogleFonts.inter(fontSize: 11.5, fontWeight: FontWeight.w600),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
-                  child: const Text('View Ledger', style: TextStyle(fontSize: 12)),
                 ),
               ),
               if (owesMoney && person.phone != null && person.phone!.isNotEmpty) ...[
-                const SizedBox(width: 6),
-                IconButton.filledTonal(
-                  onPressed: () {
-                    final msg = WhatsAppHelper.generateLedgerReminderMessage(
-                      summary,
-                      currencySymbol: currencySymbol,
-                    );
-                    WhatsAppHelper.sendWhatsAppMessage(
-                      phoneNumber: person.phone,
-                      message: msg,
-                      context: context,
-                    );
-                  },
-                  icon: const WhatsAppIcon(size: 16),
-                  tooltip: 'WhatsApp Reminder',
-                  visualDensity: VisualDensity.compact,
+                const SizedBox(width: 8),
+                SizedBox(
+                  width: 36,
+                  height: 36,
+                  child: IconButton.filledTonal(
+                    onPressed: () {
+                      final msg = WhatsAppHelper.generateLedgerReminderMessage(
+                        summary,
+                        currencySymbol: currencySymbol,
+                      );
+                      WhatsAppHelper.sendWhatsAppMessage(
+                        phoneNumber: person.phone,
+                        message: msg,
+                        context: context,
+                      );
+                    },
+                    padding: EdgeInsets.zero,
+                    icon: const WhatsAppIcon(size: 16),
+                    tooltip: 'WhatsApp Reminder',
+                    visualDensity: VisualDensity.compact,
+                  ),
                 ),
               ],
             ],
