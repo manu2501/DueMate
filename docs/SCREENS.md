@@ -27,11 +27,16 @@ leads with its one important number; destructive actions live in detail views an
 Where you stand overall (owed to you / you owe, and the two sides), then the three things you do
 most: **Give**, **Receive**, **Expense**.
 
-- **EMIs & cards**: active count and what goes out each month (tap for all EMIs), the next
-  installments due (tap for the schedule), and **Add** for a new EMI or loan.
-- **Spending in &lt;month&gt;**: spent so far against the monthly budget.
-- **Balances**: the largest open balances; **Recent**: the last five entries.
+Then, most important first, and each only once it has something to show:
+
+- **Balances**: the largest open balances (who owes you, whom you owe).
+- **Spent in &lt;month&gt;**: spent so far against the monthly budget.
+- **EMIs & loans**: one row with the next installment due, how many are active and what goes
+  out each month; *See all* opens the EMI list.
+- **Recent**: the last five entries.
 - With no data yet, Home shows a short welcome with *Add a person* and *Add an expense*.
+
+Amounts on screens are whole rupees; detail sheets, confirmations and exports keep paise.
 
 **Hide amounts.** The eye icon in the top bar (also a switch in Settings) masks every balance and
 total across the app, for using it in public. Labels, counts and dates stay readable; amounts you
@@ -50,11 +55,12 @@ asks for your fingerprint, face or screen lock, so someone you hand the phone to
   <img src="screenshots/02_people_dark.png" width="260" alt="People, dark" />
 </p>
 
-Everyone you deal with, one row each: last activity, the balance in words (*owes you*,
-*you owe*, *settled*), and a **repayment bar**: how much has been paid back so far, e.g. *Paid ₹2,500
-of ₹15,000 · 16%* (green when it's money coming back to you; *You paid back …* in neutral ink when
-you owe them). The percentage rounds down, so 100% means fully paid. Search by name, phone or notes; filter by open balance, settled or
-archived; sort from the top bar; add from contacts; the chart icon opens **Lending trends**.
+Everyone you deal with, one row each: last activity (or when money is due back), and the balance
+in words (*owes you*, *you owe*, *settled*). While someone is part way through paying back, the row
+adds a **repayment bar**, e.g. *Paid ₹2,500 of ₹15,000 · 16%* (green when it's money coming back
+to you; *You paid back …* in neutral ink when you owe them); at 0% or fully paid there's no bar.
+Search by name, phone or notes; chips for **All · Owes you · You owe · Overdue**. The ⋮ menu has
+*Sort by*, **Lending trends** and *Archived people*. Adding from contacts is in the Add person form.
 
 **Due back.** When you give money with a *Return by* date, the row says when it's due
 (*₹800 due back by 18 Nov*, *tomorrow*, *today*) in place of last activity. Once the date passes
@@ -94,8 +100,8 @@ expenses it already added stay).
   <img src="screenshots/10_expenses_emis_dark.png" width="260" alt="Expenses, EMIs view, dark" />
 </p>
 
-**EMIs & loans** view: filter mine / shared / all, the monthly outgo on active EMIs, and each
-EMI with progress and the next due date. Tap one for its schedule.
+**EMIs & loans** view: the monthly outgo on active EMIs, then each EMI with progress and the next
+due date, in two sections: **Yours** and **With people**. Tap one for its schedule.
 
 ### Activity
 
@@ -104,10 +110,11 @@ EMI with progress and the next due date. Tap one for its schedule.
   <img src="screenshots/05_activity_dark.png" width="260" alt="Activity, dark" />
 </p>
 
-Every ledger entry and expense in one timeline, grouped by day. Search, then narrow by type
-(everything / lending / expenses), period (this month, last month, this year, custom dates) and
-payment method. Totals for money in, money out and spent follow the filters. The share icon
-exports the filtered entries as PDF or CSV.
+Every ledger entry and expense in one timeline, grouped by day, for **this month** by default.
+The period chip (this month, last month, this year, all time, custom dates) stays in view, since
+the totals for money in, money out and spent follow it. **Filters** holds the rest: what to show
+(everything / lending / expenses) and payment method; it shows a count while any are on. The
+share icon exports the filtered entries as PDF or CSV.
 
 ---
 
@@ -198,8 +205,9 @@ phone's screen lock is removed, App Lock turns itself off rather than locking yo
 </p>
 
 Choose a person (their balance shows, with a one-tap *settle full balance* / *pay back all* when
-it applies), the amount with quick adds, payment method, date and note. Giving also has
-**Return by (optional)**: no date, 1 week, 2 weeks, 1 month, or any date. You get a reminder the
+it applies), the amount with quick adds, payment method, date and note (quick adds and methods each sit on one
+line that scrolls sideways). Giving also has **Add a return-by date**, a link that opens to 1 week,
+2 weeks, 1 month or any date (✕ removes it). You get a reminder the
 day before (tap it to open that person), and the person shows as overdue once it passes. An entry's
 date can be changed or cleared later from its details (*Edit*).
 
@@ -240,9 +248,13 @@ When editing, the sheet also has *Delete expense*.
 For yourself or with someone, card EMI or loan, what it was for and the card or lender. Then the
 amount, entered either way:
 
-- **Split a total**: amount, months, optional interest (reducing or flat) and charges.
-- **I know the EMI**: the monthly EMI from the bank; the original amount (optional) shows the
-  extra you pay and the effective yearly rate.
+- **Split a total**: amount and months.
+- **I know the EMI**: the monthly EMI from the bank and months.
+
+**More options** (folded away; opens by itself when editing an EMI that uses any of them):
+interest (reducing or flat) when splitting a total, or the original amount when you know the EMI
+(shows the extra you pay and the effective yearly rate); charges with an 18% GST helper; notes.
+One **Add EMI** / **Save changes** button stays at the bottom of the screen.
 
 A live summary shows the EMI, totals and last installment; *Make some months different* sets
 uneven months. Finally the first due date and installments already paid (for your own EMIs,

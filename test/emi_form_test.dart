@@ -46,7 +46,16 @@ Future<AppDatabase> _openForm(WidgetTester tester) async {
 Future<void> _fill(WidgetTester tester, String label, String text) async {
   final field = find.widgetWithText(TextFormField, label);
   expect(field, findsOneWidget, reason: 'field "$label" should exist');
+  await tester.ensureVisible(field);
   await tester.enterText(field, text);
+  await tester.pump();
+}
+
+/// Opens "More options" (interest or original amount, fees, notes).
+Future<void> _openMore(WidgetTester tester) async {
+  final more = find.text('More options');
+  await tester.ensureVisible(more);
+  await tester.tap(more);
   await tester.pump();
 }
 
@@ -69,6 +78,9 @@ void main() {
       await _fill(tester, 'Card or bank', 'HDFC');
       await _fill(tester, 'Purchase amount', '12000');
       await _fill(tester, 'Number of months', '12');
+      // Optional details stay folded away until asked for.
+      expect(find.widgetWithText(TextFormField, 'Charges and fees (optional)'), findsNothing);
+      await _openMore(tester);
       await _fill(tester, 'Charges and fees (optional)', '600');
 
       // (12000 + 600) / 12
@@ -101,6 +113,7 @@ void main() {
       await _fill(tester, 'Card or bank', 'ICICI');
       await _fill(tester, 'Monthly EMI', '9500');
       await _fill(tester, 'Number of months', '12');
+      await _openMore(tester);
       await _fill(tester, 'Purchase amount (optional)', '100000');
       await _fill(tester, 'Charges and fees (optional)', '1000');
 

@@ -60,7 +60,7 @@ Everything stays on the phone. There is no account, no server and no analytics.
 - Spending trends: month-by-month bars for any year, where the money went by category, and every expense of a past month (editable).
 
 **Everything else**
-- **Home**: where you stand overall, Give / Receive / Expense buttons, an *EMIs & cards* shortcut (active count, monthly outgo, next due installments), this month's spending against budget, largest balances and recent activity.
+- **Home**: where you stand overall, Give / Receive / Expense buttons, the largest balances, this month's spending against budget, the next EMI due, and recent activity; sections without data stay hidden.
 - **Activity**: one timeline of ledger entries and expenses, grouped by day, with search and filters for type, period and payment method; export as PDF or CSV.
 - **EMI reminders**: a notification the day before each installment is due, kept in step with your EMIs automatically; tap it to open that EMI. Amounts are left out while they're hidden or App Lock is on.
 - **Backup and restore**: back up everything to one file, and restore it later (DueMate shows what's in the file and asks before replacing your data).
