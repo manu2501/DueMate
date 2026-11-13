@@ -13,7 +13,7 @@ import 'package:duemate/features/emis/presentation/screens/add_edit_emi_screen.d
 import 'package:duemate/features/emis/presentation/widgets/emi_card.dart';
 import 'package:duemate/features/expenses/presentation/widgets/add_edit_expense_sheet.dart';
 import 'package:duemate/features/expenses/presentation/widgets/budget_dialog.dart';
-import 'package:duemate/features/expenses/presentation/widgets/recurring_expense_sheet.dart';
+import 'package:duemate/features/expenses/presentation/widgets/recurring_bills_card.dart';
 
 enum _View { spending, emis }
 
@@ -81,29 +81,29 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
     );
   }
 
-  /// Monthly repeats (rent, subscriptions), above this month's expenses.
+  /// Monthly repeats (rent, subscriptions): a plan, shown apart from (and
+  /// above) what was actually spent.
   List<Widget> _recurringSlivers(String symbol) {
     final rules = ref.watch(recurringExpensesProvider).value ?? const [];
     if (rules.isEmpty) return const [];
-    final now = DateTime.now();
     return [
-      const SliverToBoxAdapter(child: SectionHeader('Repeats every month')),
       SliverToBoxAdapter(
-        child: GroupCard(
-          children: [
-            for (final r in rules)
-              ListTile(
-                onTap: () => RecurringExpenseSheet.show(context, r),
-                leading: IconBadge(r.category.icon),
-                title: Text(r.title, maxLines: 1, overflow: TextOverflow.ellipsis),
-                subtitle: Text(recurringScheduleLabel(r, now)),
-                trailing: MoneyText(r.amount, symbol: symbol, sign: '−'),
-              ),
-          ],
+        child: Padding(
+          padding: const EdgeInsets.only(top: AppSpace.lg),
+          child: RecurringBillsCard(rules: rules, symbol: symbol),
         ),
       ),
     ];
   }
+
+  /// Category, how it was added (monthly repeat or EMI installment) and how
+  /// it was paid.
+  static String _expenseSubtitle(PersonalExpense e) => [
+        e.category.label,
+        if (e.recurringId != null) 'Monthly',
+        if (e.installmentNumber case final k? when e.isEmi) 'Installment $k',
+        e.paymentMethod.label,
+      ].join(' · ');
 
   List<Widget> _spendingSlivers(String symbol) {
     final expenses = ref.watch(monthlyExpensesProvider).value ?? const <PersonalExpense>[];
@@ -135,6 +135,12 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
 
     return [
       ...recurring,
+      const SliverToBoxAdapter(
+        child: SectionHeader(
+          "This month's expenses",
+          padding: EdgeInsets.fromLTRB(AppSpace.screenGutter, AppSpace.xl, AppSpace.screenGutter, 0),
+        ),
+      ),
       for (final entry in byDay.entries) ...[
         SliverToBoxAdapter(
           child: DateHeader(
@@ -155,7 +161,7 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
                   onTap: () => AddEditExpenseSheet.show(context, expenseToEdit: e),
                   leading: IconBadge(e.category.icon),
                   title: Text(e.title, maxLines: 1, overflow: TextOverflow.ellipsis),
-                  subtitle: Text('${e.category.label} · ${e.paymentMethod.label}'),
+                  subtitle: Text(_expenseSubtitle(e)),
                   trailing: MoneyText(e.amount, symbol: symbol, sign: '−'),
                 ),
             ],

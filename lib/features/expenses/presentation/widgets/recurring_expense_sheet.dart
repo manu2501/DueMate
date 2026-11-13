@@ -75,7 +75,8 @@ class RecurringExpenseSheet extends ConsumerWidget {
               ],
             ),
             const SizedBox(height: AppSpace.lg),
-            MoneyText(rule.amount, symbol: symbol, sign: '−', style: theme.textTheme.displaySmall),
+            // A plan, not money spent: no minus sign (the expenses it adds have one).
+            MoneyText(rule.amount, symbol: symbol, style: theme.textTheme.displaySmall),
             Text(
               'Every month · ${recurringScheduleLabel(rule, DateTime.now())} · ${rule.paymentMethod.label}',
               style: theme.textTheme.bodyMedium?.copyWith(color: cs.onSurfaceVariant),

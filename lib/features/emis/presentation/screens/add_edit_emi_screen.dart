@@ -375,7 +375,9 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
           notes: finalNotes,
           updatedAt: DateTime.now(),
         );
-        await emiRepo.updateEmi(updated);
+        // Fixes up installments already posted (removed past the paid count,
+        // re-dated to the new schedule) and saves.
+        await processor.applyEdit(current, updated);
       } else {
         final newEmi = CreditCardEmi(
           id: const Uuid().v4(),

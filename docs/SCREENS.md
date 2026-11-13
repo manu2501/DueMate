@@ -73,13 +73,15 @@ so it's never red). Repayments pay off the oldest loans first, so only the unpai
 </p>
 
 This month's spending against the budget (*left*, *only … left* from 85%, *over* in red), then
-expenses grouped by day with a daily total. Tap an expense to edit or delete it.
+**This month's expenses** grouped by day with a daily total; ones added automatically say so
+(*Monthly* for repeats, *Installment 3* for your EMIs). Tap an expense to edit or delete it.
 *Earlier months* and the chart icon open **Spending trends**.
 
-**Repeats every month** lists recurring expenses (rent, subscriptions) with the day they post and
-the next date. They're added as ordinary expenses on that day each month (the 31st posts on the
-last day of shorter months), catching up on any months missed while the app wasn't opened. Tap one
-to **change the amount** (from now on; past months keep theirs) or **stop repeating** (asks first;
+**Repeats every month** sits above them as one collapsed card, a plan rather than spending: how
+many bills, their monthly total and how many are already added this month. Open it to see each
+bill with its amount *a month* (no minus sign) and *Added 4 Nov · next 4 Dec* or the day it posts.
+They're added as ordinary expenses on that day each month (the 31st posts on the last day of
+shorter months), catching up on any months missed while the app wasn't opened. Tap one to **change the amount** (from now on; past months keep theirs) or **stop repeating** (asks first;
 expenses it already added stay).
 
 <p>

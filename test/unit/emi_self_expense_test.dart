@@ -200,4 +200,86 @@ void main() {
     expect(await expenseRepo.getAllExpenses(), isEmpty);
     expect((await database.select(database.transactions).get()).single.personId, 'p1');
   });
+
+  group('editing an EMI', () {
+    final oct10 = DateTime(2026, 10, 10);
+
+    Future<CreditCardEmi> processedLoan() async {
+      await emiRepo.createEmi(homeLoan());
+      await processor.processDueInstallments(referenceDate: oct10); // #1–#4 due
+      return (await emiRepo.getEmiById('loan-1'))!;
+    }
+
+    test('lowering paid from 4 to 3 removes the 4th and it stays unpaid', () async {
+      final emi = await processedLoan();
+      expect(emi.installmentsPaid, 4);
+
+      await processor.applyEdit(emi, emi.copyWith(installmentsPaid: 3), now: oct10);
+      await processor.processDueInstallments(referenceDate: oct10);
+
+      expect((await postedDates()).keys, unorderedEquals([1, 2, 3]));
+      expect((await emiRepo.getEmiById('loan-1'))!.installmentsPaid, 3);
+
+      // The next due date still posts: assumes paid through it.
+      await processor.processDueInstallments(referenceDate: DateTime(2026, 11, 5));
+      expect((await emiRepo.getEmiById('loan-1'))!.installmentsPaid, 4);
+    });
+
+    test('moving the start date re-dates the installments already posted', () async {
+      final emi = await processedLoan();
+      final edited = emi.copyWith(startDate: DateTime(2026, 8, 12), dueDayOfMonth: 12, installmentsPaid: 2);
+      await processor.applyEdit(emi, edited, now: oct10);
+      await processor.processDueInstallments(referenceDate: oct10);
+
+      expect(await postedDates(), {1: DateTime(2026, 8, 12), 2: DateTime(2026, 9, 12)});
+      expect((await emiRepo.getEmiById('loan-1'))!.installmentsPaid, 2);
+    });
+
+    test('raising paid adds the missing installments; new amount and name apply to all', () async {
+      final emi = await processedLoan();
+      await processor.applyEdit(
+        emi,
+        emi.copyWith(installmentsPaid: 5, monthlyInstallment: 5500, itemName: 'Car loan'),
+        now: oct10,
+      );
+      await processor.processDueInstallments(referenceDate: oct10);
+
+      final expenses = await expenseRepo.getAllExpenses();
+      expect(expenses.length, 5);
+      expect(expenses.every((e) => e.amount == 5500 && e.title == 'Car loan'), isTrue);
+      expect((await postedDates())[5], oct10, reason: 'not due yet: paid ahead, dated today');
+    });
+
+    test('lowering a finished loan reopens it', () async {
+      await emiRepo.createEmi(homeLoan());
+      await processor.processDueInstallments(referenceDate: DateTime(2027, 1, 10));
+      final done = (await emiRepo.getEmiById('loan-1'))!;
+      expect(done.isCompleted, isTrue);
+
+      await processor.applyEdit(done, done.copyWith(installmentsPaid: 5), now: DateTime(2027, 1, 10));
+      final reopened = (await emiRepo.getEmiById('loan-1'))!;
+      expect((reopened.installmentsPaid, reopened.status), (5, 'active'));
+      expect((await postedDates()).length, 5);
+    });
+
+    test('shared: lowering paid removes the ledger entry', () async {
+      await database.into(database.persons).insert(db.PersonsCompanion.insert(
+            id: 'p1',
+            name: 'Asha',
+            createdAt: DateTime(2026, 1, 1),
+            updatedAt: DateTime(2026, 1, 1),
+          ));
+      await emiRepo.createEmi(homeLoan().copyWith(personId: 'p1', kind: 'card'));
+      await processor.processDueInstallments(referenceDate: oct10);
+      final emi = (await emiRepo.getEmiById('loan-1'))!;
+      expect(emi.installmentsPaid, 4);
+
+      await processor.applyEdit(emi, emi.copyWith(installmentsPaid: 3), now: oct10);
+      await processor.processDueInstallments(referenceDate: oct10);
+
+      final txs = await database.select(database.transactions).get();
+      expect(txs.map((t) => t.installmentNumber), unorderedEquals([1, 2, 3]));
+      expect((await emiRepo.getEmiById('loan-1'))!.installmentsPaid, 3);
+    });
+  });
 }

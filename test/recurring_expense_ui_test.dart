@@ -46,6 +46,13 @@ void main() {
     await settle();
 
     expect(find.text('Repeats every month'), findsOneWidget);
+    // The rule sits in its own collapsed card, apart from what was spent.
+    expect(find.text('Music subscription'), findsOneWidget, reason: "only this month's expense until opened");
+    expect(find.textContaining('1 bill · '), findsOneWidget);
+    expect(find.text("This month's expenses"), findsOneWidget);
+    expect(find.textContaining(' · Monthly · '), findsOneWidget, reason: 'the expense says it repeats');
+    await tester.tap(find.text('Repeats every month'));
+    await settle();
     expect(find.text('Music subscription'), findsNWidgets(2), reason: 'the rule, and this month\'s expense');
 
     await tester.tap(find.text('Music subscription').first);

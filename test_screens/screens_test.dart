@@ -247,6 +247,8 @@ void main() {
       await shot('03_person');
       await go('/expenses');
       await shot('04_expenses');
+      await tester.tap(find.text('Repeats every month'));
+      await settle();
       await tester.tap(find.text('Rent').first);
       await shot('21_recurring');
       Navigator.of(tester.element(find.byType(RecurringExpenseSheet))).pop();
