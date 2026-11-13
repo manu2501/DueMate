@@ -3,6 +3,13 @@ import 'package:duemate/data/database/tables.dart';
 
 /// Single source for how an expense category is named, drawn and charted.
 extension ExpenseCategoryX on ExpenseCategory {
+  /// Order for pickers: "Other" last.
+  static final ordered = [
+    for (final c in ExpenseCategory.values)
+      if (c != ExpenseCategory.other) c,
+    ExpenseCategory.other,
+  ];
+
   String get label => switch (this) {
         ExpenseCategory.groceries => 'Groceries',
         ExpenseCategory.utilities => 'Bills & utilities',
@@ -13,6 +20,7 @@ extension ExpenseCategoryX on ExpenseCategory {
         ExpenseCategory.entertainment => 'Entertainment',
         ExpenseCategory.health => 'Health',
         ExpenseCategory.other => 'Other',
+        ExpenseCategory.emi => 'EMIs & loans',
       };
 
   IconData get icon => switch (this) {
@@ -25,6 +33,7 @@ extension ExpenseCategoryX on ExpenseCategory {
         ExpenseCategory.entertainment => Icons.movie_outlined,
         ExpenseCategory.health => Icons.favorite_border_rounded,
         ExpenseCategory.other => Icons.category_outlined,
+        ExpenseCategory.emi => Icons.event_repeat_outlined,
       };
 
   /// Categorical chart colour. Only for chart marks; labels and amounts stay
@@ -34,7 +43,7 @@ extension ExpenseCategoryX on ExpenseCategory {
   /// palette: every adjacent pair passes the colour-blind separation and
   /// normal-vision floors in light (on #FFFFFF) and dark (on #171B19).
   /// Three light slots are under 3:1 contrast, so every mark must ship with a
-  /// visible text label. "Other" is neutral grey, not a ninth hue.
+  /// visible text label. "Other" and "EMIs & loans" are neutrals, not extra hues.
   Color chartColor(Brightness brightness) {
     final dark = brightness == Brightness.dark;
     return switch (this) {
@@ -47,6 +56,10 @@ extension ExpenseCategoryX on ExpenseCategory {
       ExpenseCategory.entertainment => dark ? const Color(0xFF9085E9) : const Color(0xFF6250D6),
       ExpenseCategory.health => dark ? const Color(0xFFE66767) : const Color(0xFFE34948),
       ExpenseCategory.other => dark ? const Color(0xFF7D8480) : const Color(0xFF8C918E),
+      // A second neutral (slate), not a tenth hue: the palette stops at eight.
+      // Told apart from "Other" by lightness (normal-vision dE 19.5 light,
+      // 16.0 dark); always shown with its label.
+      ExpenseCategory.emi => dark ? const Color(0xFFAEB5B1) : const Color(0xFF4F5A55),
     };
   }
 }

@@ -18,7 +18,10 @@ class DisplayMoney {
   /// Read out by screen readers instead of the dots.
   static const hiddenLabel = 'Amount hidden';
 
-  String call(double amount) => hidden ? '$symbol$mask' : CurrencyFormatter.format(amount, symbol: symbol);
+  /// Whole rupees by default, so screens stay easy to scan; [exact] keeps
+  /// paise (detail sheets, where the precise figure is the point).
+  String call(double amount, {bool exact = false}) =>
+      hidden ? '$symbol$mask' : CurrencyFormatter.format(amount, symbol: symbol, whole: !exact);
 
   String compact(double amount) =>
       hidden ? '$symbol$mask' : CurrencyFormatter.formatCompact(amount, symbol: symbol);

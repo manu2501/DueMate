@@ -4,7 +4,7 @@ import 'package:duemate/core/utils/date_formatter.dart';
 import 'package:duemate/domain/entities/person_summary.dart';
 
 class ReminderHelper {
-  static String generateReminderText(PersonSummary summary, {String currencySymbol = '₹'}) {
+  static String generateReminderText(PersonSummary summary, {String currencySymbol = '₹', String? upiId}) {
     final personName = summary.person.name;
     final balance = CurrencyFormatter.format(summary.balance.abs(), symbol: currencySymbol);
 
@@ -16,6 +16,7 @@ class ReminderHelper {
       return 'Hi $personName,\n\n'
           'This is a friendly reminder that your outstanding balance is $balance.$lastTx\n\n'
           'Summary: Total Given: ${CurrencyFormatter.format(summary.totalGiven, symbol: currencySymbol)} | Total Repaid: ${CurrencyFormatter.format(summary.totalReceived, symbol: currencySymbol)}.\n\n'
+          '${upiId == null ? '' : 'Pay by UPI: $upiId\n\n'}'
           'Shared via DueMate.';
     } else if (summary.isOverpaid) {
       return 'Hi $personName,\n\n'
@@ -28,8 +29,8 @@ class ReminderHelper {
     }
   }
 
-  static Future<void> shareReminder(PersonSummary summary, {String currencySymbol = '₹'}) async {
-    final text = generateReminderText(summary, currencySymbol: currencySymbol);
+  static Future<void> shareReminder(PersonSummary summary, {String currencySymbol = '₹', String? upiId}) async {
+    final text = generateReminderText(summary, currencySymbol: currencySymbol, upiId: upiId);
     await SharePlus.instance.share(
       ShareParams(
         text: text,

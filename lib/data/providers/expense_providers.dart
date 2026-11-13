@@ -3,7 +3,9 @@ library;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:duemate/domain/entities/personal_expense.dart';
+import 'package:duemate/domain/entities/recurring_expense.dart';
 import 'database_providers.dart';
+import 'settings_providers.dart';
 
 final allExpensesProvider = StreamProvider<List<PersonalExpense>>((ref) {
   return ref.watch(expenseRepositoryProvider).watchAllExpenses();
@@ -21,28 +23,33 @@ final monthlyExpenseTotalProvider = Provider<double>((ref) {
   );
 });
 
-class MonthlyBudgetNotifier extends Notifier<double> {
+class MonthlyBudgetNotifier extends PrefsNotifier<double> {
   static const _key = 'duemate_monthly_budget_limit';
 
   @override
-  double build() {
-    _load();
-    return 25000.0;
-  }
+  double get initial => 25000.0;
 
-  Future<void> _load() async {
-    final prefs = await SharedPreferences.getInstance();
+  @override
+  double read(SharedPreferences prefs) {
     final saved = prefs.getDouble(_key);
-    if (saved != null && saved > 0) {
-      state = saved;
-    }
+    return saved != null && saved > 0 ? saved : initial;
   }
 
   Future<void> setBudget(double budget) async {
     state = budget;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setDouble(_key, budget);
+    await (await prefs()).setDouble(_key, budget);
   }
 }
 
 final monthlyBudgetLimitProvider = NotifierProvider<MonthlyBudgetNotifier, double>(MonthlyBudgetNotifier.new);
+
+final recurringExpensesProvider = StreamProvider<List<RecurringExpense>>((ref) {
+  return ref.watch(recurringExpenseRepositoryProvider).watchAll();
+});
+
+/// Posts recurring expenses that fell due since the app last ran. Watched by
+/// Home next to the EMI processor; invalidate it to run again (after a
+/// restore, or after adding a rule with a past start date).
+final recurringExpenseProcessorProvider = FutureProvider<int>((ref) {
+  return ref.read(recurringExpenseRepositoryProvider).postDue(DateTime.now());
+});

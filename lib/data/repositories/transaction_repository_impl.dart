@@ -2,11 +2,11 @@ import 'dart:async';
 import 'package:drift/drift.dart';
 import '../../domain/entities/ledger_summary.dart';
 import '../../domain/entities/ledger_transaction.dart';
-import '../../domain/entities/person.dart' as domain;
 import '../../domain/entities/person_summary.dart';
 import '../../domain/repositories/transaction_repository.dart';
 import '../database/app_database.dart' as db;
 import '../database/tables.dart';
+import 'person_mapper.dart';
 
 class TransactionRepositoryImpl implements TransactionRepository {
   final db.AppDatabase _database;
@@ -25,6 +25,7 @@ class TransactionRepositoryImpl implements TransactionRepository {
       emiId: row.emiId,
       installmentNumber: row.installmentNumber,
       isSettled: row.isSettled,
+      dueDate: row.dueDate,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
     );
@@ -88,6 +89,7 @@ class TransactionRepositoryImpl implements TransactionRepository {
               emiId: Value(transaction.emiId),
               installmentNumber: Value(transaction.installmentNumber),
               isSettled: Value(transaction.isSettled),
+              dueDate: Value(transaction.dueDate),
               createdAt: transaction.createdAt,
               updatedAt: transaction.updatedAt,
             ),
@@ -115,6 +117,7 @@ class TransactionRepositoryImpl implements TransactionRepository {
           emiId: Value(transaction.emiId),
           installmentNumber: Value(transaction.installmentNumber),
           isSettled: Value(transaction.isSettled),
+          dueDate: Value(transaction.dueDate),
           updatedAt: Value(DateTime.now()),
         ),
       );
@@ -140,6 +143,8 @@ class TransactionRepositoryImpl implements TransactionRepository {
             updatedAt: Value(DateTime.now()),
           ),
         );
+        // An EMI installment removed from the ledger counts as unpaid again.
+        if (tx.emiId case final emiId?) await _database.releaseEmiInstallment(emiId);
       }
     });
   }
@@ -235,17 +240,7 @@ class TransactionRepositoryImpl implements TransactionRepository {
 
         summaries.add(
           PersonSummary(
-            person: domain.Person(
-              id: p.id,
-              name: p.name,
-              phone: p.phone,
-              email: p.email,
-              notes: p.notes,
-              avatarPath: p.avatarPath,
-              createdAt: p.createdAt,
-              updatedAt: p.updatedAt,
-              archivedAt: p.archivedAt,
-            ),
+            person: p.toDomain(),
             totalGiven: given,
             totalReceived: received,
             balance: balance,
@@ -288,17 +283,7 @@ class TransactionRepositoryImpl implements TransactionRepository {
       final lastTx = txList.isNotEmpty ? _toDomain(txList.first) : null;
 
       return PersonSummary(
-        person: domain.Person(
-          id: p.id,
-          name: p.name,
-          phone: p.phone,
-          email: p.email,
-          notes: p.notes,
-          avatarPath: p.avatarPath,
-          createdAt: p.createdAt,
-          updatedAt: p.updatedAt,
-          archivedAt: p.archivedAt,
-        ),
+        person: p.toDomain(),
         totalGiven: given,
         totalReceived: received,
         balance: balance,

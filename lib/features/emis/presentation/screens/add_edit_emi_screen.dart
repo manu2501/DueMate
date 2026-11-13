@@ -64,6 +64,9 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
   DateTime _startDate = DateTime.now();
   int _dueDayOfMonth = DateTime.now().day;
   bool _isSaving = false;
+
+  /// "More options" (interest or original amount, fees, notes) is open.
+  bool _showMore = false;
   Map<int, double> _customScheduleMap = {};
 
   /// true: user types a total and we split it. false: user types the EMI.
@@ -178,6 +181,9 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
       text: emi != null ? emi.installmentsPaid.toString() : '0',
     );
     _notesController = TextEditingController(text: emi?.notes ?? '');
+    // Editing: show the optional details if any are filled in.
+    _showMore = emi != null &&
+        (emi.interestRate > 0 || emi.charges > 0 || (!emi.isSplitPlan && emi.principal > 0) || (emi.notes?.isNotEmpty ?? false));
 
     if (emi != null) {
       _emiType = emi.isLoan ? EmiType.loan : EmiType.creditCard;
@@ -375,7 +381,9 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
           notes: finalNotes,
           updatedAt: DateTime.now(),
         );
-        await emiRepo.updateEmi(updated);
+        // Fixes up installments already posted (removed past the paid count,
+        // re-dated to the new schedule) and saves.
+        await processor.applyEdit(current, updated);
       } else {
         final newEmi = CreditCardEmi(
           id: const Uuid().v4(),
@@ -464,10 +472,13 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
     );
   }
 
+  static const _numberKeyboard = TextInputType.numberWithOptions(decimal: true);
+
+  /// The money a plan needs: the amount (or the EMI) and the months.
+  /// Everything optional is in [_moreOptions].
   List<Widget> _moneySection(BuildContext context, String symbol, bool isLoan) {
     final theme = Theme.of(context);
     final muted = theme.colorScheme.onSurfaceVariant;
-    const numberKeyboard = TextInputType.numberWithOptions(decimal: true);
 
     final tenure = EmiTenureSelector(
       controller: _tenureController,
@@ -480,35 +491,6 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
           _syncCustomSchedule();
         });
       },
-    );
-
-    final chargesField = TextFormField(
-      controller: _chargesController,
-      keyboardType: numberKeyboard,
-      decoration: _moneyDecoration(
-        'Charges and fees (optional)',
-        symbol,
-        helper: _splitMode
-            ? 'Processing fee, GST, insurance. Added to the total and spread over the months.'
-            : 'One-time fees billed separately. They are not part of the monthly EMI.',
-      ),
-      validator: (v) {
-        if (v == null || v.trim().isEmpty) return null;
-        final n = double.tryParse(v.trim());
-        return (n == null || n < 0) ? 'Enter a valid amount' : null;
-      },
-    );
-
-    final gstBase = _charges + (_splitMode ? _plan.interest : 0);
-    final gstChip = Align(
-      alignment: Alignment.centerLeft,
-      child: FilterChip(
-        label: Text(_gstApplied > 0
-            ? 'GST added (${EmiCalculator.defaultGstPercent.toInt()}%)'
-            : 'Add ${EmiCalculator.defaultGstPercent.toInt()}% GST on fee and interest'),
-        selected: _gstApplied > 0,
-        onSelected: (_gstApplied > 0 || gstBase > 0) ? (_) => _toggleGst() : null,
-      ),
     );
 
     return [
@@ -543,27 +525,60 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
         style: theme.textTheme.bodySmall?.copyWith(color: muted),
       ),
       const SizedBox(height: 16),
-      if (_splitMode) ...[
+      if (_splitMode)
         TextFormField(
           controller: _baseAmountController,
-          keyboardType: numberKeyboard,
+          keyboardType: _numberKeyboard,
           style: theme.textTheme.titleLarge,
           decoration: _moneyDecoration(isLoan ? 'Loan amount' : 'Purchase amount', symbol),
           validator: (v) {
             final n = double.tryParse((v ?? '').trim());
             return (n == null || n <= 0) ? 'Enter the amount' : null;
           },
+        )
+      else
+        TextFormField(
+          controller: _emiController,
+          keyboardType: _numberKeyboard,
+          style: theme.textTheme.titleLarge,
+          decoration: _moneyDecoration('Monthly EMI', symbol),
+          validator: (v) {
+            final n = double.tryParse((v ?? '').trim());
+            return (n == null || n <= 0) ? 'Enter the monthly EMI' : null;
+          },
         ),
-        const SizedBox(height: 16),
-        tenure,
-        const SizedBox(height: 16),
+      const SizedBox(height: 16),
+      tenure,
+    ];
+  }
+
+  /// The optional details, folded away until wanted: interest (when
+  /// splitting a total) or the original amount (when the EMI is known),
+  /// charges with the GST helper, and notes. Opens by itself when editing
+  /// an EMI that already has any of them.
+  List<Widget> _moreOptions(String symbol, bool isLoan) {
+    final toggle = ListTile(
+      contentPadding: EdgeInsets.zero,
+      onTap: () => setState(() => _showMore = !_showMore),
+      leading: const Icon(Icons.tune_rounded),
+      title: const Text('More options'),
+      subtitle: Text(_splitMode ? 'Interest, fees and notes' : 'Original amount, fees and notes'),
+      trailing: Icon(_showMore ? Icons.expand_less_rounded : Icons.expand_more_rounded),
+    );
+    if (!_showMore) return [toggle];
+
+    final gstBase = _charges + (_splitMode ? _plan.interest : 0);
+    return [
+      toggle,
+      const SizedBox(height: 8),
+      if (_splitMode)
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Expanded(
               child: TextFormField(
                 controller: _interestRateController,
-                keyboardType: numberKeyboard,
+                keyboardType: _numberKeyboard,
                 decoration: InputDecoration(
                   labelText: 'Interest (% a year)',
                   hintText: 'e.g. 12',
@@ -597,28 +612,11 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
               ),
             ),
           ],
-        ),
-        const SizedBox(height: 16),
-        chargesField,
-        const SizedBox(height: 8),
-        gstChip,
-      ] else ...[
-        TextFormField(
-          controller: _emiController,
-          keyboardType: numberKeyboard,
-          style: theme.textTheme.titleLarge,
-          decoration: _moneyDecoration('Monthly EMI', symbol),
-          validator: (v) {
-            final n = double.tryParse((v ?? '').trim());
-            return (n == null || n <= 0) ? 'Enter the monthly EMI' : null;
-          },
-        ),
-        const SizedBox(height: 16),
-        tenure,
-        const SizedBox(height: 16),
+        )
+      else
         TextFormField(
           controller: _baseAmountController,
-          keyboardType: numberKeyboard,
+          keyboardType: _numberKeyboard,
           decoration: _moneyDecoration(
             isLoan ? 'Loan amount (optional)' : 'Purchase amount (optional)',
             symbol,
@@ -630,11 +628,44 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
             return (n == null || n < 0) ? 'Enter a valid amount' : null;
           },
         ),
-        const SizedBox(height: 16),
-        chargesField,
-        const SizedBox(height: 8),
-        gstChip,
-      ],
+      const SizedBox(height: 16),
+      TextFormField(
+        controller: _chargesController,
+        keyboardType: _numberKeyboard,
+        decoration: _moneyDecoration(
+          'Charges and fees (optional)',
+          symbol,
+          helper: _splitMode
+              ? 'Processing fee, GST, insurance. Added to the total and spread over the months.'
+              : 'One-time fees billed separately. They are not part of the monthly EMI.',
+        ),
+        validator: (v) {
+          if (v == null || v.trim().isEmpty) return null;
+          final n = double.tryParse(v.trim());
+          return (n == null || n < 0) ? 'Enter a valid amount' : null;
+        },
+      ),
+      const SizedBox(height: 8),
+      Align(
+        alignment: Alignment.centerLeft,
+        child: FilterChip(
+          label: Text(_gstApplied > 0
+              ? 'GST added (${EmiCalculator.defaultGstPercent.toInt()}%)'
+              : 'Add ${EmiCalculator.defaultGstPercent.toInt()}% GST on fee and interest'),
+          selected: _gstApplied > 0,
+          onSelected: (_gstApplied > 0 || gstBase > 0) ? (_) => _toggleGst() : null,
+        ),
+      ),
+      const SizedBox(height: 16),
+      TextFormField(
+        controller: _notesController,
+        maxLines: 2,
+        decoration: InputDecoration(
+          labelText: 'Notes (optional)',
+          hintText: isLoan ? 'Loan terms, account number, agreement notes...' : 'Order ID, invoice details, bank reference...',
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+        ),
+      ),
     ];
   }
 
@@ -656,24 +687,23 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
               : (isLoan ? 'Add loan' : 'Add card EMI'),
           style: TextStyle(fontWeight: FontWeight.w700),
         ),
-        actions: [
-          TextButton(
+      ),
+      // One save button, always in reach at the bottom of a long form.
+      bottomNavigationBar: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
+          child: FilledButton(
             onPressed: _isSaving ? null : _saveEmi,
+            style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(52)),
             child: _isSaving
-                ? const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2),
+                ? SizedBox(
+                    width: 22,
+                    height: 22,
+                    child: CircularProgressIndicator(strokeWidth: 2, color: cs.onPrimary),
                   )
-                : Text(
-                    isEditing ? 'Save' : 'Add',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w700,
-                      color: cs.primary,
-                    ),
-                  ),
+                : Text(isEditing ? 'Save changes' : (isLoan ? 'Add loan' : 'Add EMI')),
           ),
-        ],
+        ),
       ),
       body: Form(
         key: _formKey,
@@ -775,6 +805,8 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
 
             // Money: either split a total or type the EMI
             ..._moneySection(context, currencySymbol, isLoan),
+            const SizedBox(height: 8),
+            ..._moreOptions(currencySymbol, isLoan),
             const SizedBox(height: 20),
 
             // Live result
@@ -799,44 +831,10 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
               installmentsPaid: _installmentsPaid,
               dueSoFar: _dueSoFar,
               isEditing: isEditing,
+              isForSelf: _isForSelf,
               onPickDate: _selectStartDate,
             ),
             const SizedBox(height: 20),
-
-            // 10. Notes
-            TextFormField(
-              controller: _notesController,
-              maxLines: 2,
-              decoration: InputDecoration(
-                labelText: 'Notes (optional)',
-                hintText: isLoan ? 'Loan terms, account number, agreement notes...' : 'Order ID, invoice details, bank reference...',
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
-              ),
-            ),
-
-            const SizedBox(height: 28),
-
-            // 11. Save Button
-            FilledButton(
-              onPressed: _isSaving ? null : _saveEmi,
-              style: FilledButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 16),
-              ),
-              child: _isSaving
-                  ? const SizedBox(
-                      width: 22,
-                      height: 22,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                    )
-                  : Text(
-                      isEditing ? 'Save changes' : (isLoan ? 'Add loan' : 'Add EMI'),
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-            ),
-            const SizedBox(height: 32),
           ],
         ),
       ),

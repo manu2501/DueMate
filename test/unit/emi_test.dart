@@ -275,7 +275,7 @@ void main() {
       expect(updatedEmi.status, equals('completed'));
     });
 
-    test('Supports early installment posting via postNextInstallment', () async {
+    test('Supports paying an installment early via payInstallments', () async {
       final emi = CreditCardEmi(
         id: 'emi-test-early',
         personId: personId,
@@ -294,12 +294,13 @@ void main() {
       await emiRepo.createEmi(emi);
 
       // Today is before due date, but user posts installment 1 early
-      final success = await processor.postNextInstallment(emi);
-      expect(success, isTrue);
+      final paidOn = DateTime(2026, 11, 13);
+      expect(await processor.payInstallments(emi, paidOn: paidOn), equals(1));
 
       final txs = await txRepo.watchTransactionsForPerson(personId).first;
       expect(txs.length, equals(1));
       expect(txs.first.installmentNumber, equals(1));
+      expect(txs.first.transactionDate, equals(paidOn));
 
       final updatedEmi = await emiRepo.getEmiById('emi-test-early');
       expect(updatedEmi!.installmentsPaid, equals(1));

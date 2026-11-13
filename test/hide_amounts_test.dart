@@ -1,9 +1,9 @@
 import 'package:drift/native.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:duemate/core/constants/app_constants.dart';
+import 'package:duemate/core/services/app_lock_service.dart';
 import 'package:duemate/core/utils/display_money.dart';
 import 'package:duemate/data/database/app_database.dart' hide Person, Transaction;
 import 'package:duemate/data/database/tables.dart';
@@ -13,6 +13,9 @@ import 'package:duemate/data/repositories/transaction_repository_impl.dart';
 import 'package:duemate/domain/entities/ledger_transaction.dart';
 import 'package:duemate/domain/entities/person.dart';
 import 'package:duemate/main.dart';
+
+import 'helpers/fake_app_lock_service.dart';
+import 'helpers/test_db.dart';
 
 void main() {
   group('DisplayMoney', () {
@@ -36,6 +39,7 @@ void main() {
         'duemate_last_run_version': AppConstants.appVersionString,
       });
       final db = AppDatabase(NativeDatabase.memory());
+      final lockService = FakeAppLockService();
       final now = DateTime.now();
       await tester.runAsync(() async {
         await PersonRepositoryImpl(db)
@@ -54,7 +58,10 @@ void main() {
 
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [databaseProvider.overrideWithValue(db)],
+          overrides: [
+            databaseProvider.overrideWithValue(db),
+            appLockServiceProvider.overrideWithValue(lockService),
+          ],
           child: const DueMateApp(),
         ),
       );
@@ -79,18 +86,26 @@ void main() {
       expect(find.text('Asha'), findsOneWidget);
       expect(find.textContaining('500'), findsNothing, reason: 'People hides balances too');
 
-      // And back.
+      // Showing them again needs verification: a dismissed prompt keeps them hidden.
       await tester.tap(find.byTooltip('Home'));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 500));
+      lockService.next = AppLockAuthResult.cancelled;
       await tester.tap(find.byTooltip('Show amounts'));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
+      expect(lockService.prompts, 1);
+      expect(find.textContaining('500'), findsNothing, reason: 'still hidden after a cancelled prompt');
+
+      // Verified: amounts are back.
+      lockService.next = AppLockAuthResult.success;
+      await tester.tap(find.byTooltip('Show amounts'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(lockService.prompts, 2);
       expect(find.textContaining('500'), findsWidgets);
 
-      await tester.pumpWidget(const SizedBox.shrink());
-      await tester.pump(const Duration(seconds: 1));
-      await tester.runAsync(() => db.close());
+      await closeTestDb(tester, db);
     },
     timeout: const Timeout(Duration(seconds: 30)),
   );

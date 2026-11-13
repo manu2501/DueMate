@@ -1,19 +1,35 @@
-import 'package:flutter/material.dart';
+import 'dart:async';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
-import 'package:duemate/core/utils/currency_formatter.dart';
-import 'package:duemate/domain/entities/credit_card_emi.dart';
+import 'package:flutter/foundation.dart';
+import 'package:duemate/domain/reminder.dart';
 
-class NotificationService {
+class NotificationService implements ReminderScheduler {
   static final NotificationService _instance = NotificationService._internal();
   factory NotificationService() => _instance;
   NotificationService._internal();
 
   final FlutterLocalNotificationsPlugin _notificationsPlugin = FlutterLocalNotificationsPlugin();
   bool _isInitialized = false;
+
+  final _reminderTaps = StreamController<ReminderTarget>.broadcast();
+
+  /// What tapped reminders point at, while the app is running.
+  Stream<ReminderTarget> get reminderTaps => _reminderTaps.stream;
+
+  /// What the reminder that launched the app points at, if one did.
+  Future<ReminderTarget?> reminderThatLaunchedApp() async {
+    try {
+      final details = await _notificationsPlugin.getNotificationAppLaunchDetails();
+      if (details == null || !details.didNotificationLaunchApp) return null;
+      return ReminderTarget.parse(details.notificationResponse?.payload);
+    } catch (_) {
+      return null;
+    }
+  }
 
   static const String _kNotificationsEnabledKey = 'duemate_notifications_enabled';
   static const String _channelId = 'duemate_reminders';
@@ -41,8 +57,9 @@ class NotificationService {
 
       await _notificationsPlugin.initialize(
         settings: initSettings,
-        onDidReceiveNotificationResponse: (NotificationResponse details) {
-          debugPrint('Notification clicked with payload: ${details.payload}');
+        onDidReceiveNotificationResponse: (details) {
+          final target = ReminderTarget.parse(details.payload);
+          if (target != null) _reminderTaps.add(target);
         },
       );
 
@@ -76,9 +93,8 @@ class NotificationService {
   Future<void> setNotificationsEnabled(bool enabled) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_kNotificationsEnabledKey, enabled);
-    if (!enabled) {
-      await cancelAllReminders();
-    }
+    // Off: reminders are cancelled. On: the latest plan is scheduled.
+    await replaceReminders(_requested);
   }
 
   /// Request notification permissions from OS if not already granted
@@ -134,66 +150,66 @@ class NotificationService {
     }
   }
 
-  /// Schedule a due date reminder notification for an active EMI
-  Future<void> scheduleEmiDueReminder(
-    CreditCardEmi emi, {
-    required String personName,
-    String currencySymbol = '₹',
-  }) async {
-    if (!await areNotificationsEnabled()) return;
+  List<Reminder> _requested = const [];
+  List<Reminder>? _scheduled;
+  Future<void> _applying = Future.value();
+
+  /// Makes the scheduled reminders (EMIs, money due back) match [plan] (what
+  /// the planners say should be scheduled). Runs one at a time and
+  /// does nothing when the plan hasn't changed, so it's cheap to call on
+  /// every EMI change.
+  @override
+  Future<void> replaceReminders(List<Reminder> plan) {
+    _requested = plan;
+    return _applying = _applying.then((_) => _apply());
+  }
+
+  Future<void> _apply() async {
+    final plan = await areNotificationsEnabled() ? _requested : const <Reminder>[];
+    if (listEquals(plan, _scheduled)) return;
     await initialize();
-
-    if (emi.isCompleted || !emi.isActive) return;
-
-    final now = DateTime.now();
-    // Next due date for this month
-    var dueDateTime = DateTime(now.year, now.month, emi.dueDayOfMonth, 9, 0);
-    if (dueDateTime.isBefore(now)) {
-      dueDateTime = DateTime(now.year, now.month + 1, emi.dueDayOfMonth, 9, 0);
+    try {
+      // Only DueMate reminders are replaced; anything else stays.
+      final pending = await _notificationsPlugin.pendingNotificationRequests();
+      for (final p in pending) {
+        if (Reminder.isReminderPayload(p.payload)) {
+          await _notificationsPlugin.cancel(id: p.id);
+        }
+      }
+      for (final r in plan) {
+        await _notificationsPlugin.zonedSchedule(
+          id: r.id,
+          title: r.title,
+          body: r.body,
+          payload: r.payload,
+          // Keeps the instant: 9:00 local whatever tz.local is set to.
+          scheduledDate: tz.TZDateTime.from(r.at, tz.local),
+          notificationDetails: _reminderDetails,
+          // Inexact: needs no exact-alarm permission; minutes late is fine.
+          androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+        );
+      }
+      _scheduled = plan;
+    } catch (e) {
+      debugPrint('Could not schedule reminders: $e');
     }
+  }
 
-    final id = emi.id.hashCode.abs();
-    final monthlyStr = CurrencyFormatter.format(emi.monthlyInstallment, symbol: currencySymbol);
-
-    const androidDetails = AndroidNotificationDetails(
+  static const _reminderDetails = NotificationDetails(
+    android: AndroidNotificationDetails(
       _channelId,
       _channelName,
       channelDescription: _channelDescription,
       importance: Importance.high,
       priority: Priority.high,
-    );
+      // Content stays hidden on a locked screen.
+      visibility: NotificationVisibility.private,
+    ),
+    iOS: DarwinNotificationDetails(),
+  );
+}
 
-    const notificationDetails = NotificationDetails(
-      android: androidDetails,
-      iOS: DarwinNotificationDetails(),
-    );
-
-    try {
-      final tzScheduled = tz.TZDateTime.from(dueDateTime, tz.local);
-
-      await _notificationsPlugin.zonedSchedule(
-        id: id,
-        title: '⏰ Upcoming EMI Due: ${emi.itemName}',
-        body: emi.isForSelf
-            ? 'Personal EMI $monthlyStr (${emi.installmentsPaid + 1}/${emi.totalTenureMonths} mo due today)'
-            : '$personName • Installment ${emi.installmentsPaid + 1}/${emi.totalTenureMonths} ($monthlyStr) due today',
-        scheduledDate: tzScheduled,
-        notificationDetails: notificationDetails,
-        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-      );
-      debugPrint('Scheduled notification #$id for ${emi.itemName} at $dueDateTime');
-    } catch (e) {
-      debugPrint('Fallback scheduling notification for ${emi.itemName}: $e');
-    }
-  }
-
-  /// Cancel a specific scheduled notification
-  Future<void> cancelReminder(int id) async {
-    await _notificationsPlugin.cancel(id: id);
-  }
-
-  /// Cancel all scheduled notifications
-  Future<void> cancelAllReminders() async {
-    await _notificationsPlugin.cancelAll();
-  }
+/// Schedules reminders; [NotificationService] in the app, a fake in tests.
+abstract interface class ReminderScheduler {
+  Future<void> replaceReminders(List<Reminder> plan);
 }

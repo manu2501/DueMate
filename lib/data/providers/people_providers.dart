@@ -3,10 +3,13 @@ library;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:duemate/core/constants/app_constants.dart';
 import 'package:duemate/domain/entities/person_summary.dart';
+import 'package:duemate/domain/loan_dues.dart';
 import 'ledger_providers.dart';
 
 // People Screen Filter & Sort Enums
-enum PeopleFilter { all, active, settled, archived }
+/// Chips on People: [all], [owesYou], [youOwe], [overdue]. [archived] is
+/// reached from the menu.
+enum PeopleFilter { all, owesYou, youOwe, overdue, archived }
 enum PeopleSort { highestOutstanding, recentlyActive, alphabetical, recentlyAdded }
 
 class PeopleFilterNotifier extends Notifier<PeopleFilter> {
@@ -42,6 +45,10 @@ final filteredPersonSummariesProvider = Provider<List<PersonSummary>>((ref) {
   final filter = ref.watch(peopleFilterProvider);
   final sort = ref.watch(peopleSortProvider);
   final query = ref.watch(peopleSearchQueryProvider).trim().toLowerCase();
+  final now = DateTime.now();
+  final today = DateTime(now.year, now.month, now.day);
+  // Only needed (and only watched) for the Overdue filter.
+  final dues = filter == PeopleFilter.overdue ? ref.watch(loanDuesProvider) : const <String, LoanDueStatus>{};
 
   return summariesAsync.maybeWhen(
     data: (list) {
@@ -52,12 +59,13 @@ final filteredPersonSummariesProvider = Provider<List<PersonSummary>>((ref) {
         switch (filter) {
           case PeopleFilter.all:
             return !item.person.isArchived;
-          case PeopleFilter.active:
+          case PeopleFilter.owesYou:
+            return !item.person.isArchived && item.owesMoney;
+          case PeopleFilter.youOwe:
+            return !item.person.isArchived && item.isOverpaid;
+          case PeopleFilter.overdue:
             if (item.person.isArchived) return false;
-            return item.balance.abs() > 0.0001;
-          case PeopleFilter.settled:
-            if (item.person.isArchived) return false;
-            return item.balance.abs() <= 0.0001;
+            return dues[item.person.id]?.isOverdue(today) ?? false;
           case PeopleFilter.archived:
             return item.person.isArchived;
         }

@@ -9,6 +9,7 @@ import 'package:duemate/core/widgets/confirm_dialog.dart';
 import 'package:duemate/data/providers/app_providers.dart';
 import 'package:duemate/domain/person_matcher.dart';
 import 'package:duemate/domain/entities/person.dart';
+import 'package:duemate/domain/upi.dart';
 
 class AddEditPersonScreen extends ConsumerStatefulWidget {
   final Person? personToEdit;
@@ -33,6 +34,7 @@ class _AddEditPersonScreenState extends ConsumerState<AddEditPersonScreen> {
   late final TextEditingController _phoneController;
   late final TextEditingController _emailController;
   late final TextEditingController _notesController;
+  late final TextEditingController _upiController;
   bool _isSaving = false;
   bool _isImporting = false;
 
@@ -45,6 +47,7 @@ class _AddEditPersonScreenState extends ConsumerState<AddEditPersonScreen> {
     _phoneController = TextEditingController(text: widget.personToEdit?.phone ?? '');
     _emailController = TextEditingController(text: widget.personToEdit?.email ?? '');
     _notesController = TextEditingController(text: widget.personToEdit?.notes ?? '');
+    _upiController = TextEditingController(text: widget.personToEdit?.upiId ?? '');
 
     _nameController.addListener(_onNameChanged);
   }
@@ -60,6 +63,7 @@ class _AddEditPersonScreenState extends ConsumerState<AddEditPersonScreen> {
     _phoneController.dispose();
     _emailController.dispose();
     _notesController.dispose();
+    _upiController.dispose();
     super.dispose();
   }
 
@@ -127,6 +131,7 @@ class _AddEditPersonScreenState extends ConsumerState<AddEditPersonScreen> {
     final inputName = _nameController.text.trim();
     final inputPhone = _phoneController.text.trim();
     final normPhone = PersonMatcher.normalizePhone(inputPhone);
+    final inputUpi = Upi.normalizeId(_upiController.text);
 
     final people = (await ref.read(allPersonSummariesProvider.future)).map((s) => s.person);
     final existing = PersonMatcher.findDuplicate(
@@ -157,6 +162,8 @@ class _AddEditPersonScreenState extends ConsumerState<AddEditPersonScreen> {
           email: _emailController.text.trim().isEmpty ? null : _emailController.text.trim(),
           notes: _notesController.text.trim().isEmpty ? null : _notesController.text.trim(),
           updatedAt: now,
+          upiId: inputUpi,
+          clearUpiId: inputUpi.isEmpty,
         );
         await ref.read(personRepositoryProvider).updatePerson(updated);
       } else {
@@ -167,6 +174,7 @@ class _AddEditPersonScreenState extends ConsumerState<AddEditPersonScreen> {
           email: _emailController.text.trim().isEmpty ? null : _emailController.text.trim(),
           notes: _notesController.text.trim().isEmpty ? null : _notesController.text.trim(),
           createdAt: now,
+          upiId: inputUpi.isEmpty ? null : inputUpi,
           updatedAt: now,
         );
         await ref.read(personRepositoryProvider).createPerson(newPerson);
@@ -258,6 +266,20 @@ class _AddEditPersonScreenState extends ConsumerState<AddEditPersonScreen> {
                   prefixIcon: Icon(Icons.phone_outlined),
                   helperText: 'Needed for WhatsApp reminders',
                 ),
+              ),
+              const SizedBox(height: AppSpace.lg),
+              TextFormField(
+                controller: _upiController,
+                keyboardType: TextInputType.emailAddress,
+                autocorrect: false,
+                textInputAction: TextInputAction.next,
+                decoration: const InputDecoration(
+                  labelText: 'UPI ID (optional)',
+                  prefixIcon: Icon(Icons.account_balance_wallet_outlined),
+                  hintText: 'name@okhdfcbank',
+                  helperText: 'To pay them from a UPI app when you give money',
+                ),
+                validator: Upi.validateOptionalId,
               ),
               const SizedBox(height: AppSpace.lg),
               TextFormField(

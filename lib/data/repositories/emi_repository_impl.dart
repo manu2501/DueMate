@@ -82,6 +82,10 @@ class EmiRepositoryImpl implements EmiRepository {
   }
 
   @override
+  Future<List<domain.CreditCardEmi>> getAllEmis() async =>
+      (await _database.select(_database.creditCardEmis).get()).map(_toDomain).toList();
+
+  @override
   Future<domain.CreditCardEmi?> getEmiById(String id) async {
     final query = _database.select(_database.creditCardEmis)..where((tbl) => tbl.id.equals(id));
     final row = await query.getSingleOrNull();
@@ -148,8 +152,11 @@ class EmiRepositoryImpl implements EmiRepository {
   }
 
   @override
-  Future<void> deleteEmi(String id) async {
-    await (_database.delete(_database.creditCardEmis)..where((tbl) => tbl.id.equals(id))).go();
-  }
+  Future<void> deleteEmi(String id) => _database.transaction(() async {
+        // Postings have no foreign key to the EMI: remove them explicitly.
+        await (_database.delete(_database.expenses)..where((t) => t.emiId.equals(id))).go();
+        await (_database.delete(_database.transactions)..where((t) => t.emiId.equals(id))).go();
+        await (_database.delete(_database.creditCardEmis)..where((tbl) => tbl.id.equals(id))).go();
+      });
 }
 

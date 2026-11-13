@@ -38,8 +38,9 @@
 Everything stays on the phone. There is no account, no server and no analytics.
 
 **People and balances**
-- Record money you **give** and money you **receive**, per person, with date, payment method (UPI, cash, card, bank transfer, other) and a note.
-- Each person's ledger shows who owes whom, what you gave and received, their EMIs, and history grouped by month.
+- Record money you **give** and money you **receive**, per person, with date, payment method (UPI, cash, card, bank transfer, wallet apps like Paytm or Amazon Pay, other) and a note.
+- **UPI**: show a QR with your UPI ID and the amount when you're being paid (or share it as an image), and open your UPI app pre-filled to pay someone whose UPI ID you've saved (when you come back, one tap records it). Reminders include your UPI ID. Rupees only.
+- Each person's ledger shows who owes whom, how much has been paid back (a progress bar, also on every row in People, e.g. "Paid ₹2,500 of ₹15,000 · 16%"), their EMIs, and history grouped by month.
 - Add people by hand or from phone contacts. Duplicates are caught by phone number (last 10 digits), so two different people with the same name can both be added.
 - Remind someone on WhatsApp, or share their statement as PDF or CSV.
 - Archive people you're done with; delete asks first and says exactly what goes.
@@ -51,19 +52,24 @@ Everything stays on the phone. There is no account, no server and no analytics.
   - **I know the EMI**: type the monthly EMI from your bank; add the original amount to see the extra you pay and the effective yearly rate.
 - Charges and fees, with an 18% GST helper applied to fee + interest (never principal).
 - Set a different amount for specific months (e.g. a first month with a fee).
-- Installments are added to the ledger on their due dates automatically; "Record now" posts the next one early.
+- Installments are posted automatically on their due dates: your own EMIs and loans to expenses (in the month each was due, including ones already paid when you add it), shared ones to the person's ledger. "Pay" records one or more months early, dated the day you paid.
 
 **Spending**
-- Log expenses by category (groceries, bills, rent, fuel, food, shopping, entertainment, health, other) in a few taps; the amount comes first and a description is optional.
+- Log expenses by category (groceries, bills, rent, fuel, food, shopping, entertainment, health, EMIs & loans, other) in a few taps; the amount comes first and a description is optional.
 - A monthly budget with a clear "left / over" status on Home and Expenses.
 - Spending trends: month-by-month bars for any year, where the money went by category, and every expense of a past month (editable).
 
 **Everything else**
-- **Home**: where you stand overall, Give / Receive / Expense buttons, an *EMIs & cards* shortcut (active count, monthly outgo, next due installments), this month's spending against budget, largest balances and recent activity.
+- **Home**: where you stand overall, Give / Receive / Expense buttons, the largest balances, this month's spending against budget, the next EMI due, and recent activity; sections without data stay hidden.
 - **Activity**: one timeline of ledger entries and expenses, grouped by day, with search and filters for type, period and payment method; export as PDF or CSV.
-- **Notifications**: permission and a test notification in Settings. Scheduled EMI due-date reminders are not wired up yet (see [TODO](TODO.md)).
-- **Hide amounts**: the eye icon on Home (or the switch in Settings) replaces every balance and total with dots, e.g. when using the app in public. Amounts you're typing, exports and shared messages are never hidden. The choice is remembered.
-- **Settings**: theme (system / light / dark), hide amounts, currency (₹, $, €, £, AED, S$, A$, C$), monthly budget, notifications, backup, CSV export, erase all data.
+- **EMI reminders**: a notification the day before each installment is due, kept in step with your EMIs automatically; tap it to open that EMI. Amounts are left out while they're hidden or App Lock is on.
+- **Backup and restore**: back up everything to one file, and restore it later (DueMate shows what's in the file and asks before replacing your data).
+- **Due dates on loans**: give money with a "return by" date; People shows *due back by …* or *overdue since …* (with an Overdue filter), and you get a reminder the day before.
+- **Recurring expenses**: mark an expense as repeating every month (rent, subscriptions) and it's added automatically on that day; change the amount or stop it any time.
+- **Lending trends**: money lent vs collected, month by month (chart icon on People).
+- **Hide amounts**: the eye icon on Home (or the switch in Settings) replaces every balance and total with dots, e.g. when using the app in public. Amounts you're typing, exports and shared messages are never hidden. The choice is remembered, and showing amounts again asks for fingerprint, face or screen lock.
+- **App Lock**: ask for fingerprint, face or the phone's screen lock to open DueMate, on launch and after you've been away for a chosen time. Balances are hidden from the recent-apps view while it's on.
+- **Settings**: theme (system / light / dark), hide amounts, App Lock, currency (₹, $, €, £, AED, S$, A$, C$), monthly budget, notifications, backup and restore, CSV export, erase all data, and the version with **What's new** (from [CHANGELOG.md](CHANGELOG.md)).
 
 ## Design
 
@@ -154,6 +160,10 @@ The logo is defined once in `lib/core/widgets/app_logo.dart`. After changing it,
 ```bash
 flutter test test_screens/logo_export_test.dart --update-goldens
 ```
+
+## Changelog
+
+See [CHANGELOG.md](CHANGELOG.md) (also in the app under Settings › What's new). Current version: **1.1.0 (build 2)**.
 
 ## License
 

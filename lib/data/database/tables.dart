@@ -11,6 +11,11 @@ enum PaymentMethod {
   bankTransfer,
   card,
   other,
+
+  /// A wallet app's balance (Paytm, Amazon Pay, PhonePe wallet, ...).
+  /// Appended last because the enum is stored by index; pickers use
+  /// `PaymentMethodX.ordered`, which keeps "Other" at the end.
+  wallet,
 }
 
 enum ExpenseCategory {
@@ -23,6 +28,10 @@ enum ExpenseCategory {
   entertainment,
   health,
   other,
+
+  /// Installments of your own EMIs and loans. Appended last because the enum
+  /// is stored by index. Since schema v11.
+  emi,
 }
 
 class Persons extends Table {
@@ -31,6 +40,8 @@ class Persons extends Table {
   TextColumn get phone => text().nullable()();
   TextColumn get email => text().nullable()();
   TextColumn get notes => text().nullable()();
+  /// Their UPI ID (VPA), to pay them from a UPI app. Since schema v8.
+  TextColumn get upiId => text().nullable()();
   TextColumn get avatarPath => text().nullable()();
   DateTimeColumn get createdAt => dateTime()();
   DateTimeColumn get updatedAt => dateTime()();
@@ -51,6 +62,9 @@ class Transactions extends Table {
   TextColumn get emiId => text().nullable()();
   IntColumn get installmentNumber => integer().nullable()();
   BoolColumn get isSettled => boolean().withDefault(const Constant(false))();
+
+  /// For money given: when it should be back. Since schema v10.
+  DateTimeColumn get dueDate => dateTime().nullable()();
   DateTimeColumn get createdAt => dateTime()();
   DateTimeColumn get updatedAt => dateTime()();
 
@@ -100,6 +114,15 @@ class Expenses extends Table {
   DateTimeColumn get expenseDate => dateTime()();
   IntColumn get paymentMethod => intEnum<PaymentMethod>()();
   TextColumn get notes => text().nullable()();
+
+  /// The [RecurringExpenses] rule that posted it, if any. No foreign key:
+  /// stopping a rule keeps the expenses it posted. Since schema v9.
+  TextColumn get recurringId => text().nullable()();
+
+  /// Your own EMI or loan that posted it, and which installment. No foreign
+  /// key: deleting the EMI keeps what you already paid. Since schema v11.
+  TextColumn get emiId => text().nullable()();
+  IntColumn get installmentNumber => integer().nullable()();
   DateTimeColumn get createdAt => dateTime()();
   DateTimeColumn get updatedAt => dateTime()();
 
@@ -107,3 +130,27 @@ class Expenses extends Table {
   Set<Column> get primaryKey => {id};
 }
 
+/// A monthly repeating expense (rent, subscriptions). Since schema v9.
+/// Deleting a rule stops it; expenses it already posted stay.
+class RecurringExpenses extends Table {
+  TextColumn get id => text()();
+  TextColumn get title => text().withLength(min: 1, max: 150)();
+  RealColumn get amount => real()();
+  IntColumn get category => intEnum<ExpenseCategory>()();
+  IntColumn get paymentMethod => intEnum<PaymentMethod>()();
+  TextColumn get notes => text().nullable()();
+
+  /// Posts on this day each month (clamped to short months).
+  IntColumn get dayOfMonth => integer()();
+
+  /// First occurrence; nothing is posted before it.
+  DateTimeColumn get startDate => dateTime()();
+
+  /// Date of the latest posted occurrence; months up to it are done.
+  DateTimeColumn get lastPostedDate => dateTime().nullable()();
+  DateTimeColumn get createdAt => dateTime()();
+  DateTimeColumn get updatedAt => dateTime()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}

@@ -5,20 +5,50 @@ import 'tables.dart';
 
 part 'app_database.g.dart';
 
-@DriftDatabase(tables: [Persons, Transactions, CreditCardEmis, Expenses])
+@DriftDatabase(tables: [Persons, Transactions, CreditCardEmis, Expenses, RecurringExpenses])
 class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? e]) : super(e ?? driftDatabase(name: 'duemate_db'));
 
   @override
-  int get schemaVersion => 7;
+  int get schemaVersion => 11;
 
-  /// Deletes every person, transaction, EMI and expense, in one transaction.
+  /// Your own EMI installments used to be posted to the hidden "self" ledger.
+  /// They are spending, so they move into expenses (same id, amount and date).
+  /// Runs on upgrade to v11 and after restoring an older backup; does nothing
+  /// once there is nothing left to move.
+  Future<void> moveSelfEmiPostingsToExpenses() => transaction(() async {
+        const self = AppConstants.selfPersonId;
+        await customStatement(
+          'INSERT OR IGNORE INTO expenses (id, title, amount, category, expense_date, payment_method, notes, '
+          'emi_id, installment_number, created_at, updated_at) '
+          "SELECT t.id, coalesce(e.item_name, 'EMI'), t.amount, ${ExpenseCategory.emi.index}, t.transaction_date, "
+          "t.payment_method, coalesce('EMI ' || t.installment_number || '/' || e.total_tenure_months || ' · ' || e.card_name, t.note), "
+          't.emi_id, t.installment_number, t.created_at, t.updated_at '
+          'FROM transactions t LEFT JOIN credit_card_emis e ON e.id = t.emi_id '
+          "WHERE t.person_id = '$self' AND t.emi_id IS NOT NULL",
+        );
+        await customStatement("DELETE FROM transactions WHERE person_id = '$self' AND emi_id IS NOT NULL");
+      });
+
+  /// One installment of an EMI is no longer paid (its expense or ledger
+  /// entry was deleted): counts one fewer and reopens a finished EMI. No-op
+  /// if the EMI itself is gone.
+  Future<void> releaseEmiInstallment(String emiId) => customUpdate(
+        'UPDATE credit_card_emis SET installments_paid = max(installments_paid - 1, 0), '
+        "status = CASE WHEN status = 'completed' THEN 'active' ELSE status END WHERE id = ?1",
+        variables: [Variable.withString(emiId)],
+        updates: {creditCardEmis},
+      );
+
+  /// Deletes every person, transaction, EMI, expense and recurring expense,
+  /// in one transaction.
   /// The user's own "self" row is kept: EMIs and expenses added afterwards
   /// reference it.
   Future<void> eraseAllData() => transaction(() async {
         await delete(transactions).go();
         await delete(creditCardEmis).go();
         await delete(expenses).go();
+        await delete(recurringExpenses).go();
         await (delete(persons)..where((p) => p.id.equals(AppConstants.selfPersonId).not())).go();
       });
 
@@ -59,6 +89,21 @@ class AppDatabase extends _$AppDatabase {
           "lower(coalesce(notes, '')) LIKE '%loan%'",
         );
       }
+      if (from < 8) {
+        await m.addColumn(persons, persons.upiId);
+      }
+      if (from < 9) {
+        await m.createTable(recurringExpenses);
+        await m.addColumn(expenses, expenses.recurringId);
+      }
+      if (from < 10) {
+        await m.addColumn(transactions, transactions.dueDate);
+      }
+      if (from < 11) {
+        await m.addColumn(expenses, expenses.emiId);
+        await m.addColumn(expenses, expenses.installmentNumber);
+        await moveSelfEmiPostingsToExpenses();
+      }
     },
     beforeOpen: (details) async {
       await customStatement('PRAGMA foreign_keys = ON');
@@ -77,6 +122,7 @@ class AppDatabase extends _$AppDatabase {
       await customStatement('CREATE INDEX IF NOT EXISTS idx_transactions_emi_id ON transactions(emi_id)');
       await customStatement('CREATE INDEX IF NOT EXISTS idx_emis_person_id ON credit_card_emis(person_id)');
       await customStatement('CREATE INDEX IF NOT EXISTS idx_expenses_date ON expenses(expense_date DESC)');
+      await customStatement('CREATE INDEX IF NOT EXISTS idx_expenses_emi_id ON expenses(emi_id)');
     },
   );
 }

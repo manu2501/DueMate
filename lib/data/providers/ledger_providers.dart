@@ -6,6 +6,7 @@ import 'package:duemate/domain/entities/ledger_summary.dart';
 import 'package:duemate/domain/entities/ledger_transaction.dart';
 import 'package:duemate/domain/entities/person.dart' as domain;
 import 'package:duemate/domain/entities/person_summary.dart';
+import 'package:duemate/domain/loan_dues.dart';
 import 'database_providers.dart';
 
 // Ledger & Summary Stream Providers
@@ -47,4 +48,10 @@ final personsMapProvider = Provider<Map<String, domain.Person>>((ref) {
     updatedAt: DateTime(2020),
   );
   return map;
+});
+
+/// Who owes what back by when (dated loans not yet repaid), by person id.
+final loanDuesProvider = Provider<Map<String, LoanDueStatus>>((ref) {
+  final txs = ref.watch(allTransactionsProvider).asData?.value;
+  return txs == null ? const {} : LoanDues.byPerson(txs);
 });

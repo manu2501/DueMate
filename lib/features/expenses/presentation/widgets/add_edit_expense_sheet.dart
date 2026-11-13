@@ -7,9 +7,11 @@ import 'package:duemate/core/theme/app_theme.dart';
 import 'package:duemate/core/utils/date_formatter.dart';
 import 'package:duemate/core/widgets/amount_field.dart';
 import 'package:duemate/core/widgets/confirm_dialog.dart';
+import 'package:duemate/core/widgets/ui_kit.dart' show ChipRow;
 import 'package:duemate/data/database/tables.dart';
 import 'package:duemate/data/providers/app_providers.dart';
 import 'package:duemate/domain/entities/personal_expense.dart';
+import 'package:duemate/domain/entities/recurring_expense.dart';
 
 /// Add or edit a personal expense. Amount first, then what it was.
 class AddEditExpenseSheet extends ConsumerStatefulWidget {
@@ -40,6 +42,7 @@ class _AddEditExpenseSheetState extends ConsumerState<AddEditExpenseSheet> {
   PaymentMethod _method = PaymentMethod.upi;
   DateTime _date = DateTime.now();
   bool _isSaving = false;
+  bool _repeat = false;
 
   bool get isEditing => widget.expenseToEdit != null;
   double get _amount => double.tryParse(_amountController.text.trim()) ?? 0;
@@ -91,7 +94,37 @@ class _AddEditExpenseSheetState extends ConsumerState<AddEditExpenseSheet> {
     final now = DateTime.now();
     try {
       final repo = ref.read(expenseRepositoryProvider);
-      if (isEditing) {
+      if (_repeat && !isEditing) {
+        final ruleId = const Uuid().v4();
+        await ref.read(recurringExpenseRepositoryProvider).createWithFirst(
+              RecurringExpense(
+                id: ruleId,
+                title: title,
+                amount: amount,
+                category: _category,
+                paymentMethod: _method,
+                notes: notes,
+                dayOfMonth: _date.day,
+                startDate: _date,
+                createdAt: now,
+                updatedAt: now,
+              ),
+              PersonalExpense(
+                id: const Uuid().v4(),
+                title: title,
+                amount: amount,
+                category: _category,
+                expenseDate: _date,
+                paymentMethod: _method,
+                notes: notes,
+                recurringId: ruleId,
+                createdAt: now,
+                updatedAt: now,
+              ),
+            );
+        // Started in an earlier month: post the months since then too.
+        await ref.read(recurringExpenseRepositoryProvider).postDue(now);
+      } else if (isEditing) {
         await repo.updateExpense(widget.expenseToEdit!.copyWith(
           title: title,
           amount: amount,
@@ -115,7 +148,13 @@ class _AddEditExpenseSheetState extends ConsumerState<AddEditExpenseSheet> {
         ));
       }
       if (mounted) Navigator.of(context).pop();
-      messenger.showSnackBar(SnackBar(content: Text(isEditing ? 'Changes saved' : 'Expense added')));
+      messenger.showSnackBar(SnackBar(
+        content: Text(isEditing
+            ? 'Changes saved'
+            : _repeat
+                ? 'Expense added. It repeats on the ${ordinal(_date.day)} of every month.'
+                : 'Expense added'),
+      ));
     } catch (_) {
       messenger.showSnackBar(const SnackBar(content: Text("Couldn't save. Please try again.")));
     } finally {
@@ -172,7 +211,7 @@ class _AddEditExpenseSheetState extends ConsumerState<AddEditExpenseSheet> {
               spacing: AppSpace.sm,
               runSpacing: AppSpace.sm,
               children: [
-                for (final c in ExpenseCategory.values)
+                for (final c in ExpenseCategoryX.ordered)
                   ChoiceChip(
                     avatar: Icon(c.icon, size: 18),
                     label: Text(c.label),
@@ -191,11 +230,9 @@ class _AddEditExpenseSheetState extends ConsumerState<AddEditExpenseSheet> {
               ),
             ),
             label('Paid with'),
-            Wrap(
-              spacing: AppSpace.sm,
-              runSpacing: AppSpace.sm,
+            ChipRow(
               children: [
-                for (final m in PaymentMethod.values)
+                for (final m in PaymentMethodX.ordered)
                   ChoiceChip(
                     label: Text(m.label),
                     selected: m == _method,
@@ -212,6 +249,16 @@ class _AddEditExpenseSheetState extends ConsumerState<AddEditExpenseSheet> {
                 child: Text(DateFormatter.formatRelative(_date)),
               ),
             ),
+            if (!isEditing)
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Repeat every month'),
+                subtitle: Text(_repeat
+                    ? 'Added automatically on the ${ordinal(_date.day)} of each month'
+                    : 'For rent, subscriptions and bills'),
+                value: _repeat,
+                onChanged: (v) => setState(() => _repeat = v),
+              ),
             const SizedBox(height: AppSpace.lg),
             TextField(
               controller: _notesController,

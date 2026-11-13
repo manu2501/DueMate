@@ -8,7 +8,11 @@ import 'package:duemate/core/utils/date_formatter.dart';
 import 'package:duemate/core/utils/display_money.dart';
 import 'package:duemate/core/widgets/amount_field.dart';
 import 'package:duemate/core/widgets/avatar_widget.dart';
+import 'package:duemate/core/widgets/confirm_dialog.dart';
 import 'package:duemate/core/widgets/person_picker_sheet.dart';
+import 'package:duemate/core/widgets/return_by_field.dart';
+import 'package:duemate/core/widgets/ui_kit.dart' show ChipRow;
+import 'package:duemate/core/widgets/upi_widgets.dart';
 import 'package:duemate/data/database/tables.dart';
 import 'package:duemate/data/providers/app_providers.dart';
 import 'package:duemate/domain/entities/ledger_transaction.dart';
@@ -45,7 +49,7 @@ class LedgerEntrySheet extends ConsumerStatefulWidget {
   ConsumerState<LedgerEntrySheet> createState() => _LedgerEntrySheetState();
 }
 
-class _LedgerEntrySheetState extends ConsumerState<LedgerEntrySheet> {
+class _LedgerEntrySheetState extends ConsumerState<LedgerEntrySheet> with WidgetsBindingObserver {
   static const _presets = [100.0, 500.0, 1000.0, 2000.0, 5000.0];
 
   final _amountController = TextEditingController();
@@ -55,13 +59,20 @@ class _LedgerEntrySheetState extends ConsumerState<LedgerEntrySheet> {
   String? _selectedPersonId;
   PaymentMethod _paymentMethod = PaymentMethod.upi;
   DateTime _date = DateTime.now();
+
+  /// Give only: when it should be back.
+  DateTime? _dueDate;
   bool _isSaving = false;
+
+  /// Who "Pay with UPI app" was opened for; cleared once we've asked.
+  String? _upiPayee;
 
   bool get _isGive => widget.type == TransactionType.moneyGiven;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _selectedPersonId = widget.initialPersonId;
     if (widget.initialPersonId != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) => _focusNode.requestFocus());
@@ -70,6 +81,7 @@ class _LedgerEntrySheetState extends ConsumerState<LedgerEntrySheet> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _amountController.dispose();
     _noteController.dispose();
     _focusNode.dispose();
@@ -109,6 +121,76 @@ class _LedgerEntrySheetState extends ConsumerState<LedgerEntrySheet> {
     if (picked != null) setState(() => _date = picked);
   }
 
+  String? get _note {
+    final n = _noteController.text.trim();
+    return n.isEmpty ? null : n;
+  }
+
+  Future<void> _showUpiQr() async {
+    _focusNode.unfocus();
+    setState(() => _paymentMethod = PaymentMethod.upi);
+    await UpiQrSheet.show(context, ref, amount: _amount, note: _note);
+  }
+
+  Future<void> _payWithUpi(String name, String upiId) async {
+    if (_amount <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Enter an amount first')));
+      return;
+    }
+    _focusNode.unfocus();
+    setState(() => _paymentMethod = PaymentMethod.upi);
+    // Set before launching: the app may be paused before the launch returns.
+    _upiPayee = name;
+    final opened = await payWithUpiApp(context, ref, payeeId: upiId, payeeName: name, amount: _amount, note: _note);
+    if (!opened) _upiPayee = null;
+  }
+
+  /// UPI apps don't report back, so once the user is back in DueMate (and
+  /// past App Lock, if it kicked in) ask whether the payment went through.
+  /// Yes records the Give exactly as filled in.
+  Future<void> _askAboutUpiPayment() async {
+    final payee = _upiPayee;
+    if (payee == null || !mounted) return;
+    if (WidgetsBinding.instance.lifecycleState != AppLifecycleState.resumed) return;
+    if (ref.read(appLockControllerProvider).locked) return; // asked again on unlock
+    _upiPayee = null;
+    final money = CurrencyFormatter.format(_amount, symbol: ref.read(currencySymbolProvider));
+    final paid = await showConfirmDialog(
+      context,
+      title: 'Did the payment go through?',
+      message: 'If your UPI app shows $money sent to $payee, record it now.',
+      confirmLabel: 'Yes, record it',
+      cancelLabel: 'Not yet',
+    );
+    if (paid && mounted) await _save();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) _askAboutUpiPayment();
+  }
+
+  /// UPI shortcut (rupees only): your QR when receiving; a UPI app when
+  /// giving to someone whose UPI ID is saved.
+  Widget? _upiAction(PersonSummary? selected, String symbol) {
+    final amount = _amount > 0 ? ' ${CurrencyFormatter.format(_amount, symbol: symbol)}' : '';
+    if (!_isGive) {
+      return OutlinedButton.icon(
+        onPressed: _showUpiQr,
+        icon: const Icon(Icons.qr_code_2_rounded),
+        label: Text(amount.isEmpty ? 'Show UPI QR' : 'Show UPI QR for$amount'),
+      );
+    }
+    final payee = selected?.person;
+    final upiId = payee?.upiId;
+    if (payee == null || upiId == null || upiId.isEmpty) return null;
+    return OutlinedButton.icon(
+      onPressed: () => _payWithUpi(payee.name, upiId),
+      icon: const Icon(Icons.open_in_new_rounded),
+      label: Text('Pay$amount with UPI app'),
+    );
+  }
+
   Future<void> _save() async {
     final amount = _amount;
     final messenger = ScaffoldMessenger.of(context);
@@ -136,6 +218,7 @@ class _LedgerEntrySheetState extends ConsumerState<LedgerEntrySheet> {
               transactionDate: DateTime(
                   _date.year, _date.month, _date.day, now.hour, now.minute, now.second),
               paymentMethod: _paymentMethod,
+              dueDate: _isGive ? _dueDate : null,
               note: note.isEmpty ? null : note,
               createdAt: now,
               updatedAt: now,
@@ -162,6 +245,11 @@ class _LedgerEntrySheetState extends ConsumerState<LedgerEntrySheet> {
 
   @override
   Widget build(BuildContext context) {
+    // Back from the UPI app but App Lock was up: ask once it's unlocked.
+    ref.listen(appLockControllerProvider.select((s) => s.locked), (_, locked) {
+      if (!locked) _askAboutUpiPayment();
+    });
+
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
     final ledger = LedgerColors.of(context);
@@ -172,6 +260,8 @@ class _LedgerEntrySheetState extends ConsumerState<LedgerEntrySheet> {
     final PersonSummary? selected = _selectedPersonId == null
         ? null
         : summaries?.where((s) => s.person.id == _selectedPersonId).firstOrNull;
+
+    final upiAction = ref.watch(upiAvailableProvider) ? _upiAction(selected, symbol) : null;
 
     return Padding(
       padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
@@ -214,9 +304,7 @@ class _LedgerEntrySheetState extends ConsumerState<LedgerEntrySheet> {
                       onChanged: () => setState(() {}),
                     ),
                     const SizedBox(height: 12),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
+                    ChipRow(
                       children: [
                         for (final p in _presets)
                           ActionChip(
@@ -226,11 +314,9 @@ class _LedgerEntrySheetState extends ConsumerState<LedgerEntrySheet> {
                       ],
                     ),
                     const SizedBox(height: 20),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
+                    ChipRow(
                       children: [
-                        for (final method in PaymentMethod.values)
+                        for (final method in PaymentMethodX.ordered)
                           ChoiceChip(
                             label: Text(method.label),
                             selected: method == _paymentMethod,
@@ -271,7 +357,15 @@ class _LedgerEntrySheetState extends ConsumerState<LedgerEntrySheet> {
                         ),
                       ],
                     ),
+                    if (_isGive) ...[
+                      const SizedBox(height: AppSpace.lg),
+                      ReturnByField(value: _dueDate, from: _date, onChanged: (d) => setState(() => _dueDate = d)),
+                    ],
                     const SizedBox(height: 24),
+                    if (upiAction != null) ...[
+                      upiAction,
+                      const SizedBox(height: AppSpace.md),
+                    ],
                     SizedBox(
                       height: 52,
                       child: FilledButton.icon(
@@ -441,8 +535,8 @@ class _PersonPanel extends StatelessWidget {
               child: ActionChip(
                 avatar: Icon(Icons.done_all_rounded, size: 16, color: accent),
                 label: Text(isGive
-                    ? 'Pay back all ${money(settleAmount)}'
-                    : 'Settle full balance ${money(settleAmount)}'),
+                    ? 'Pay back all ${money(settleAmount, exact: true)}'
+                    : 'Settle full balance ${money(settleAmount, exact: true)}'),
                 onPressed: () => onSettle(settleAmount),
               ),
             ),

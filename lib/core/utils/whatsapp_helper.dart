@@ -92,6 +92,7 @@ class WhatsAppHelper {
   static String generateLedgerReminderMessage(
     PersonSummary summary, {
     String currencySymbol = '₹',
+    String? upiId,
   }) {
     final personName = summary.person.name;
     final balanceText = CurrencyFormatter.format(summary.balance.abs(), symbol: currencySymbol);
@@ -107,6 +108,7 @@ class WhatsAppHelper {
           '• Total Given: ${CurrencyFormatter.format(summary.totalGiven, symbol: currencySymbol)}\n'
           '• Total Received: ${CurrencyFormatter.format(summary.totalReceived, symbol: currencySymbol)}\n'
           '• Pending Balance: *$balanceText*\n\n'
+          '${upiId == null ? '' : '💳 Pay by UPI: *$upiId*\n\n'}'
           'Please let me know once transferred! Thank you 🙏';
     } else if (summary.isOverpaid) {
       return 'Hi $personName 👋,\n\n'
@@ -117,16 +119,18 @@ class WhatsAppHelper {
     }
   }
 
-  /// Generates a WhatsApp reminder message for an active EMI installment
+  /// Generates a WhatsApp reminder message for an active EMI installment:
+  /// [installment] (default: the one after the paid count).
   static String generateEmiReminderMessage(
     CreditCardEmi emi,
     Person person, {
     String currencySymbol = '₹',
+    int? installment,
   }) {
     final monthlyAmount = CurrencyFormatter.format(emi.monthlyInstallment, symbol: currencySymbol);
     final totalAmount = CurrencyFormatter.format(emi.totalAmount, symbol: currencySymbol);
 
-    final installmentIndex = (emi.installmentsPaid + 1).clamp(1, emi.totalTenureMonths);
+    final installmentIndex = (installment ?? emi.installmentsPaid + 1).clamp(1, emi.totalTenureMonths);
 
     return 'Hi ${person.name} 👋,\n\n'
         'Friendly reminder regarding installment *$installmentIndex of ${emi.totalTenureMonths}* for *${emi.itemName}*.\n\n'

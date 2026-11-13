@@ -8,6 +8,7 @@ import 'package:duemate/core/utils/display_money.dart';
 import 'package:duemate/core/widgets/avatar_widget.dart';
 import 'package:duemate/data/providers/app_providers.dart';
 import 'package:duemate/domain/entities/person_summary.dart';
+import 'package:duemate/domain/loan_dues.dart';
 
 /// Layout used by every top-level tab: a large title that collapses on
 /// scroll, optional actions, then the page content as slivers.
@@ -140,6 +141,9 @@ class MoneyText extends ConsumerWidget {
   final TextStyle? style;
   final TextAlign? textAlign;
 
+  /// Keep paise. Off by default: lists and totals show whole rupees.
+  final bool exact;
+
   const MoneyText(
     this.amount, {
     super.key,
@@ -148,6 +152,7 @@ class MoneyText extends ConsumerWidget {
     this.sign = '',
     this.style,
     this.textAlign,
+    this.exact = false,
   });
 
   static Color colorFor(BuildContext context, MoneyTone tone) {
@@ -166,7 +171,7 @@ class MoneyText extends ConsumerWidget {
     final base = style ?? Theme.of(context).textTheme.titleSmall;
     final hidden = ref.watch(hideBalancesProvider);
     return Text(
-      hidden ? '$symbol${DisplayMoney.mask}' : '$sign${CurrencyFormatter.format(amount.abs(), symbol: symbol)}',
+      hidden ? '$symbol${DisplayMoney.mask}' : '$sign${CurrencyFormatter.format(amount.abs(), symbol: symbol, whole: !exact)}',
       semanticsLabel: hidden ? DisplayMoney.hiddenLabel : null,
       textAlign: textAlign,
       maxLines: 1,
@@ -182,12 +187,108 @@ class MoneyText extends ConsumerWidget {
   return (label: 'settled', tone: MoneyTone.muted);
 }
 
+/// How much has been paid back, as a thin bar and "Paid ₹X of ₹Y · N%".
+/// The paid part is green when it's money coming back to you and neutral
+/// ink when you're the one repaying (lending is never red). Amounts follow
+/// "Hide amounts"; the percentage stays visible.
+class RepaymentBar extends ConsumerWidget {
+  final Repayment repayment;
+  final double thickness;
+
+  const RepaymentBar(this.repayment, {super.key, this.thickness = 4});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final ledger = LedgerColors.of(context);
+    final money = ref.watch(displayMoneyProvider);
+    final r = repayment;
+    final caption =
+        '${r.byYou ? 'You paid back' : 'Paid'} ${money(r.paid)} of ${money(r.of)} · ${r.percent}%';
+
+    return Semantics(
+      label: caption,
+      excludeSemantics: true,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          LinearProgressIndicator(
+            value: r.fraction,
+            minHeight: thickness,
+            borderRadius: BorderRadius.circular(thickness),
+            color: r.byYou ? ledger.cashOut : ledger.cashIn,
+            backgroundColor: theme.colorScheme.surfaceContainerHighest,
+          ),
+          const SizedBox(height: AppSpace.xs),
+          Text(
+            caption,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// "₹5,000 due back by 15 Dec" or, once the date has passed, "₹5,000
+/// overdue since 15 Dec" in the warning colour with an icon (overdue money is
+/// owed *to* you, so it's never red). Amounts follow "Hide amounts".
+class DueBackLine extends ConsumerWidget {
+  final LoanDueStatus status;
+  final TextStyle? style;
+
+  const DueBackLine(this.status, {super.key, this.style});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final cs = Theme.of(context).colorScheme;
+    final money = ref.watch(displayMoneyProvider);
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final overdue = status.isOverdue(today);
+    final next = status.next;
+    final days = next.date.difference(today).inDays;
+    final when = days == 0
+        ? 'today'
+        : days == 1
+            ? 'tomorrow'
+            : 'by ${DateFormatter.formatShortDate(next.date)}';
+    final text = overdue
+        ? '${money(status.overdueAmount(today))} overdue since ${DateFormatter.formatShortDate(next.date)}'
+        : '${money(next.amount)} due back $when';
+    final color = overdue ? cs.tertiary : cs.onSurfaceVariant;
+    final base = style ?? Theme.of(context).textTheme.bodySmall;
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(overdue ? Icons.error_outline_rounded : Icons.schedule_rounded, size: (base?.fontSize ?? 12) + 2, color: color),
+        const SizedBox(width: AppSpace.xs),
+        Flexible(
+          child: Text(text,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: base?.copyWith(color: color, fontWeight: overdue ? FontWeight.w600 : null)),
+        ),
+      ],
+    );
+  }
+}
+
 /// One person in a list: who, when you last dealt with them, and the balance.
+/// With [showRepayment], also how much has been paid back.
 class PersonRow extends StatelessWidget {
   final PersonSummary summary;
   final String symbol;
   final VoidCallback? onTap;
   final VoidCallback? onLongPress;
+  final bool showRepayment;
+
+  /// Dated loans not yet repaid: replaces "last activity" with when it's due.
+  final LoanDueStatus? due;
 
   const PersonRow({
     super.key,
@@ -195,6 +296,8 @@ class PersonRow extends StatelessWidget {
     required this.symbol,
     this.onTap,
     this.onLongPress,
+    this.showRepayment = false,
+    this.due,
   });
 
   @override
@@ -208,13 +311,16 @@ class PersonRow extends StatelessWidget {
         : (p.phone?.isNotEmpty ?? false)
             ? p.phone!
             : 'No entries yet';
+    // Only while partly repaid: a bar at 0% or 100% adds a line and no news.
+    final repayment = showRepayment && (summary.repayment?.isPartial ?? false) ? summary.repayment : null;
+    final open = onTap ?? () => context.push('/people/${p.id}');
 
-    return ListTile(
-      onTap: onTap ?? () => context.push('/people/${p.id}'),
-      onLongPress: onLongPress,
+    final tile = ListTile(
+      onTap: repayment == null ? open : null,
+      onLongPress: repayment == null ? onLongPress : null,
       leading: AvatarWidget(name: p.name, radius: 20, heroTag: 'avatar-${p.id}'),
       title: Text(p.name, maxLines: 1, overflow: TextOverflow.ellipsis),
-      subtitle: Text(subtitle, maxLines: 1, overflow: TextOverflow.ellipsis),
+      subtitle: due != null ? DueBackLine(due!) : Text(subtitle, maxLines: 1, overflow: TextOverflow.ellipsis),
       trailing: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         crossAxisAlignment: CrossAxisAlignment.end,
@@ -224,6 +330,26 @@ class PersonRow extends StatelessWidget {
           Text(
             wording.label,
             style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+          ),
+        ],
+      ),
+    );
+    if (repayment == null) return tile;
+
+    // The bar spans the row under the name and balance, so every row's bar
+    // has the same width whatever the balance column needs. One tap target.
+    return InkWell(
+      onTap: open,
+      onLongPress: onLongPress,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          tile,
+          Padding(
+            // Lines up with the name and the balance: tile padding, then the
+            // 40dp avatar and ListTile's 16dp gap.
+            padding: const EdgeInsets.fromLTRB(AppSpace.screenGutter + 40 + 16, 0, AppSpace.screenGutter, AppSpace.md),
+            child: RepaymentBar(repayment),
           ),
         ],
       ),
@@ -289,6 +415,89 @@ class IconBadge extends StatelessWidget {
         borderRadius: BorderRadius.circular(AppRadius.md),
       ),
       child: Icon(icon, size: size * 0.5, color: color ?? cs.onSurfaceVariant),
+    );
+  }
+}
+
+/// App-bar menu for picking a year, e.g. on trend screens.
+class YearMenuButton extends StatelessWidget {
+  final int year;
+  final List<int> years;
+  final ValueChanged<int> onSelected;
+
+  const YearMenuButton({super.key, required this.year, required this.years, required this.onSelected});
+
+  @override
+  Widget build(BuildContext context) {
+    return PopupMenuButton<int>(
+      tooltip: 'Choose year',
+      initialValue: year,
+      onSelected: onSelected,
+      itemBuilder: (_) => [for (final y in years.reversed) PopupMenuItem(value: y, child: Text('$y'))],
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: AppSpace.lg),
+        child: Row(
+          children: [
+            Text('$year', style: Theme.of(context).textTheme.titleMedium),
+            const Icon(Icons.arrow_drop_down_rounded),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// How reliably someone repays loans with a "return by" date, e.g.
+/// "Repaid on time: 3 of 4 loans (75%)". Neutral ink: it's a record, not money
+/// owed. Shows nothing until at least one dated loan has been paid back:
+/// a loan that is only overdue so far is already on the due-back line.
+class RepaymentRecordLine extends StatelessWidget {
+  final RepaymentRecord record;
+  final TextStyle? style;
+
+  const RepaymentRecordLine(this.record, {super.key, this.style});
+
+  @override
+  Widget build(BuildContext context) {
+    final share = record.onTimeShare;
+    if (share == null || record.repaid == 0) return const SizedBox.shrink();
+    final color = Theme.of(context).colorScheme.onSurfaceVariant;
+    final base = style ?? Theme.of(context).textTheme.bodySmall;
+    final loans = record.judged == 1 ? 'loan' : 'loans';
+    final text = 'Repaid on time: ${record.onTime} of ${record.judged} $loans (${(share * 100).round()}%)';
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(Icons.event_available_outlined, size: (base?.fontSize ?? 12) + 2, color: color),
+        const SizedBox(width: AppSpace.xs),
+        Flexible(
+          child: Text(text, maxLines: 1, overflow: TextOverflow.ellipsis, style: base?.copyWith(color: color)),
+        ),
+      ],
+    );
+  }
+}
+
+/// Chips on one line that scrolls sideways, instead of wrapping onto more
+/// lines: forms stay short, and the first choices are always in view.
+class ChipRow extends StatelessWidget {
+  final List<Widget> children;
+
+  const ChipRow({super.key, required this.children});
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      clipBehavior: Clip.none,
+      child: Row(
+        children: [
+          for (var i = 0; i < children.length; i++) ...[
+            if (i > 0) const SizedBox(width: AppSpace.sm),
+            children[i],
+          ],
+        ],
+      ),
     );
   }
 }

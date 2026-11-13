@@ -2,25 +2,14 @@ import 'package:drift/drift.dart';
 import '../../domain/entities/person.dart' as domain;
 import '../../domain/repositories/person_repository.dart';
 import '../database/app_database.dart' as db;
+import 'person_mapper.dart';
 
 class PersonRepositoryImpl implements PersonRepository {
   final db.AppDatabase _database;
 
   PersonRepositoryImpl(this._database);
 
-  domain.Person _toDomain(db.Person row) {
-    return domain.Person(
-      id: row.id,
-      name: row.name,
-      phone: row.phone,
-      email: row.email,
-      notes: row.notes,
-      avatarPath: row.avatarPath,
-      createdAt: row.createdAt,
-      updatedAt: row.updatedAt,
-      archivedAt: row.archivedAt,
-    );
-  }
+  domain.Person _toDomain(db.Person row) => row.toDomain();
 
   @override
   Stream<List<domain.Person>> watchAllPersons({bool includeArchived = false}) {
@@ -69,6 +58,7 @@ class PersonRepositoryImpl implements PersonRepository {
             phone: Value(person.phone),
             email: Value(person.email),
             notes: Value(person.notes),
+            upiId: Value(person.upiId),
             avatarPath: Value(person.avatarPath),
             createdAt: person.createdAt,
             updatedAt: person.updatedAt,
@@ -85,6 +75,7 @@ class PersonRepositoryImpl implements PersonRepository {
         phone: Value(person.phone),
         email: Value(person.email),
         notes: Value(person.notes),
+        upiId: Value(person.upiId),
         avatarPath: Value(person.avatarPath),
         updatedAt: Value(DateTime.now()),
         archivedAt: Value(person.archivedAt),

@@ -6,20 +6,20 @@ import 'package:duemate/core/theme/app_theme.dart';
 import 'package:duemate/core/utils/date_formatter.dart';
 import 'package:duemate/core/utils/permission_manager.dart';
 import 'package:duemate/core/widgets/app_logo.dart';
+import 'package:duemate/core/widgets/hide_amounts_toggle.dart';
 import 'package:duemate/core/widgets/quick_give_sheet.dart';
 import 'package:duemate/core/widgets/quick_receive_sheet.dart';
 import 'package:duemate/core/widgets/transaction_tile.dart';
 import 'package:duemate/core/widgets/ui_kit.dart';
 import 'package:duemate/data/providers/app_providers.dart';
 import 'package:duemate/domain/entities/credit_card_emi.dart';
-import 'package:duemate/features/emis/presentation/screens/add_edit_emi_screen.dart';
 import 'package:duemate/features/emis/presentation/widgets/emi_details_sheet.dart';
 import 'package:duemate/features/expenses/presentation/widgets/add_edit_expense_sheet.dart';
 import 'package:duemate/features/people/presentation/screens/add_edit_person_screen.dart';
 import 'package:duemate/features/transactions/presentation/widgets/transaction_details_dialog.dart';
 
-/// Home answers, in order: where do I stand, what can I do, what's coming
-/// up, and who's involved.
+/// Home answers, in order: where do I stand, what can I do, who owes what,
+/// what I spent and what is due next. Sections without data stay hidden.
 class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
 
@@ -38,8 +38,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Post any EMI installments that fell due since the app was last opened.
+    // Post EMI installments and recurring expenses that fell due since the
+    // app was last opened.
     ref.watch(emiAutoProcessorProvider);
+    ref.watch(recurringExpenseProcessorProvider);
 
     final symbol = ref.watch(currencySymbolProvider);
     final hasPeople = (ref.watch(allPersonSummariesProvider).value ?? const [])
@@ -79,11 +81,12 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             if (isEmpty)
               const SliverToBoxAdapter(child: _Welcome())
             else ...[
+              // Most important first; each section only once it has something.
               SliverToBoxAdapter(child: _Position(symbol: symbol)),
               const SliverToBoxAdapter(child: _PrimaryActions()),
-              SliverToBoxAdapter(child: _EmisAndCards(symbol: symbol)),
-              SliverToBoxAdapter(child: _MonthSpend(symbol: symbol)),
               SliverToBoxAdapter(child: _Balances(symbol: symbol)),
+              if (hasExpenses) SliverToBoxAdapter(child: _MonthSpend(symbol: symbol)),
+              if (hasEmis) SliverToBoxAdapter(child: _NextEmi(symbol: symbol)),
               SliverToBoxAdapter(child: _Recent(symbol: symbol)),
             ],
             const SliverToBoxAdapter(child: SizedBox(height: AppSpace.xl)),
@@ -175,61 +178,47 @@ class _PrimaryActions extends StatelessWidget {
   }
 }
 
-/// Shortcut to EMIs and cards: how many, what goes out each month, and the
-/// next installments due. Always shown, so EMIs are one tap from Home.
-class _EmisAndCards extends ConsumerWidget {
+/// EMIs in one row: the next installment due, with how many are active and
+/// what goes out each month. "See all" opens the EMI list.
+class _NextEmi extends ConsumerWidget {
   final String symbol;
-  const _EmisAndCards({required this.symbol});
+  const _NextEmi({required this.symbol});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final emis = ref.watch(activeEmisProvider).value ?? const <CreditCardEmi>[];
     final people = ref.watch(personsMapProvider);
-    void openAll() => context.go('/expenses?tab=emis');
 
-    final upcoming = emis.where((e) => e.nextDueDate != null).toList()
-      ..sort((a, b) => a.nextDueDate!.compareTo(b.nextDueDate!));
+    // Each EMI's earliest unpaid installment, soonest first.
+    final upcoming = [
+      for (final e in emis)
+        if (watchInstallments(ref, e) case final s when s.next != null) s,
+    ]..sort((a, b) => a.nextDueDate!.compareTo(b.nextDueDate!));
+    if (upcoming.isEmpty) return const SizedBox.shrink();
+    final next = upcoming.first;
     // What leaves your account each month: your own EMIs and those on your card.
-    final monthly = emis
-        .where((e) => e.isForSelf || e.isPaidByMe)
-        .fold<double>(0, (s, e) => s + e.getMonthlyInstallmentFor(e.installmentsPaid + 1));
+    final monthly = upcoming
+        .where((s) => s.emi.isForSelf || s.emi.isPaidByMe)
+        .fold<double>(0, (sum, s) => sum + s.nextAmount);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        SectionHeader('EMIs & cards', actionLabel: 'Add', onAction: () => AddEditEmiScreen.show(context)),
+        SectionHeader('EMIs & loans', actionLabel: 'See all', onAction: () => context.go('/expenses?tab=emis')),
         GroupCard(
-          children: emis.isEmpty
-              ? [
-                  ListTile(
-                    onTap: () => AddEditEmiScreen.show(context),
-                    leading: const IconBadge(Icons.credit_card_outlined),
-                    title: const Text('Add an EMI or loan'),
-                    subtitle: const Text('Installments go into the ledger on their due dates'),
-                    trailing: const Icon(Icons.chevron_right_rounded),
-                  ),
-                ]
-              : [
-                  ListTile(
-                    onTap: openAll,
-                    leading: const IconBadge(Icons.credit_card_outlined),
-                    title: Text('${emis.length} active'),
-                    subtitle: Text(
-                      monthly > 0
-                          ? '${ref.watch(displayMoneyProvider)(monthly)} goes out each month'
-                          : 'Paid by others',
-                    ),
-                    trailing: const Icon(Icons.chevron_right_rounded),
-                  ),
-                  for (final e in upcoming.take(3))
-                    ListTile(
-                      onTap: () => EmiDetailsSheet.show(context, emi: e, person: people[e.personId]),
-                      leading: const IconBadge(Icons.event_outlined),
-                      title: Text(e.itemName, maxLines: 1, overflow: TextOverflow.ellipsis),
-                      subtitle: Text('Due ${DateFormatter.formatRelative(e.nextDueDate!)} · ${e.cardName}'),
-                      trailing: MoneyText(e.getMonthlyInstallmentFor(e.installmentsPaid + 1), symbol: symbol),
-                    ),
-                ],
+          children: [
+            ListTile(
+              onTap: () => EmiDetailsSheet.show(context, emi: next.emi, person: people[next.emi.personId]),
+              leading: const IconBadge(Icons.event_outlined),
+              title: Text('Next: ${next.emi.itemName}', maxLines: 1, overflow: TextOverflow.ellipsis),
+              subtitle: Text([
+                'Due ${DateFormatter.formatRelative(next.nextDueDate!)}',
+                '${emis.length} active',
+                if (monthly > 0) '${ref.watch(displayMoneyProvider)(monthly)} a month',
+              ].join(' · ')),
+              trailing: MoneyText(next.nextAmount, symbol: symbol),
+            ),
+          ],
         ),
       ],
     );
@@ -254,7 +243,7 @@ class _MonthSpend extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        SectionHeader('Spending in $month'),
+        SectionHeader('Spent in $month'),
         GroupCard(
           children: [
             InkWell(
@@ -304,21 +293,15 @@ class _Balances extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final top = ref.watch(topPeopleByBalanceProvider);
+    // Nothing open: the headline already says "All square".
+    if (top.isEmpty) return const SizedBox.shrink();
+    final dues = ref.watch(loanDuesProvider);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         SectionHeader('Balances', actionLabel: 'All people', onAction: () => context.go('/people')),
         GroupCard(
-          children: top.isEmpty
-              ? [
-                  ListTile(
-                    leading: const IconBadge(Icons.check_rounded),
-                    title: const Text('No open balances'),
-                    subtitle: const Text('Record what you give or receive and it shows up here.'),
-                    onTap: () => context.go('/people'),
-                  ),
-                ]
-              : [for (final s in top) PersonRow(summary: s, symbol: symbol)],
+          children: [for (final s in top) PersonRow(summary: s, symbol: symbol, due: dues[s.person.id])],
         ),
       ],
     );
@@ -411,7 +394,7 @@ class _HideAmountsButton extends ConsumerWidget {
       isSelected: hidden,
       icon: const Icon(Icons.visibility_outlined),
       selectedIcon: const Icon(Icons.visibility_off_outlined),
-      onPressed: () => ref.read(hideBalancesProvider.notifier).toggle(),
+      onPressed: () => setAmountsHidden(context, ref, !hidden),
     );
   }
 }

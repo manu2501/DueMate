@@ -17,6 +17,7 @@ import 'package:duemate/core/widgets/transaction_tile.dart';
 import 'package:duemate/core/widgets/ui_kit.dart';
 import 'package:duemate/data/providers/app_providers.dart';
 import 'package:duemate/domain/entities/ledger_transaction.dart';
+import 'package:duemate/domain/loan_dues.dart';
 import 'package:duemate/domain/entities/person_summary.dart';
 import 'package:duemate/features/emis/presentation/screens/add_edit_emi_screen.dart';
 import 'package:duemate/features/emis/presentation/widgets/emi_card.dart';
@@ -115,7 +116,7 @@ class PersonDetailsScreen extends ConsumerWidget {
   }
 }
 
-enum _MenuAction { statement, shareText, details, edit, addEmi, archive, delete }
+enum _MenuAction { statement, shareText, details, edit, archive, delete }
 
 class _PersonLedger extends ConsumerWidget {
   final PersonSummary summary;
@@ -139,9 +140,11 @@ class _PersonLedger extends ConsumerWidget {
     final person = summary.person;
     final transactions = ref.watch(personTransactionsProvider(person.id)).value ?? const <LedgerTransaction>[];
     final emis = ref.watch(personEmisProvider(person.id)).value ?? const [];
+    final dueList = LoanDues.outstanding(transactions);
+    final due = dueList.isEmpty ? null : LoanDueStatus(dueList);
+    final record = RepaymentRecord.of(transactions, DateTime.now());
     final hasPhone = person.phone?.trim().isNotEmpty ?? false;
     final canRemind = summary.owesMoney && hasPhone;
-    final money = ref.watch(displayMoneyProvider);
 
     final firstName = person.name.split(' ').first;
     final String headline;
@@ -159,9 +162,12 @@ class _PersonLedger extends ConsumerWidget {
 
     void remind() => WhatsAppHelper.sendWhatsAppMessage(
           phoneNumber: person.phone,
-          message: WhatsAppHelper.generateLedgerReminderMessage(summary, currencySymbol: symbol),
+          message: WhatsAppHelper.generateLedgerReminderMessage(summary,
+              currencySymbol: symbol, upiId: ref.read(upiIdForRemindersProvider)),
           context: context,
         );
+
+    void addEmi() => AddEditEmiScreen.show(context, personId: person.id);
 
     void onMenu(_MenuAction a) {
       switch (a) {
@@ -181,13 +187,11 @@ class _PersonLedger extends ConsumerWidget {
             ),
           );
         case _MenuAction.shareText:
-          ReminderHelper.shareReminder(summary, currencySymbol: symbol);
+          ReminderHelper.shareReminder(summary, currencySymbol: symbol, upiId: ref.read(upiIdForRemindersProvider));
         case _MenuAction.details:
           PersonInfoSheet.show(context, person: person, summary: summary, currencySymbol: symbol);
         case _MenuAction.edit:
           AddEditPersonScreen.show(context, personToEdit: person);
-        case _MenuAction.addEmi:
-          AddEditEmiScreen.show(context, personId: person.id);
         case _MenuAction.archive:
           onArchive();
         case _MenuAction.delete:
@@ -239,7 +243,6 @@ class _PersonLedger extends ConsumerWidget {
                   item(_MenuAction.shareText, Icons.ios_share_rounded, 'Share balance as text'),
                   item(_MenuAction.details, Icons.info_outline_rounded, 'Contact details'),
                   item(_MenuAction.edit, Icons.edit_outlined, 'Edit'),
-                  item(_MenuAction.addEmi, Icons.event_repeat_outlined, 'Add EMI or loan'),
                   const PopupMenuDivider(),
                   item(_MenuAction.archive, Icons.archive_outlined, person.isArchived ? 'Unarchive' : 'Archive'),
                   item(_MenuAction.delete, Icons.delete_outline_rounded, 'Delete', color: cs.error),
@@ -271,12 +274,17 @@ class _PersonLedger extends ConsumerWidget {
                   Text(headline, style: theme.textTheme.labelLarge?.copyWith(color: cs.onSurfaceVariant)),
                   const SizedBox(height: AppSpace.xs),
                   MoneyText(summary.balance, symbol: symbol, tone: tone, style: theme.textTheme.displaySmall),
-                  if (!summary.hasNoTransactions) ...[
+                  if (summary.repayment case final repayment?) ...[
+                    const SizedBox(height: AppSpace.md),
+                    RepaymentBar(repayment, thickness: 8),
+                  ],
+                  if (due != null) ...[
+                    const SizedBox(height: AppSpace.sm),
+                    DueBackLine(due, style: theme.textTheme.bodyMedium),
+                  ],
+                  if (record.repaid > 0) ...[
                     const SizedBox(height: AppSpace.xs),
-                    Text(
-                      'You gave ${money(summary.totalGiven)} · received ${money(summary.totalReceived)}',
-                      style: theme.textTheme.bodyMedium?.copyWith(color: cs.onSurfaceVariant),
-                    ),
+                    RepaymentRecordLine(record, style: theme.textTheme.bodyMedium),
                   ],
                 ],
               ),
@@ -309,20 +317,24 @@ class _PersonLedger extends ConsumerWidget {
             ),
           ),
 
-          if (emis.isNotEmpty) ...[
-            SliverToBoxAdapter(
-              child: SectionHeader(
-                'EMIs and loans',
-                actionLabel: 'Add',
-                onAction: () => AddEditEmiScreen.show(context, personId: person.id),
-              ),
+          SliverToBoxAdapter(
+            child: SectionHeader('EMIs & loans', actionLabel: 'Add', onAction: addEmi),
+          ),
+          SliverToBoxAdapter(
+            child: GroupCard(
+              children: emis.isEmpty
+                  ? [
+                      ListTile(
+                        onTap: addEmi,
+                        leading: const IconBadge(Icons.credit_card_outlined),
+                        title: const Text('Card EMI or loan'),
+                        subtitle: Text("Each installment is added to ${person.name.split(' ').first}'s ledger on its due date"),
+                        trailing: const Icon(Icons.chevron_right_rounded),
+                      ),
+                    ]
+                  : [for (final e in emis) EmiCard(emi: e, person: person, currencySymbol: symbol)],
             ),
-            SliverToBoxAdapter(
-              child: GroupCard(
-                children: [for (final e in emis) EmiCard(emi: e, person: person, currencySymbol: symbol)],
-              ),
-            ),
-          ],
+          ),
 
           if (transactions.isEmpty)
             SliverToBoxAdapter(

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:duemate/core/constants/app_constants.dart';
+import 'package:duemate/core/services/app_lock_service.dart';
 import 'package:duemate/core/services/notification_service.dart';
 import 'package:duemate/core/theme/app_theme.dart';
 import 'package:duemate/core/utils/backup_helper.dart';
@@ -8,9 +10,12 @@ import 'package:duemate/core/utils/csv_exporter.dart';
 import 'package:duemate/core/utils/permission_manager.dart';
 import 'package:duemate/core/widgets/app_logo.dart';
 import 'package:duemate/core/widgets/confirm_dialog.dart';
+import 'package:duemate/core/widgets/hide_amounts_toggle.dart';
+import 'package:duemate/core/widgets/upi_widgets.dart';
 import 'package:duemate/core/widgets/ui_kit.dart';
 import 'package:duemate/data/providers/app_providers.dart';
 import 'package:duemate/features/expenses/presentation/widgets/budget_dialog.dart';
+import 'package:duemate/features/settings/presentation/widgets/restore_backup.dart';
 
 /// Settings, grouped by what you're trying to do. Each row says what it
 /// changes; anything destructive is last and asks first.
@@ -54,16 +59,23 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     if (mounted) _snack(ok ? 'Test reminder sent. Check your notifications.' : "Couldn't send. Check notification permission.");
   }
 
-  void _pickCurrency(String current) {
+  /// Pick-one sheet: a title and one radio row per option; picking saves and closes.
+  void _showRadioPicker<T>({
+    required String title,
+    required T current,
+    required List<T> options,
+    required Widget Function(BuildContext ctx, T option) tile,
+    required ValueChanged<T> onPicked,
+  }) {
     showModalBottomSheet<void>(
       context: context,
       useRootNavigator: true,
       isScrollControlled: true,
       builder: (ctx) => SafeArea(
-        child: RadioGroup<String>(
+        child: RadioGroup<T>(
           groupValue: current,
-          onChanged: (symbol) {
-            if (symbol != null) ref.read(currencySymbolProvider.notifier).setCurrency(symbol);
+          onChanged: (value) {
+            if (value != null) onPicked(value);
             Navigator.of(ctx).pop();
           },
           child: ListView(
@@ -71,20 +83,44 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             children: [
               Padding(
                 padding: const EdgeInsets.fromLTRB(AppSpace.screenGutter, 0, AppSpace.screenGutter, AppSpace.sm),
-                child: Text('Currency', style: Theme.of(ctx).textTheme.titleMedium),
+                child: Text(title, style: Theme.of(ctx).textTheme.titleMedium),
               ),
-              for (final c in AppConstants.supportedCurrencies)
-                RadioListTile<String>(
-                  value: c.symbol,
-                  title: Text(c.name),
-                  subtitle: Text(c.code),
-                  secondary: Text(c.symbol, style: Theme.of(ctx).textTheme.titleMedium),
-                ),
+              for (final o in options) tile(ctx, o),
             ],
           ),
         ),
       ),
     );
+  }
+
+  void _pickCurrency(String current) => _showRadioPicker<String>(
+        title: 'Currency',
+        current: current,
+        options: [for (final c in AppConstants.supportedCurrencies) c.symbol],
+        tile: (ctx, symbol) {
+          final c = AppConstants.supportedCurrencies.firstWhere((c) => c.symbol == symbol);
+          return RadioListTile<String>(
+            value: c.symbol,
+            title: Text(c.name),
+            subtitle: Text(c.code),
+            secondary: Text(c.symbol, style: Theme.of(ctx).textTheme.titleMedium),
+          );
+        },
+        onPicked: (symbol) => ref.read(currencySymbolProvider.notifier).setCurrency(symbol),
+      );
+
+  void _pickLockDelay(AppLockDelay current) => _showRadioPicker<AppLockDelay>(
+        title: 'Lock after leaving the app',
+        current: current,
+        options: AppLockDelay.values,
+        tile: (_, d) => RadioListTile<AppLockDelay>(value: d, title: Text(d.label)),
+        onPicked: (d) => ref.read(appLockSettingsProvider.notifier).setDelay(d),
+      );
+
+  Future<void> _setAppLock(bool on) async {
+    final result = await ref.read(appLockControllerProvider.notifier).setEnabled(on);
+    final message = appLockMessage(result);
+    if (message != null && mounted) _snack(message);
   }
 
   Future<void> _exportCsv() async {
@@ -117,6 +153,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final themeMode = ref.watch(themeModeProvider);
     final symbol = ref.watch(currencySymbolProvider);
     final budget = ref.watch(monthlyBudgetLimitProvider);
+    final lockSettings = ref.watch(appLockSettingsProvider);
+    final upi = ref.watch(upiProfileProvider);
     final currency = AppConstants.supportedCurrencies.where((c) => c.symbol == symbol).firstOrNull;
 
     return Scaffold(
@@ -153,7 +191,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 title: const Text('Hide amounts'),
                 subtitle: const Text('Show dots instead of balances and totals, e.g. in public. Also on Home.'),
                 value: ref.watch(hideBalancesProvider),
-                onChanged: (v) => ref.read(hideBalancesProvider.notifier).set(v),
+                onChanged: (v) => setAmountsHidden(context, ref, v),
               ),
               ListTile(
                 title: const Text('Currency'),
@@ -174,6 +212,33 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 trailing: Text(ref.watch(displayMoneyProvider)(budget), style: theme.textTheme.titleSmall),
                 onTap: () => editMonthlyBudget(context, ref),
               ),
+              if (ref.watch(upiAvailableProvider))
+                ListTile(
+                  title: const Text('Your UPI ID'),
+                  subtitle: Text(upi.id ?? 'For UPI QR codes and payment reminders'),
+                  trailing: const Icon(Icons.chevron_right_rounded),
+                  onTap: () => editUpiProfile(context, ref),
+                ),
+            ],
+          ),
+
+          const SectionHeader('Security'),
+          GroupCard(
+            dividerIndent: AppSpace.screenGutter,
+            children: [
+              SwitchListTile(
+                contentPadding: const EdgeInsets.symmetric(horizontal: AppSpace.screenGutter),
+                title: const Text('App Lock'),
+                subtitle: const Text('Ask for your fingerprint, face or screen lock to open DueMate'),
+                value: lockSettings.enabled,
+                onChanged: _setAppLock,
+              ),
+              ListTile(
+                enabled: lockSettings.enabled,
+                title: const Text('Lock after leaving the app'),
+                subtitle: Text(lockSettings.delay.label),
+                onTap: () => _pickLockDelay(lockSettings.delay),
+              ),
             ],
           ),
 
@@ -184,7 +249,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               SwitchListTile(
                 contentPadding: const EdgeInsets.symmetric(horizontal: AppSpace.screenGutter),
                 title: const Text('Notifications'),
-                subtitle: const Text('Allow DueMate to send you notifications'),
+                subtitle: const Text('EMI reminders the day before each installment is due'),
                 value: _remindersOn ?? false,
                 onChanged: _remindersOn == null ? null : _setReminders,
               ),
@@ -213,6 +278,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 onTap: () => BackupHelper.exportBackup(ref.read(databaseProvider)),
               ),
               ListTile(
+                title: const Text('Restore from a backup'),
+                subtitle: const Text('Replaces everything on this phone with a backup file'),
+                onTap: () => restoreFromBackup(context, ref),
+              ),
+              ListTile(
                 title: const Text('Export transactions'),
                 subtitle: const Text('CSV for Excel or Google Sheets'),
                 onTap: _exportCsv,
@@ -221,6 +291,34 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 title: Text('Erase all data', style: TextStyle(color: cs.error)),
                 subtitle: const Text('Removes everything from this phone'),
                 onTap: _erase,
+              ),
+            ],
+          ),
+
+          const SectionHeader('About'),
+          GroupCard(
+            children: [
+              const ListTile(
+                title: Text('Version'),
+                trailing: Text(AppConstants.appVersionLabel),
+              ),
+              ListTile(
+                title: const Text("What's new"),
+                subtitle: const Text('What changed in each version'),
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (ref.watch(hasUnseenReleaseProvider))
+                      Badge(
+                        label: const Text('New'),
+                        backgroundColor: cs.primary,
+                        textColor: cs.onPrimary,
+                        padding: const EdgeInsets.symmetric(horizontal: AppSpace.sm),
+                      ),
+                    const Icon(Icons.chevron_right_rounded),
+                  ],
+                ),
+                onTap: () => context.push('/changelog'),
               ),
             ],
           ),
@@ -235,7 +333,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('${AppConstants.appName} ${AppConstants.appVersionString}', style: theme.textTheme.titleSmall),
+                      Text(AppConstants.appName, style: theme.textTheme.titleSmall),
                       Text(
                         'Your data stays on this phone. No account, no tracking.',
                         style: theme.textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),

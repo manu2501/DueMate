@@ -11,6 +11,9 @@ class LedgerTransaction {
   final String? emiId;
   final int? installmentNumber;
   final bool isSettled;
+
+  /// For money given: when it should be back (optional).
+  final DateTime? dueDate;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -25,6 +28,7 @@ class LedgerTransaction {
     this.emiId,
     this.installmentNumber,
     this.isSettled = false,
+    this.dueDate,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -44,6 +48,8 @@ class LedgerTransaction {
     String? emiId,
     int? installmentNumber,
     bool? isSettled,
+    DateTime? dueDate,
+    bool clearDueDate = false,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -58,6 +64,7 @@ class LedgerTransaction {
       emiId: emiId ?? this.emiId,
       installmentNumber: installmentNumber ?? this.installmentNumber,
       isSettled: isSettled ?? this.isSettled,
+      dueDate: clearDueDate ? null : (dueDate ?? this.dueDate),
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
