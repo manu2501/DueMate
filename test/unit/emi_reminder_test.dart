@@ -81,6 +81,12 @@ void main() {
           reason: 'today 9:00 has passed; next one');
     });
 
+    test('skips installments already paid ahead; reminds of the unpaid ones', () {
+      // #1 and #3 are posted (#3 paid ahead): remind #2, #4, #5.
+      final plan = EmiReminderPlanner.plan([_emi(paid: 2)], now: now, posted: {'e1': {1, 3}});
+      expect(plan.map((r) => r.body.split(' · ').first), ['installment 2 of 12', 'installment 4 of 12', 'installment 5 of 12']);
+    });
+
     test('stops at the last installment and skips finished or cancelled EMIs', () {
       expect(EmiReminderPlanner.plan([_emi(paid: 11)], now: now), hasLength(1));
       expect(EmiReminderPlanner.plan([_emi(paid: 12)], now: now), isEmpty);

@@ -31,6 +31,7 @@ final reminderPlanProvider = Provider<List<Reminder>?>((ref) {
     ...EmiReminderPlanner.plan(
       emis,
       now: now,
+      posted: ref.watch(emiPostingsProvider),
       whoFor: (e) => e.personId == AppConstants.selfPersonId ? null : people[e.personId]?.name,
       amountText: private ? null : money,
     ),

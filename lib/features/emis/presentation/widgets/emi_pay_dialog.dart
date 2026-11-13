@@ -2,21 +2,23 @@ import 'package:flutter/material.dart';
 import 'package:duemate/core/theme/app_theme.dart';
 import 'package:duemate/core/utils/currency_formatter.dart';
 import 'package:duemate/core/utils/date_formatter.dart';
+import 'package:duemate/domain/emi_installments.dart';
 import 'package:duemate/domain/entities/credit_card_emi.dart';
 
 /// What the user chose in [EmiPayDialog].
 typedef EmiPayment = ({int count, DateTime paidOn});
 
 /// Records the next installment(s) as paid, including paying ahead of the
-/// due date: how many, and the day you paid.
+/// due date: how many, and the day you paid. Takes the earliest unpaid
+/// installments, so a gap left unpaid is filled first.
 class EmiPayDialog extends StatefulWidget {
-  final CreditCardEmi emi;
+  final EmiInstallments state;
   final String symbol;
 
-  const EmiPayDialog({super.key, required this.emi, required this.symbol});
+  const EmiPayDialog({super.key, required this.state, required this.symbol});
 
-  static Future<EmiPayment?> show(BuildContext context, {required CreditCardEmi emi, required String symbol}) =>
-      showDialog<EmiPayment>(context: context, builder: (_) => EmiPayDialog(emi: emi, symbol: symbol));
+  static Future<EmiPayment?> show(BuildContext context, {required EmiInstallments state, required String symbol}) =>
+      showDialog<EmiPayment>(context: context, builder: (_) => EmiPayDialog(state: state, symbol: symbol));
 
   @override
   State<EmiPayDialog> createState() => _EmiPayDialogState();
@@ -26,17 +28,13 @@ class _EmiPayDialogState extends State<EmiPayDialog> {
   int _count = 1;
   DateTime _paidOn = DateUtils.dateOnly(DateTime.now());
 
-  CreditCardEmi get emi => widget.emi;
-  int get _first => emi.installmentsPaid + 1;
-  int get _last => _first + _count - 1;
+  CreditCardEmi get emi => widget.state.emi;
+  late final List<int> _unpaid = widget.state.unpaid.toList();
+  List<int> get _chosen => _unpaid.take(_count).toList();
+  int get _first => _chosen.first;
+  int get _last => _chosen.last;
 
-  double get _total {
-    var sum = 0.0;
-    for (var k = _first; k <= _last; k++) {
-      sum += emi.getMonthlyInstallmentFor(k);
-    }
-    return sum;
-  }
+  double get _total => _chosen.fold(0, (s, k) => s + emi.getMonthlyInstallmentFor(k));
 
   Future<void> _pickDate() async {
     final picked = await showDatePicker(
@@ -52,11 +50,14 @@ class _EmiPayDialogState extends State<EmiPayDialog> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
-    final remaining = emi.remainingInstallments;
+    final remaining = _unpaid.length;
+    final contiguous = _last - _first + 1 == _count;
     final months = _count == 1
         ? 'Installment $_first · due ${DateFormatter.formatDate(emi.getDueDateForInstallment(_first))}'
-        : 'Installments $_first–$_last · ${DateFormatter.formatMonthYear(emi.getDueDateForInstallment(_first))} to '
-            '${DateFormatter.formatMonthYear(emi.getDueDateForInstallment(_last))}';
+        : contiguous
+            ? 'Installments $_first–$_last · ${DateFormatter.formatMonthYear(emi.getDueDateForInstallment(_first))} to '
+                '${DateFormatter.formatMonthYear(emi.getDueDateForInstallment(_last))}'
+            : 'Installments ${_chosen.take(_count - 1).join(', ')} and $_last';
 
     return AlertDialog(
       title: const Text('Record payment'),

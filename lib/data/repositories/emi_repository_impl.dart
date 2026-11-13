@@ -152,8 +152,11 @@ class EmiRepositoryImpl implements EmiRepository {
   }
 
   @override
-  Future<void> deleteEmi(String id) async {
-    await (_database.delete(_database.creditCardEmis)..where((tbl) => tbl.id.equals(id))).go();
-  }
+  Future<void> deleteEmi(String id) => _database.transaction(() async {
+        // Postings have no foreign key to the EMI: remove them explicitly.
+        await (_database.delete(_database.expenses)..where((t) => t.emiId.equals(id))).go();
+        await (_database.delete(_database.transactions)..where((t) => t.emiId.equals(id))).go();
+        await (_database.delete(_database.creditCardEmis)..where((tbl) => tbl.id.equals(id))).go();
+      });
 }
 

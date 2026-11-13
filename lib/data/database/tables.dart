@@ -11,6 +11,11 @@ enum PaymentMethod {
   bankTransfer,
   card,
   other,
+
+  /// A wallet app's balance (Paytm, Amazon Pay, PhonePe wallet, ...).
+  /// Appended last because the enum is stored by index; pickers use
+  /// `PaymentMethodX.ordered`, which keeps "Other" at the end.
+  wallet,
 }
 
 enum ExpenseCategory {

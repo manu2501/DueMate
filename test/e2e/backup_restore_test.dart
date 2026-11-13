@@ -60,7 +60,7 @@ Future<void> _seed(AppDatabase db, {String prefix = ''}) async {
     amount: 900,
     category: ExpenseCategory.groceries,
     expenseDate: _t,
-    paymentMethod: PaymentMethod.cash,
+    paymentMethod: PaymentMethod.wallet, // newest method: round-trips by index
     createdAt: _t,
     updatedAt: _t,
   ));

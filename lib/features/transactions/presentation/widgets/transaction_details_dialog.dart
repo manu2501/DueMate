@@ -103,7 +103,7 @@ class TransactionDetailsDialog extends ConsumerWidget {
                   DropdownButtonFormField<PaymentMethod>(
                     initialValue: selectedMethod,
                     decoration: const InputDecoration(labelText: 'Paid with'),
-                    items: PaymentMethod.values.map((method) {
+                    items: PaymentMethodX.ordered.map((method) {
                       return DropdownMenuItem(
                         value: method,
                         child: Row(

@@ -441,3 +441,34 @@ class YearMenuButton extends StatelessWidget {
     );
   }
 }
+
+/// How reliably someone repays loans with a "return by" date, e.g.
+/// "Repaid on time: 3 of 4 loans (75%)". Neutral ink: it's a record, not money
+/// owed. Shows nothing until at least one dated loan has been paid back:
+/// a loan that is only overdue so far is already on the due-back line.
+class RepaymentRecordLine extends StatelessWidget {
+  final RepaymentRecord record;
+  final TextStyle? style;
+
+  const RepaymentRecordLine(this.record, {super.key, this.style});
+
+  @override
+  Widget build(BuildContext context) {
+    final share = record.onTimeShare;
+    if (share == null || record.repaid == 0) return const SizedBox.shrink();
+    final color = Theme.of(context).colorScheme.onSurfaceVariant;
+    final base = style ?? Theme.of(context).textTheme.bodySmall;
+    final loans = record.judged == 1 ? 'loan' : 'loans';
+    final text = 'Repaid on time: ${record.onTime} of ${record.judged} $loans (${(share * 100).round()}%)';
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(Icons.event_available_outlined, size: (base?.fontSize ?? 12) + 2, color: color),
+        const SizedBox(width: AppSpace.xs),
+        Flexible(
+          child: Text(text, maxLines: 1, overflow: TextOverflow.ellipsis, style: base?.copyWith(color: color)),
+        ),
+      ],
+    );
+  }
+}

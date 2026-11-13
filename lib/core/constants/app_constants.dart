@@ -81,34 +81,30 @@ extension TransactionTypeX on TransactionType {
 }
 
 extension PaymentMethodX on PaymentMethod {
-  String get label {
-    switch (this) {
-      case PaymentMethod.upi:
-        return 'UPI';
-      case PaymentMethod.cash:
-        return 'Cash';
-      case PaymentMethod.bankTransfer:
-        return 'Bank transfer';
-      case PaymentMethod.card:
-        return 'Card';
-      case PaymentMethod.other:
-        return 'Other';
-    }
-  }
+  /// Order for pickers and filters: "Other" last (the enum's stored order
+  /// has later additions after it).
+  static final ordered = [
+    for (final m in PaymentMethod.values)
+      if (m != PaymentMethod.other) m,
+    PaymentMethod.other,
+  ];
 
-  IconData get icon {
-    switch (this) {
-      case PaymentMethod.upi:
-        return Icons.qr_code_scanner_rounded;
-      case PaymentMethod.cash:
-        return Icons.payments_outlined;
-      case PaymentMethod.bankTransfer:
-        return Icons.account_balance_outlined;
-      case PaymentMethod.card:
-        return Icons.credit_card_outlined;
-      case PaymentMethod.other:
-        return Icons.more_horiz_rounded;
-    }
-  }
+  String get label => switch (this) {
+        PaymentMethod.upi => 'UPI',
+        PaymentMethod.cash => 'Cash',
+        PaymentMethod.bankTransfer => 'Bank transfer',
+        PaymentMethod.card => 'Card',
+        PaymentMethod.wallet => 'Wallet',
+        PaymentMethod.other => 'Other',
+      };
+
+  IconData get icon => switch (this) {
+        PaymentMethod.upi => Icons.qr_code_scanner_rounded,
+        PaymentMethod.cash => Icons.payments_outlined,
+        PaymentMethod.bankTransfer => Icons.account_balance_outlined,
+        PaymentMethod.card => Icons.credit_card_outlined,
+        PaymentMethod.wallet => Icons.account_balance_wallet_outlined,
+        PaymentMethod.other => Icons.more_horiz_rounded,
+      };
 }
 

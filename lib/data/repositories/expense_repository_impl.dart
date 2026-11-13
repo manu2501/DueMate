@@ -100,6 +100,6 @@ class ExpenseRepositoryImpl implements ExpenseRepository {
         final row = await (_db.select(_db.expenses)..where((t) => t.id.equals(id))).getSingleOrNull();
         await (_db.delete(_db.expenses)..where((t) => t.id.equals(id))).go();
         // An EMI installment removed from expenses counts as unpaid again.
-        if (row?.emiId case final emiId?) await _db.recountSelfEmiPaid(emiId);
+        if (row?.emiId case final emiId?) await _db.releaseEmiInstallment(emiId);
       });
 }

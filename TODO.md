@@ -62,7 +62,8 @@ What's done, what's known to be missing, and what's next.
 ### Insight
 - [x] **Lending cashflow chart:** Lending trends (People › chart icon), lent vs collected per month.
 - [x] **Due dates on money you lend:** "Return by" on Give (schema v10), due/overdue on People and Home, Overdue filter, reminder the day before.
-- [ ] **Repayment reliability:** an on-time percentage per person.
+- [x] **Repayment reliability:** on-time share of dated loans per person (`RepaymentRecord`, same oldest-first matching as `LoanDues`), on the person page once one has been repaid.
+- [x] **EMI schedule shows what is actually paid:** gaps and missed months (`EmiInstallments`); mark any month paid or unpaid, change its amount; deleting an EMI posting releases it.
 
 ### Privacy and convenience
 - [x] **App lock:** fingerprint / face / screen-lock unlock on launch and resume (`local_auth`), with a lock delay.

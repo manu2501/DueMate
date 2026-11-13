@@ -121,7 +121,8 @@ exports the filtered entries as PDF or CSV.
 </p>
 
 Who owes whom and how much, a larger repayment bar (*Paid ₹2,500 of ₹15,000 · 16%*), when money
-is due back (or overdue), then **Give** / **Receive** / **EMI** for this
+is due back (or overdue), how reliably they repay (*Repaid on time: 3 of 4 loans (75%)*, once a
+loan with a "return by" date has been paid back; an unpaid one past its date counts against it), then **Give** / **Receive** / **EMI** for this
 person. *EMIs and loans* follows (always shown: add a card EMI or loan for them; each installment
 is added to their ledger on its due date), then history by month. The top bar has a WhatsApp reminder (when they
 owe you and have a number) and a menu: share statement, share balance as text, contact details,
@@ -254,11 +255,26 @@ each paid installment is added to expenses in the month it was due).
   <img src="screenshots/13_emi_details_dark.png" width="260" alt="EMI schedule, dark" />
 </p>
 
-Monthly amount, paid and left, progress, then every installment. Tap a month to change its
-amount; **Pay** records the next installment(s) as paid on the day you choose, so you can pay
-ahead (they are not posted again on their due dates). Your own EMIs and loans go to expenses
-(category *EMIs & loans*), shared ones to the person's ledger. Edit and delete at the bottom
-(and a WhatsApp reminder for shared EMIs).
+Monthly amount, paid and left, progress, then every installment as it really stands: *Paid*,
+*Paid before tracking* (shared EMIs), *Not paid* for a past month left unpaid (warning colour,
+with a count under the progress bar), *Next* or *Upcoming*. **Pay** on the earliest unpaid month
+records one or more installments on the day you choose, filling a gap first, so you can pay ahead
+(they are not posted again on their due dates). Your own EMIs and loans go to expenses (category
+*EMIs & loans*), shared ones to the person's ledger. Edit and delete at the bottom (and a WhatsApp
+reminder for shared EMIs). The sheet stays open and updates as you record payments. **Delete**
+asks first and says what goes: the EMI and every payment it recorded (*its 2 payments in Asha's
+ledger (₹2,000)*, so their balance changes); nothing is left behind.
+
+<p>
+  <img src="screenshots/22_emi_installment.png" width="260" alt="One installment, light" />
+  <img src="screenshots/22_emi_installment_dark.png" width="260" alt="One installment, dark" />
+</p>
+
+Tap a month for its actions: **Mark as paid** (pick the day you paid), **Mark as unpaid** (asks
+first; removes its expense or ledger entry, and it is not added back on its own) and **Change
+amount** (this month only; a recorded payment changes too). Deleting an EMI's expense or ledger
+entry elsewhere also marks that month unpaid. Cards, Home and reminders follow the months
+actually paid.
 
 ### Entry details
 

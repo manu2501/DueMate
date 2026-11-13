@@ -233,7 +233,7 @@ class _AddEditExpenseSheetState extends ConsumerState<AddEditExpenseSheet> {
               spacing: AppSpace.sm,
               runSpacing: AppSpace.sm,
               children: [
-                for (final m in PaymentMethod.values)
+                for (final m in PaymentMethodX.ordered)
                   ChoiceChip(
                     label: Text(m.label),
                     selected: m == _method,

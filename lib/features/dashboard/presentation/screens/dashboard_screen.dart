@@ -190,12 +190,15 @@ class _EmisAndCards extends ConsumerWidget {
     final people = ref.watch(personsMapProvider);
     void openAll() => context.go('/expenses?tab=emis');
 
-    final upcoming = emis.where((e) => e.nextDueDate != null).toList()
-      ..sort((a, b) => a.nextDueDate!.compareTo(b.nextDueDate!));
+    // Each EMI's earliest unpaid installment, soonest first.
+    final upcoming = [
+      for (final e in emis)
+        if (watchInstallments(ref, e) case final s when s.next != null) s,
+    ]..sort((a, b) => a.nextDueDate!.compareTo(b.nextDueDate!));
     // What leaves your account each month: your own EMIs and those on your card.
-    final monthly = emis
-        .where((e) => e.isForSelf || e.isPaidByMe)
-        .fold<double>(0, (s, e) => s + e.getMonthlyInstallmentFor(e.installmentsPaid + 1));
+    final monthly = upcoming
+        .where((s) => s.emi.isForSelf || s.emi.isPaidByMe)
+        .fold<double>(0, (sum, s) => sum + s.nextAmount);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -224,13 +227,13 @@ class _EmisAndCards extends ConsumerWidget {
                     ),
                     trailing: const Icon(Icons.chevron_right_rounded),
                   ),
-                  for (final e in upcoming.take(3))
+                  for (final s in upcoming.take(3))
                     ListTile(
-                      onTap: () => EmiDetailsSheet.show(context, emi: e, person: people[e.personId]),
+                      onTap: () => EmiDetailsSheet.show(context, emi: s.emi, person: people[s.emi.personId]),
                       leading: const IconBadge(Icons.event_outlined),
-                      title: Text(e.itemName, maxLines: 1, overflow: TextOverflow.ellipsis),
-                      subtitle: Text('Due ${DateFormatter.formatRelative(e.nextDueDate!)} · ${e.cardName}'),
-                      trailing: MoneyText(e.getMonthlyInstallmentFor(e.installmentsPaid + 1), symbol: symbol),
+                      title: Text(s.emi.itemName, maxLines: 1, overflow: TextOverflow.ellipsis),
+                      subtitle: Text('Due ${DateFormatter.formatRelative(s.nextDueDate!)} · ${s.emi.cardName}'),
+                      trailing: MoneyText(s.nextAmount, symbol: symbol),
                     ),
                 ],
         ),

@@ -290,6 +290,11 @@ void main() {
       await home();
       await tester.tap(find.text('iPhone 16').first);
       await shot('13_emi_details');
+      // One installment's actions: mark paid/unpaid, change amount.
+      await tester.tap(find.text('5 Oct 2026'));
+      await shot('22_emi_installment');
+      Navigator.of(tester.element(find.text('Mark as unpaid'))).pop();
+      await settle();
 
       await home();
       await go('/people/rahul');

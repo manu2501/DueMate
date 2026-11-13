@@ -1,7 +1,10 @@
+import 'dart:convert';
+
 import 'package:drift/drift.dart';
 import 'package:uuid/uuid.dart';
 import '../../data/database/app_database.dart' as db;
 import '../../data/database/tables.dart';
+import '../../domain/emi_installments.dart';
 import '../../domain/entities/credit_card_emi.dart';
 import '../../domain/entities/ledger_transaction.dart';
 import '../../domain/repositories/emi_repository.dart';
@@ -23,7 +26,11 @@ class EmiProcessorResult {
 /// - EMIs shared with someone become **ledger entries** on that person.
 ///
 /// Every posting carries the EMI id and installment number, so nothing is
-/// posted twice.
+/// posted twice. Which installments count as paid is [EmiInstallments]; the
+/// EMI's `installmentsPaid` is kept equal to its count.
+///
+/// Methods that change one EMI re-read it first, so a stale copy from the UI
+/// never overwrites newer data.
 class EmiProcessorService {
   final EmiRepository emiRepository;
   final TransactionRepository transactionRepository;
@@ -37,12 +44,12 @@ class EmiProcessorService {
 
   /// Posts installments that fell due since the EMI was last processed
   /// (all due ones the first time), up to [referenceDate] (default now).
-  /// One left unpaid on purpose (count lowered on edit, expense deleted) is
-  /// not posted again: only newly due dates are.
+  /// One left unpaid on purpose (marked unpaid, count lowered on edit,
+  /// posting deleted) is not posted again: only newly due dates are.
   ///
   /// Your own EMIs: installments marked paid on the form (even before the
-  /// app tracked them) are posted too, each in its own due month; ones marked
-  /// paid ahead of their due date are dated [referenceDate].
+  /// app tracked them) are posted too, each in its own due month; ones not
+  /// due yet (paid ahead) are dated [referenceDate].
   /// Shared EMIs: installments marked paid on the form are treated as settled
   /// before tracking and are not posted.
   Future<EmiProcessorResult> processDueInstallments({DateTime? referenceDate}) async {
@@ -59,25 +66,20 @@ class EmiProcessorService {
       final to = dueCount(emi, now);
       generated += await database.transaction(() async {
         final posted = await postedInstallments(emi);
-        final prepaid = _prepaid(emi, posted);
-        var added = 0;
-        Future<void> post(int k) async {
+        final paid = {...EmiInstallments.of(emi, posted).paid};
+        final toPost = [
+          // Your own: every installment counted as paid gets its expense.
+          if (emi.isForSelf) ...paid.difference(posted),
+          for (var k = from + 1; k <= to; k++)
+            if (!paid.contains(k)) k,
+        ]..sort();
+        for (final k in toPost) {
           final dueDate = emi.getDueDateForInstallment(k);
           await _post(emi, k, dueDate.isAfter(now) ? now : dueDate);
-          posted.add(k);
-          added++;
+          paid.add(k);
         }
-
-        // Your own: every installment marked paid gets an expense.
-        for (var k = 1; emi.isForSelf && posted.length < emi.installmentsPaid && k <= emi.totalTenureMonths; k++) {
-          if (!posted.contains(k)) await post(k);
-        }
-        for (var k = from + 1; k <= to; k++) {
-          if (!_isPaid(emi, posted, k)) await post(k);
-        }
-        await _savePaid(emi, _paidCount(emi, prepaid, posted),
-            processedAt: now, force: added > 0 || to > from);
-        return added;
+        await _savePaid(emi, paid.length, processedAt: now, force: toPost.isNotEmpty || to > from);
+        return toPost.length;
       });
     }
 
@@ -90,18 +92,72 @@ class EmiProcessorService {
   Future<int> payInstallments(CreditCardEmi emi, {int count = 1, DateTime? paidOn}) {
     final date = paidOn ?? DateTime.now();
     return database.transaction(() async {
-      final posted = await postedInstallments(emi);
-      final prepaid = _prepaid(emi, posted);
-      var added = 0;
-      for (var k = 1; k <= emi.totalTenureMonths && added < count; k++) {
-        if (_isPaid(emi, posted, k)) continue;
-        await _post(emi, k, date);
-        posted.add(k);
-        added++;
+      final fresh = await _fresh(emi);
+      if (fresh == null) return 0;
+      final state = await installments(fresh);
+      final ks = state.unpaid.take(count).toList();
+      for (final k in ks) {
+        await _post(fresh, k, date);
       }
       // Paying ahead doesn't change what has fallen due: keep lastProcessedDate.
-      if (added > 0) await _savePaid(emi, _paidCount(emi, prepaid, posted), force: true);
-      return added;
+      if (ks.isNotEmpty) await _savePaid(fresh, state.count + ks.length, force: true);
+      return ks.length;
+    });
+  }
+
+  /// Marks installment [k] paid on [paidOn] (default: its due date, or today
+  /// if that is still ahead). False if it was already paid.
+  Future<bool> markPaid(CreditCardEmi emi, int k, {DateTime? paidOn}) {
+    return database.transaction(() async {
+      final fresh = await _fresh(emi);
+      if (fresh == null || k < 1 || k > fresh.totalTenureMonths) return false;
+      final state = await installments(fresh);
+      if (state.isPaid(k)) return false;
+      final due = fresh.getDueDateForInstallment(k);
+      final today = _dayOf(DateTime.now());
+      await _post(fresh, k, paidOn ?? (due.isAfter(today) ? today : due));
+      await _savePaid(fresh, state.count + 1, force: true);
+      return true;
+    });
+  }
+
+  /// Marks installment [k] unpaid: removes its expense or ledger entry (for
+  /// one paid before tracking, just the count). It is not posted again on
+  /// its own; the next due date that passes posts as usual. False if it
+  /// wasn't paid.
+  Future<bool> markUnpaid(CreditCardEmi emi, int k) {
+    return database.transaction(() async {
+      final fresh = await _fresh(emi);
+      if (fresh == null) return false;
+      final state = await installments(fresh);
+      if (!state.isPaid(k)) return false;
+      await _deletePostings(fresh, (n) => n == k);
+      await _savePaid(fresh, state.count - 1, force: true);
+      return true;
+    });
+  }
+
+  /// Sets what installment [k] costs. Its expense or ledger entry, if it is
+  /// already paid, takes the new amount too.
+  Future<void> setInstallmentAmount(CreditCardEmi emi, int k, double amount) {
+    return database.transaction(() async {
+      final fresh = await _fresh(emi);
+      if (fresh == null) return;
+      final schedule = <String, dynamic>{
+        if (fresh.customScheduleJson case final json? when json.isNotEmpty) ...jsonDecode(json) as Map<String, dynamic>,
+        '$k': amount,
+      };
+      await emiRepository.updateEmi(fresh.copyWith(customScheduleJson: jsonEncode(schedule)));
+      final now = DateTime.now();
+      if (fresh.isForSelf) {
+        await (database.update(database.expenses)
+              ..where((t) => t.emiId.equals(fresh.id) & t.installmentNumber.equals(k)))
+            .write(db.ExpensesCompanion(amount: Value(amount), updatedAt: Value(now)));
+      } else {
+        await (database.update(database.transactions)
+              ..where((t) => t.emiId.equals(fresh.id) & t.installmentNumber.equals(k)))
+            .write(db.TransactionsCompanion(amount: Value(amount), updatedAt: Value(now)));
+      }
     });
   }
 
@@ -125,6 +181,72 @@ class EmiProcessorService {
         status: _statusFor(after, after.installmentsPaid),
       ));
     });
+  }
+
+  /// Which installments of [emi] are paid, from what is posted.
+  Future<EmiInstallments> installments(CreditCardEmi emi) async =>
+      EmiInstallments.of(emi, await postedInstallments(emi));
+
+  /// Installment numbers already posted for [emi] (expenses for your own,
+  /// ledger entries for shared ones).
+  Future<Set<int>> postedInstallments(CreditCardEmi emi) async {
+    if (emi.isForSelf) {
+      final q = database.selectOnly(database.expenses)
+        ..addColumns([database.expenses.installmentNumber])
+        ..where(database.expenses.emiId.equals(emi.id));
+      return {for (final r in await q.get()) ?r.read(database.expenses.installmentNumber)};
+    }
+    final q = database.selectOnly(database.transactions)
+      ..addColumns([database.transactions.installmentNumber])
+      ..where(database.transactions.emiId.equals(emi.id));
+    return {for (final r in await q.get()) ?r.read(database.transactions.installmentNumber)};
+  }
+
+  /// Installments due on or before [now].
+  static int dueCount(CreditCardEmi emi, DateTime now) {
+    var n = 0;
+    while (n < emi.totalTenureMonths && !_dayOf(emi.getDueDateForInstallment(n + 1)).isAfter(_dayOf(now))) {
+      n++;
+    }
+    return n;
+  }
+
+  Future<CreditCardEmi?> _fresh(CreditCardEmi emi) => emiRepository.getEmiById(emi.id);
+
+  Future<void> _post(CreditCardEmi emi, int k, DateTime date) async {
+    final now = DateTime.now();
+    final amount = emi.getMonthlyInstallmentFor(k);
+    final note = _note(emi, k);
+    final method = emi.isLoan ? PaymentMethod.bankTransfer : PaymentMethod.card;
+    if (emi.isForSelf) {
+      await database.into(database.expenses).insert(db.ExpensesCompanion.insert(
+            id: const Uuid().v4(),
+            title: emi.itemName,
+            amount: amount,
+            category: ExpenseCategory.emi,
+            expenseDate: date,
+            paymentMethod: method,
+            notes: Value(note),
+            emiId: Value(emi.id),
+            installmentNumber: Value(k),
+            createdAt: now,
+            updatedAt: now,
+          ));
+      return;
+    }
+    await transactionRepository.addTransaction(LedgerTransaction(
+      id: const Uuid().v4(),
+      personId: emi.personId,
+      type: emi.isPaidByMe ? TransactionType.moneyGiven : TransactionType.paymentReceived,
+      amount: amount,
+      transactionDate: date,
+      paymentMethod: method,
+      note: '$note: ${emi.itemName}',
+      emiId: emi.id,
+      installmentNumber: k,
+      createdAt: now,
+      updatedAt: now,
+    ));
   }
 
   Future<void> _deletePostings(CreditCardEmi emi, bool Function(int k) which) async {
@@ -184,84 +306,14 @@ class EmiProcessorService {
     return [for (final r in rows) (id: r.id, k: r.installmentNumber, date: r.transactionDate)];
   }
 
-  /// Posted, or (shared EMIs) counted as paid before tracking.
-  static bool _isPaid(CreditCardEmi emi, Set<int> posted, int k) =>
-      posted.contains(k) || (!emi.isForSelf && k <= emi.installmentsPaid);
-
-  static int _paidCount(CreditCardEmi emi, int prepaid, Set<int> posted) =>
-      (prepaid + posted.length).clamp(0, emi.totalTenureMonths);
-
   static String _note(CreditCardEmi emi, int k) => 'EMI $k/${emi.totalTenureMonths} · ${emi.cardName}';
 
-  /// Installments due on or before [now].
-  static int dueCount(CreditCardEmi emi, DateTime now) {
-    var n = 0;
-    while (n < emi.totalTenureMonths && !_dayOf(emi.getDueDateForInstallment(n + 1)).isAfter(_dayOf(now))) {
-      n++;
-    }
-    return n;
-  }
-
-  /// Installment numbers already posted for [emi] (expenses for your own,
-  /// ledger entries for shared ones).
-  Future<Set<int>> postedInstallments(CreditCardEmi emi) async {
-    if (emi.isForSelf) {
-      final q = database.selectOnly(database.expenses)
-        ..addColumns([database.expenses.installmentNumber])
-        ..where(database.expenses.emiId.equals(emi.id));
-      return {for (final r in await q.get()) ?r.read(database.expenses.installmentNumber)};
-    }
-    final q = database.selectOnly(database.transactions)
-      ..addColumns([database.transactions.installmentNumber])
-      ..where(database.transactions.emiId.equals(emi.id));
-    return {for (final r in await q.get()) ?r.read(database.transactions.installmentNumber)};
-  }
-
-  /// Shared EMIs only: installments declared paid that have no ledger entry.
-  /// Your own EMIs post every paid installment, so they have none.
-  int _prepaid(CreditCardEmi emi, Set<int> posted) =>
-      emi.isForSelf ? 0 : (emi.installmentsPaid - posted.length).clamp(0, emi.totalTenureMonths);
-
-  Future<void> _post(CreditCardEmi emi, int k, DateTime date) async {
-    final now = DateTime.now();
-    final amount = emi.getMonthlyInstallmentFor(k);
-    final note = _note(emi, k);
-    if (emi.isForSelf) {
-      await database.into(database.expenses).insert(db.ExpensesCompanion.insert(
-            id: const Uuid().v4(),
-            title: emi.itemName,
-            amount: amount,
-            category: ExpenseCategory.emi,
-            expenseDate: date,
-            paymentMethod: emi.isLoan ? PaymentMethod.bankTransfer : PaymentMethod.card,
-            notes: Value(note),
-            emiId: Value(emi.id),
-            installmentNumber: Value(k),
-            createdAt: now,
-            updatedAt: now,
-          ));
-      return;
-    }
-    await transactionRepository.addTransaction(LedgerTransaction(
-      id: const Uuid().v4(),
-      personId: emi.personId,
-      type: emi.isPaidByMe ? TransactionType.moneyGiven : TransactionType.paymentReceived,
-      amount: amount,
-      transactionDate: date,
-      paymentMethod: emi.isLoan ? PaymentMethod.bankTransfer : PaymentMethod.card,
-      note: '$note: ${emi.itemName}',
-      emiId: emi.id,
-      installmentNumber: k,
-      createdAt: now,
-      updatedAt: now,
-    ));
-  }
-
   Future<void> _savePaid(CreditCardEmi emi, int paid, {DateTime? processedAt, required bool force}) async {
-    final status = _statusFor(emi, paid);
-    if (!force && paid == emi.installmentsPaid && status == emi.status) return;
+    final count = paid.clamp(0, emi.totalTenureMonths);
+    final status = _statusFor(emi, count);
+    if (!force && count == emi.installmentsPaid && status == emi.status) return;
     await emiRepository.updateEmi(emi.copyWith(
-      installmentsPaid: paid,
+      installmentsPaid: count,
       status: status,
       lastProcessedDate: processedAt ?? emi.lastProcessedDate,
       updatedAt: DateTime.now(),

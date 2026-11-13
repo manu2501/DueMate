@@ -1,3 +1,4 @@
+import 'emi_installments.dart';
 import 'entities/credit_card_emi.dart';
 import 'loan_dues.dart';
 import 'reminder.dart';
@@ -13,22 +14,30 @@ class EmiReminderPlanner {
   /// keep coming even if the app isn't opened (installments post on open).
   static const perEmi = 3;
 
+  /// [posted] gives the installment numbers already posted per EMI id, so
+  /// ones paid ahead are skipped (see [EmiInstallments]); without it the
+  /// first `installmentsPaid` count as paid.
   /// [whoFor] names the person a shared EMI is with (null for your own).
   /// [amountText] formats an amount, or is null to leave amounts out
   /// (amounts hidden / App Lock on: notifications show on the lock screen).
   static List<Reminder> plan(
     Iterable<CreditCardEmi> emis, {
     required DateTime now,
+    Map<String, Set<int>> posted = const {},
     String? Function(CreditCardEmi emi)? whoFor,
     String Function(double amount)? amountText,
   }) {
     final out = <Reminder>[];
     for (final emi in emis) {
       if (!emi.isActive) continue;
-      final last = (emi.installmentsPaid + perEmi).clamp(0, emi.totalTenureMonths);
-      for (var k = emi.installmentsPaid + 1; k <= last; k++) {
-        final timing = Reminder.timing(emi.getDueDateForInstallment(k), now);
-        if (timing == null) continue; // Already due; it posts when the app opens.
+      // The next unpaid installments still ahead. Already due ones post
+      // when the app opens.
+      final ahead = EmiInstallments.of(emi, posted[emi.id] ?? const {})
+          .unpaid
+          .map((k) => (k, Reminder.timing(emi.getDueDateForInstallment(k), now)))
+          .where((r) => r.$2 != null)
+          .take(perEmi);
+      for (final (k, timing!) in ahead) {
         final who = whoFor?.call(emi);
         out.add(Reminder(
           id: Reminder.stableId('${emi.id}#$k'),

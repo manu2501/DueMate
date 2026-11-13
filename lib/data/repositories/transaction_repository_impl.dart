@@ -143,6 +143,8 @@ class TransactionRepositoryImpl implements TransactionRepository {
             updatedAt: Value(DateTime.now()),
           ),
         );
+        // An EMI installment removed from the ledger counts as unpaid again.
+        if (tx.emiId case final emiId?) await _database.releaseEmiInstallment(emiId);
       }
     });
   }

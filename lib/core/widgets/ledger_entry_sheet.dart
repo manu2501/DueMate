@@ -319,7 +319,7 @@ class _LedgerEntrySheetState extends ConsumerState<LedgerEntrySheet> with Widget
                       spacing: 8,
                       runSpacing: 8,
                       children: [
-                        for (final method in PaymentMethod.values)
+                        for (final method in PaymentMethodX.ordered)
                           ChoiceChip(
                             label: Text(method.label),
                             selected: method == _paymentMethod,

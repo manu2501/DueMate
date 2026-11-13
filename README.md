@@ -38,7 +38,7 @@
 Everything stays on the phone. There is no account, no server and no analytics.
 
 **People and balances**
-- Record money you **give** and money you **receive**, per person, with date, payment method (UPI, cash, card, bank transfer, other) and a note.
+- Record money you **give** and money you **receive**, per person, with date, payment method (UPI, cash, card, bank transfer, wallet apps like Paytm or Amazon Pay, other) and a note.
 - **UPI**: show a QR with your UPI ID and the amount when you're being paid (or share it as an image), and open your UPI app pre-filled to pay someone whose UPI ID you've saved (when you come back, one tap records it). Reminders include your UPI ID. Rupees only.
 - Each person's ledger shows who owes whom, how much has been paid back (a progress bar, also on every row in People, e.g. "Paid ₹2,500 of ₹15,000 · 16%"), their EMIs, and history grouped by month.
 - Add people by hand or from phone contacts. Duplicates are caught by phone number (last 10 digits), so two different people with the same name can both be added.

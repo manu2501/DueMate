@@ -142,6 +142,7 @@ class _PersonLedger extends ConsumerWidget {
     final emis = ref.watch(personEmisProvider(person.id)).value ?? const [];
     final dueList = LoanDues.outstanding(transactions);
     final due = dueList.isEmpty ? null : LoanDueStatus(dueList);
+    final record = RepaymentRecord.of(transactions, DateTime.now());
     final hasPhone = person.phone?.trim().isNotEmpty ?? false;
     final canRemind = summary.owesMoney && hasPhone;
 
@@ -282,6 +283,10 @@ class _PersonLedger extends ConsumerWidget {
                   if (due != null) ...[
                     const SizedBox(height: AppSpace.sm),
                     DueBackLine(due, style: theme.textTheme.bodyMedium),
+                  ],
+                  if (record.repaid > 0) ...[
+                    const SizedBox(height: AppSpace.xs),
+                    RepaymentRecordLine(record, style: theme.textTheme.bodyMedium),
                   ],
                 ],
               ),

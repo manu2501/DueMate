@@ -30,12 +30,12 @@ class AppDatabase extends _$AppDatabase {
         await customStatement("DELETE FROM transactions WHERE person_id = '$self' AND emi_id IS NOT NULL");
       });
 
-  /// Sets your own EMI's paid count from the expenses it posted, and reopens
-  /// it if one was removed. Call after deleting such an expense.
-  Future<void> recountSelfEmiPaid(String emiId) => customUpdate(
-        'UPDATE credit_card_emis SET installments_paid = (SELECT COUNT(*) FROM expenses WHERE emi_id = ?1), '
-        "status = CASE WHEN status = 'completed' AND (SELECT COUNT(*) FROM expenses WHERE emi_id = ?1) < total_tenure_months "
-        "THEN 'active' ELSE status END WHERE id = ?1",
+  /// One installment of an EMI is no longer paid (its expense or ledger
+  /// entry was deleted): counts one fewer and reopens a finished EMI. No-op
+  /// if the EMI itself is gone.
+  Future<void> releaseEmiInstallment(String emiId) => customUpdate(
+        'UPDATE credit_card_emis SET installments_paid = max(installments_paid - 1, 0), '
+        "status = CASE WHEN status = 'completed' THEN 'active' ELSE status END WHERE id = ?1",
         variables: [Variable.withString(emiId)],
         updates: {creditCardEmis},
       );

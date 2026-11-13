@@ -154,7 +154,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
             mainAxisSize: MainAxisSize.min,
             children: [
               const RadioListTile<Object>(value: 'any', title: Text('Any method')),
-              for (final m in PaymentMethod.values) RadioListTile<Object>(value: m, title: Text(m.label)),
+              for (final m in PaymentMethodX.ordered) RadioListTile<Object>(value: m, title: Text(m.label)),
             ],
           ),
         ),

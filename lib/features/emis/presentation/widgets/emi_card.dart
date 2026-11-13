@@ -36,12 +36,13 @@ class EmiCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
-    final done = emi.isCompleted;
-    final next = emi.nextDueDate;
+    final state = watchInstallments(ref, emi);
+    final done = state.isComplete;
+    final next = state.nextDueDate;
 
     final status = done
         ? 'Completed'
-        : '${emi.installmentsPaid} of ${emi.totalTenureMonths} paid'
+        : '${state.count} of ${emi.totalTenureMonths} paid'
             '${next != null ? ' · next ${DateFormatter.formatShortDate(next)}' : ''}';
     final rel = relation(emi, person);
 
@@ -87,7 +88,7 @@ class EmiCard extends ConsumerWidget {
                   ClipRRect(
                     borderRadius: BorderRadius.circular(2),
                     child: LinearProgressIndicator(
-                      value: emi.progress,
+                      value: state.progress,
                       minHeight: 4,
                       color: done ? cs.outline : cs.primary,
                     ),

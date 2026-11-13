@@ -119,16 +119,18 @@ class WhatsAppHelper {
     }
   }
 
-  /// Generates a WhatsApp reminder message for an active EMI installment
+  /// Generates a WhatsApp reminder message for an active EMI installment:
+  /// [installment] (default: the one after the paid count).
   static String generateEmiReminderMessage(
     CreditCardEmi emi,
     Person person, {
     String currencySymbol = '₹',
+    int? installment,
   }) {
     final monthlyAmount = CurrencyFormatter.format(emi.monthlyInstallment, symbol: currencySymbol);
     final totalAmount = CurrencyFormatter.format(emi.totalAmount, symbol: currencySymbol);
 
-    final installmentIndex = (emi.installmentsPaid + 1).clamp(1, emi.totalTenureMonths);
+    final installmentIndex = (installment ?? emi.installmentsPaid + 1).clamp(1, emi.totalTenureMonths);
 
     return 'Hi ${person.name} 👋,\n\n'
         'Friendly reminder regarding installment *$installmentIndex of ${emi.totalTenureMonths}* for *${emi.itemName}*.\n\n'

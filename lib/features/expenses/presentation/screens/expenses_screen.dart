@@ -186,25 +186,27 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
   List<Widget> _emiSlivers(String symbol) {
     final all = ref.watch(allEmisProvider).value ?? const [];
     final people = ref.watch(personsMapProvider);
-    final emis = all.where((e) {
-      if (e.isCancelled) return false;
-      return switch (_owner) {
-        _EmiOwner.mine => e.isForSelf,
-        _EmiOwner.shared => !e.isForSelf,
-        _EmiOwner.all => true,
-      };
-    }).toList()
-      ..sort((a, b) {
-        // Active first, then by next due date.
-        if (a.isCompleted != b.isCompleted) return a.isCompleted ? 1 : -1;
-        final ad = a.nextDueDate ?? DateTime(9999);
-        final bd = b.nextDueDate ?? DateTime(9999);
-        return ad.compareTo(bd);
+    final states = [
+      for (final e in all)
+        if (!e.isCancelled) watchInstallments(ref, e),
+    ];
+    final emis = [
+      for (final s in states)
+        if (switch (_owner) {
+          _EmiOwner.mine => s.emi.isForSelf,
+          _EmiOwner.shared => !s.emi.isForSelf,
+          _EmiOwner.all => true,
+        })
+          s,
+    ]..sort((a, b) {
+        // Unfinished first, then by the earliest unpaid installment.
+        if (a.isComplete != b.isComplete) return a.isComplete ? 1 : -1;
+        return (a.nextDueDate ?? DateTime(9999)).compareTo(b.nextDueDate ?? DateTime(9999));
       });
 
-    final monthlyOut = all
-        .where((e) => e.isActive && (e.isForSelf || e.isPaidByMe))
-        .fold<double>(0, (s, e) => s + e.getMonthlyInstallmentFor(e.installmentsPaid + 1));
+    final monthlyOut = states
+        .where((s) => !s.isComplete && (s.emi.isForSelf || s.emi.isPaidByMe))
+        .fold<double>(0, (sum, s) => sum + s.nextAmount);
 
     return [
       SliverToBoxAdapter(
@@ -258,7 +260,7 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
           child: GroupCard(
             dividerIndent: 76,
             children: [
-              for (final e in emis)
+              for (final e in emis.map((s) => s.emi))
                 EmiCard(
                   emi: e,
                   person: e.personId == AppConstants.selfPersonId ? null : people[e.personId],
