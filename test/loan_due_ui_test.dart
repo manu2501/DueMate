@@ -71,7 +71,9 @@ void main() {
     expect(find.textContaining('overdue since'), findsOneWidget);
     expect(find.textContaining('due back tomorrow'), findsOneWidget);
 
-    await tester.tap(find.widgetWithText(ChoiceChip, 'Overdue'));
+    final overdue = find.widgetWithText(ChoiceChip, 'Overdue');
+    await tester.ensureVisible(overdue);
+    await tester.tap(overdue);
     await settle(tester);
     expect(find.text('Late Larry'), findsOneWidget);
     expect(find.text('Soon Sara'), findsNothing);
@@ -101,6 +103,11 @@ void main() {
     await settle(tester);
 
     await tester.enterText(find.byType(TextField).first, '1500');
+    // Return-by starts as a link; it opens to the quick picks.
+    final add = find.text('Add a return-by date');
+    await tester.ensureVisible(add);
+    await tester.tap(add);
+    await tester.pump();
     final week = find.widgetWithText(ChoiceChip, '1 week');
     await tester.ensureVisible(week);
     await tester.tap(week);

@@ -6,13 +6,17 @@ class CurrencyFormatter {
   static final _usInt = NumberFormat.currency(symbol: '', decimalDigits: 0, locale: 'en_US');
   static final _usDec = NumberFormat.currency(symbol: '', decimalDigits: 2, locale: 'en_US');
 
+  /// [whole] rounds to the nearest rupee (screens: headlines, lists,
+  /// totals). Leave it off where the exact figure matters: typed amounts,
+  /// confirmations, detail sheets, exports and messages.
   static String format(
     double amount, {
     String symbol = '₹',
     bool showSign = false,
+    bool whole = false,
   }) {
     final isNegative = amount < 0;
-    final absAmount = amount.abs();
+    final absAmount = whole ? amount.abs().roundToDouble() : amount.abs();
     final hasDecimals = (absAmount % 1) != 0;
 
     final NumberFormat formatter;

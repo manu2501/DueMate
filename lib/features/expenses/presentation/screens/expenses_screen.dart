@@ -8,6 +8,7 @@ import 'package:duemate/core/utils/date_formatter.dart';
 import 'package:duemate/core/widgets/empty_state_widget.dart';
 import 'package:duemate/core/widgets/ui_kit.dart';
 import 'package:duemate/data/providers/app_providers.dart';
+import 'package:duemate/domain/emi_installments.dart';
 import 'package:duemate/domain/entities/personal_expense.dart';
 import 'package:duemate/features/emis/presentation/screens/add_edit_emi_screen.dart';
 import 'package:duemate/features/emis/presentation/widgets/emi_card.dart';
@@ -16,8 +17,6 @@ import 'package:duemate/features/expenses/presentation/widgets/budget_dialog.dar
 import 'package:duemate/features/expenses/presentation/widgets/recurring_bills_card.dart';
 
 enum _View { spending, emis }
-
-enum _EmiOwner { mine, shared, all }
 
 class ExpensesScreen extends ConsumerStatefulWidget {
   /// 'emis' opens the EMIs view (used by links from Home).
@@ -31,7 +30,6 @@ class ExpensesScreen extends ConsumerStatefulWidget {
 
 class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
   late _View _view = widget.initialTab == 'emis' ? _View.emis : _View.spending;
-  _EmiOwner _owner = _EmiOwner.all;
 
   @override
   void didUpdateWidget(ExpensesScreen old) {
@@ -68,7 +66,7 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
             child: SegmentedButton<_View>(
               showSelectedIcon: false,
               segments: const [
-                ButtonSegment(value: _View.spending, label: Text('Spending')),
+                ButtonSegment(value: _View.spending, label: Text('Spent')),
                 ButtonSegment(value: _View.emis, label: Text('EMIs & loans')),
               ],
               selected: {_view},
@@ -183,96 +181,79 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
     ];
   }
 
+  /// EMIs in two plain sections, yours and those with people, rather than
+  /// another row of filters under the Spent / EMIs tabs.
   List<Widget> _emiSlivers(String symbol) {
     final all = ref.watch(allEmisProvider).value ?? const [];
     final people = ref.watch(personsMapProvider);
     final states = [
       for (final e in all)
         if (!e.isCancelled) watchInstallments(ref, e),
-    ];
-    final emis = [
-      for (final s in states)
-        if (switch (_owner) {
-          _EmiOwner.mine => s.emi.isForSelf,
-          _EmiOwner.shared => !s.emi.isForSelf,
-          _EmiOwner.all => true,
-        })
-          s,
     ]..sort((a, b) {
         // Unfinished first, then by the earliest unpaid installment.
         if (a.isComplete != b.isComplete) return a.isComplete ? 1 : -1;
         return (a.nextDueDate ?? DateTime(9999)).compareTo(b.nextDueDate ?? DateTime(9999));
       });
 
+    if (states.isEmpty) {
+      return [
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.only(top: AppSpace.xxl),
+            child: EmptyStateWidget(
+              icon: Icons.event_repeat_outlined,
+              title: 'No EMIs or loans yet',
+              description: 'Track card EMIs and loans. On each due date, yours are added to expenses and shared ones to the ledger.',
+              actionLabel: 'Add EMI or loan',
+              onActionPressed: () => AddEditEmiScreen.show(context),
+            ),
+          ),
+        ),
+      ];
+    }
+
     final monthlyOut = states
         .where((s) => !s.isComplete && (s.emi.isForSelf || s.emi.isPaidByMe))
         .fold<double>(0, (sum, s) => sum + s.nextAmount);
 
+    List<Widget> section(String title, Iterable<EmiInstallments> group) => [
+          if (group.isNotEmpty) ...[
+            SliverToBoxAdapter(child: SectionHeader(title)),
+            SliverToBoxAdapter(
+              child: GroupCard(
+                dividerIndent: 76,
+                children: [
+                  for (final s in group)
+                    EmiCard(
+                      emi: s.emi,
+                      person: s.emi.isForSelf ? null : people[s.emi.personId],
+                      currencySymbol: symbol,
+                    ),
+                ],
+              ),
+            ),
+          ],
+        ];
+
     return [
-      SliverToBoxAdapter(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(AppSpace.lg, AppSpace.md, AppSpace.lg, 0),
-          child: Wrap(
-            spacing: AppSpace.sm,
-            children: [
-              for (final o in _EmiOwner.values)
-                ChoiceChip(
-                  label: Text(switch (o) {
-                    _EmiOwner.mine => 'Mine',
-                    _EmiOwner.shared => 'Shared',
-                    _EmiOwner.all => 'All',
-                  }),
-                  selected: _owner == o,
-                  onSelected: (_) => setState(() => _owner = o),
-                ),
-            ],
-          ),
-        ),
-      ),
       if (monthlyOut > 0)
         SliverToBoxAdapter(
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(AppSpace.screenGutter, AppSpace.md, AppSpace.screenGutter, 0),
+            padding: const EdgeInsets.fromLTRB(AppSpace.screenGutter, AppSpace.lg, AppSpace.screenGutter, 0),
             child: Text(
-              '${ref.watch(displayMoneyProvider)(monthlyOut)} goes out each month on active EMIs',
+              '${ref.watch(displayMoneyProvider)(monthlyOut)} goes out each month',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
             ),
           ),
         ),
-      if (emis.isEmpty)
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: const EdgeInsets.only(top: AppSpace.xxl),
-            child: EmptyStateWidget(
-              icon: Icons.event_repeat_outlined,
-              title: 'No EMIs or loans here',
-              description: 'Track card EMIs and loans. On each due date, yours are added to expenses and shared ones to the ledger.',
-              actionLabel: 'Add EMI or loan',
-              onActionPressed: () => AddEditEmiScreen.show(context),
-            ),
-          ),
-        )
-      else ...[
-        const SliverToBoxAdapter(child: SizedBox(height: AppSpace.md)),
-        SliverToBoxAdapter(
-          child: GroupCard(
-            dividerIndent: 76,
-            children: [
-              for (final e in emis.map((s) => s.emi))
-                EmiCard(
-                  emi: e,
-                  person: e.personId == AppConstants.selfPersonId ? null : people[e.personId],
-                  currencySymbol: symbol,
-                ),
-            ],
-          ),
-        ),
-      ],
+      ...section('Yours', states.where((s) => s.emi.isForSelf)),
+      ...section('With people', states.where((s) => !s.emi.isForSelf)),
     ];
   }
 }
+
 
 class _MonthHeader extends ConsumerWidget {
   final String symbol;

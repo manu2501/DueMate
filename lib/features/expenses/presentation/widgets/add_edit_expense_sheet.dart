@@ -7,6 +7,7 @@ import 'package:duemate/core/theme/app_theme.dart';
 import 'package:duemate/core/utils/date_formatter.dart';
 import 'package:duemate/core/widgets/amount_field.dart';
 import 'package:duemate/core/widgets/confirm_dialog.dart';
+import 'package:duemate/core/widgets/ui_kit.dart' show ChipRow;
 import 'package:duemate/data/database/tables.dart';
 import 'package:duemate/data/providers/app_providers.dart';
 import 'package:duemate/domain/entities/personal_expense.dart';
@@ -229,9 +230,7 @@ class _AddEditExpenseSheetState extends ConsumerState<AddEditExpenseSheet> {
               ),
             ),
             label('Paid with'),
-            Wrap(
-              spacing: AppSpace.sm,
-              runSpacing: AppSpace.sm,
+            ChipRow(
               children: [
                 for (final m in PaymentMethodX.ordered)
                   ChoiceChip(

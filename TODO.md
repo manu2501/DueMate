@@ -41,7 +41,7 @@ What's done, what's known to be missing, and what's next.
 
 - [x] **EMI reminders:** the day before each of the next three installments of every active EMI, re-planned automatically from the EMI table (`EmiReminderPlanner` + `emiReminderSyncProvider`).
 - [x] **Restore from backup:** Settings › Restore from a backup; validated before anything changes, replaces all data in one transaction.
-- [x] **Your EMIs and loans are expenses** (schema v11): each installment is posted to expenses (category *EMIs & loans*) in its own month, including ones marked already paid; installments on the old self ledger are moved over. **Pay** records months ahead on the day paid. Shared loans keep posting like card EMIs (decided). An **EMI** button sits next to Give / Receive on a person.
+- [x] **Your EMIs and loans are expenses** (schema v11): each installment is posted to expenses (category *EMIs & loans*) in its own month, including ones marked already paid; installments on the old self ledger are moved over. **Pay** records months ahead on the day paid. Shared loans keep posting like card EMIs (decided). A person page always shows *EMIs and loans* with an Add action.
 
 ---
 

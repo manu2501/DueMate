@@ -64,7 +64,7 @@ void main() {
   );
 
   testWidgets(
-    'EMIs & cards on Home opens the EMI view of Expenses',
+    'EMIs & loans on Home opens the EMI view of Expenses',
     (tester) async {
       SharedPreferences.setMockInitialValues({
         'duemate_last_run_version': AppConstants.appVersionString,
@@ -94,8 +94,8 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 500));
 
-      expect(find.text('EMIs & cards'), findsOneWidget);
-      await tester.tap(find.text('1 active'));
+      expect(find.text('EMIs & loans'), findsWidgets);
+      await tester.tap(find.text('See all'));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 500));
 

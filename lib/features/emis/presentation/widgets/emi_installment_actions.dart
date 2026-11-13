@@ -109,7 +109,7 @@ Future<void> showEmiInstallmentActions(
                   Text(
                     [
                       'Due ${DateFormatter.formatDate(due)}',
-                      money(emi.getMonthlyInstallmentFor(k)),
+                      money(emi.getMonthlyInstallmentFor(k), exact: true),
                       if (isUntracked) 'paid before tracking' else if (paid) 'paid',
                     ].join(' · '),
                     style: theme.textTheme.bodyMedium?.copyWith(color: muted),

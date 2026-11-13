@@ -287,7 +287,7 @@ void main() {
       await go('/add-person');
       await shot('12_add_person');
 
-      await home();
+      await go('/expenses?tab=emis');
       await tester.tap(find.text('iPhone 16').first);
       await shot('13_emi_details');
       // One installment's actions: mark paid/unpaid, change amount.

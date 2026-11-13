@@ -122,7 +122,7 @@ exports the filtered entries as PDF or CSV.
 
 Who owes whom and how much, a larger repayment bar (*Paid ₹2,500 of ₹15,000 · 16%*), when money
 is due back (or overdue), how reliably they repay (*Repaid on time: 3 of 4 loans (75%)*, once a
-loan with a "return by" date has been paid back; an unpaid one past its date counts against it), then **Give** / **Receive** / **EMI** for this
+loan with a "return by" date has been paid back; an unpaid one past its date counts against it), then **Give** / **Receive** for this
 person. *EMIs and loans* follows (always shown: add a card EMI or loan for them; each installment
 is added to their ledger on its due date), then history by month. The top bar has a WhatsApp reminder (when they
 owe you and have a number) and a menu: share statement, share balance as text, contact details,

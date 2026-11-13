@@ -1,20 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:uuid/uuid.dart';
 import 'package:duemate/core/theme/app_theme.dart';
-import 'package:duemate/core/utils/contacts_helper.dart';
 import 'package:duemate/core/utils/whatsapp_helper.dart';
 import 'package:duemate/core/widgets/avatar_widget.dart';
-import 'package:duemate/core/widgets/confirm_dialog.dart';
 import 'package:duemate/core/widgets/empty_state_widget.dart';
 import 'package:duemate/core/widgets/quick_give_sheet.dart';
 import 'package:duemate/core/widgets/quick_receive_sheet.dart';
 import 'package:duemate/core/widgets/ui_kit.dart';
 import 'package:duemate/data/providers/app_providers.dart';
-import 'package:duemate/domain/entities/person.dart';
 import 'package:duemate/domain/entities/person_summary.dart';
-import 'package:duemate/domain/person_matcher.dart';
 import 'package:duemate/features/people/presentation/screens/add_edit_person_screen.dart';
 
 class PeopleScreen extends ConsumerStatefulWidget {
@@ -26,13 +21,12 @@ class PeopleScreen extends ConsumerStatefulWidget {
 
 class _PeopleScreenState extends ConsumerState<PeopleScreen> {
   final _searchController = TextEditingController();
-  bool _isImporting = false;
 
   static const _filters = {
     PeopleFilter.all: 'All',
-    PeopleFilter.active: 'Open balance',
+    PeopleFilter.owesYou: 'Owes you',
+    PeopleFilter.youOwe: 'You owe',
     PeopleFilter.overdue: 'Overdue',
-    PeopleFilter.settled: 'Settled',
     PeopleFilter.archived: 'Archived',
   };
 
@@ -47,47 +41,6 @@ class _PeopleScreenState extends ConsumerState<PeopleScreen> {
   void dispose() {
     _searchController.dispose();
     super.dispose();
-  }
-
-  Future<void> _importFromContacts() async {
-    setState(() => _isImporting = true);
-    try {
-      final contact = await ContactsHelper.pickContact();
-      if (contact == null) return;
-
-      final people = (await ref.read(allPersonSummariesProvider.future)).map((s) => s.person);
-      final existing = PersonMatcher.findDuplicate(people, name: contact.name, phone: contact.phone);
-      if (existing != null) {
-        if (mounted && await showAlreadyInLedgerDialog(context, existing) && mounted) {
-          context.push('/people/${existing.id}');
-        }
-        return;
-      }
-
-      final now = DateTime.now();
-      final newPerson = Person(
-        id: const Uuid().v4(),
-        name: contact.name,
-        phone: contact.phone,
-        email: contact.email,
-        createdAt: now,
-        updatedAt: now,
-      );
-      await ref.read(personRepositoryProvider).createPerson(newPerson);
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${newPerson.name} added')));
-        context.push('/people/${newPerson.id}');
-      }
-    } catch (_) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Couldn't read that contact.")),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _isImporting = false);
-    }
   }
 
   void _showSortSheet() {
@@ -204,19 +157,26 @@ class _PeopleScreenState extends ConsumerState<PeopleScreen> {
 
     return TabScaffold(
       title: 'People',
+      // One menu instead of a row of unlabelled icons. Adding from contacts
+      // lives in the Add person form.
       actions: [
-        IconButton(
-          tooltip: 'Add from contacts',
-          onPressed: _isImporting ? null : _importFromContacts,
-          icon: _isImporting
-              ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
-              : const Icon(Icons.contacts_outlined),
-        ),
-        IconButton(tooltip: 'Sort', onPressed: _showSortSheet, icon: const Icon(Icons.sort_rounded)),
-        IconButton(
-          tooltip: 'Lending trends',
-          onPressed: () => context.push('/lending-trends'),
-          icon: const Icon(Icons.insights_outlined),
+        PopupMenuButton<VoidCallback>(
+          tooltip: 'More',
+          onSelected: (action) => action(),
+          itemBuilder: (_) => [
+            PopupMenuItem(
+              value: _showSortSheet,
+              child: const ListTile(leading: Icon(Icons.sort_rounded), title: Text('Sort by…')),
+            ),
+            PopupMenuItem(
+              value: () => context.push('/lending-trends'),
+              child: const ListTile(leading: Icon(Icons.insights_outlined), title: Text('Lending trends')),
+            ),
+            PopupMenuItem(
+              value: () => ref.read(peopleFilterProvider.notifier).setFilter(PeopleFilter.archived),
+              child: const ListTile(leading: Icon(Icons.archive_outlined), title: Text('Archived people')),
+            ),
+          ],
         ),
       ],
       floatingActionButton: FloatingActionButton.extended(
@@ -266,7 +226,10 @@ class _PeopleScreenState extends ConsumerState<PeopleScreen> {
             padding: const EdgeInsets.fromLTRB(AppSpace.lg, AppSpace.md, AppSpace.lg, AppSpace.md),
             child: Row(
               children: [
-                for (final e in _filters.entries) ...[
+                // Archived only shows as a chip while it's the filter (picked
+                // from the menu), so there's a visible way back.
+                for (final e in _filters.entries)
+                  if (e.key != PeopleFilter.archived || filter == PeopleFilter.archived) ...[
                   ChoiceChip(
                     label: Text(e.value),
                     selected: filter == e.key,
@@ -287,17 +250,21 @@ class _PeopleScreenState extends ConsumerState<PeopleScreen> {
                   ? 'No one matches "${_searchController.text}"'
                   : switch (filter) {
                       PeopleFilter.all => 'No one here yet',
+                      PeopleFilter.owesYou => 'No one owes you',
+                      PeopleFilter.youOwe => "You don't owe anyone",
                       PeopleFilter.overdue => 'Nothing overdue',
-                      _ => 'No one in ${_filters[filter]!.toLowerCase()}',
+                      PeopleFilter.archived => 'No archived people',
                     },
               description: searching
                   ? 'Try a different name or number.'
-                  : filter == PeopleFilter.overdue
-                      ? 'Set a "Return by" date when you give money; anyone late shows up here.'
-                      : 'Add someone you lend to, borrow from, or share EMIs with.',
-              actionLabel: searching || filter == PeopleFilter.overdue ? null : 'Add person',
-              onActionPressed:
-                  searching || filter == PeopleFilter.overdue ? null : () => AddEditPersonScreen.show(context),
+                  : switch (filter) {
+                      PeopleFilter.all => 'Add someone you lend to, borrow from, or share EMIs with.',
+                      PeopleFilter.overdue => 'Set a "Return by" date when you give money; anyone late shows up here.',
+                      PeopleFilter.archived => 'Archive someone from their page to tidy the list; their records stay.',
+                      _ => 'Balances show up here as you record what you give and receive.',
+                    },
+              actionLabel: !searching && filter == PeopleFilter.all ? 'Add person' : null,
+              onActionPressed: !searching && filter == PeopleFilter.all ? () => AddEditPersonScreen.show(context) : null,
             ),
           )
         else

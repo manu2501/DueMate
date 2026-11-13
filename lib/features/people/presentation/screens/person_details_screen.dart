@@ -168,8 +168,6 @@ class _PersonLedger extends ConsumerWidget {
         );
 
     void addEmi() => AddEditEmiScreen.show(context, personId: person.id);
-    // Three actions share the row: trim the side padding so labels fit on one line.
-    final actionStyle = FilledButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: AppSpace.sm));
 
     void onMenu(_MenuAction a) {
       switch (a) {
@@ -301,7 +299,6 @@ class _PersonLedger extends ConsumerWidget {
                 children: [
                   Expanded(
                     child: FilledButton.tonalIcon(
-                      style: actionStyle,
                       onPressed: () => QuickGiveSheet.show(context, personId: person.id),
                       icon: const Icon(Icons.north_east_rounded, size: 20),
                       label: const Text('Give'),
@@ -310,19 +307,9 @@ class _PersonLedger extends ConsumerWidget {
                   const SizedBox(width: AppSpace.sm),
                   Expanded(
                     child: FilledButton.tonalIcon(
-                      style: actionStyle,
                       onPressed: () => QuickReceiveSheet.show(context, personId: person.id),
                       icon: const Icon(Icons.south_west_rounded, size: 20),
                       label: const Text('Receive'),
-                    ),
-                  ),
-                  const SizedBox(width: AppSpace.sm),
-                  Expanded(
-                    child: FilledButton.tonalIcon(
-                      style: actionStyle,
-                      onPressed: addEmi,
-                      icon: const Icon(Icons.credit_card_outlined, size: 20),
-                      label: const Text('EMI'),
                     ),
                   ),
                 ],
@@ -331,7 +318,7 @@ class _PersonLedger extends ConsumerWidget {
           ),
 
           SliverToBoxAdapter(
-            child: SectionHeader('EMIs and loans', actionLabel: 'Add', onAction: addEmi),
+            child: SectionHeader('EMIs & loans', actionLabel: 'Add', onAction: addEmi),
           ),
           SliverToBoxAdapter(
             child: GroupCard(

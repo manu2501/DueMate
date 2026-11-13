@@ -141,6 +141,9 @@ class MoneyText extends ConsumerWidget {
   final TextStyle? style;
   final TextAlign? textAlign;
 
+  /// Keep paise. Off by default: lists and totals show whole rupees.
+  final bool exact;
+
   const MoneyText(
     this.amount, {
     super.key,
@@ -149,6 +152,7 @@ class MoneyText extends ConsumerWidget {
     this.sign = '',
     this.style,
     this.textAlign,
+    this.exact = false,
   });
 
   static Color colorFor(BuildContext context, MoneyTone tone) {
@@ -167,7 +171,7 @@ class MoneyText extends ConsumerWidget {
     final base = style ?? Theme.of(context).textTheme.titleSmall;
     final hidden = ref.watch(hideBalancesProvider);
     return Text(
-      hidden ? '$symbol${DisplayMoney.mask}' : '$sign${CurrencyFormatter.format(amount.abs(), symbol: symbol)}',
+      hidden ? '$symbol${DisplayMoney.mask}' : '$sign${CurrencyFormatter.format(amount.abs(), symbol: symbol, whole: !exact)}',
       semanticsLabel: hidden ? DisplayMoney.hiddenLabel : null,
       textAlign: textAlign,
       maxLines: 1,
@@ -307,7 +311,8 @@ class PersonRow extends StatelessWidget {
         : (p.phone?.isNotEmpty ?? false)
             ? p.phone!
             : 'No entries yet';
-    final repayment = showRepayment ? summary.repayment : null;
+    // Only while partly repaid: a bar at 0% or 100% adds a line and no news.
+    final repayment = showRepayment && (summary.repayment?.isPartial ?? false) ? summary.repayment : null;
     final open = onTap ?? () => context.push('/people/${p.id}');
 
     final tile = ListTile(
@@ -469,6 +474,30 @@ class RepaymentRecordLine extends StatelessWidget {
           child: Text(text, maxLines: 1, overflow: TextOverflow.ellipsis, style: base?.copyWith(color: color)),
         ),
       ],
+    );
+  }
+}
+
+/// Chips on one line that scrolls sideways, instead of wrapping onto more
+/// lines: forms stay short, and the first choices are always in view.
+class ChipRow extends StatelessWidget {
+  final List<Widget> children;
+
+  const ChipRow({super.key, required this.children});
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      clipBehavior: Clip.none,
+      child: Row(
+        children: [
+          for (var i = 0; i < children.length; i++) ...[
+            if (i > 0) const SizedBox(width: AppSpace.sm),
+            children[i],
+          ],
+        ],
+      ),
     );
   }
 }

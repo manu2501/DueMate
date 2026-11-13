@@ -62,4 +62,8 @@ class Repayment {
 
   /// Whole percent; only shows 100 when fully paid, never rounded up to it.
   int get percent => fraction >= 1 ? 100 : (fraction * 100).floor().clamp(0, 99);
+
+  /// Some paid back, not all: the only time a list shows the bar. At 0% it
+  /// says nothing new; at 100% the row already says "settled".
+  bool get isPartial => paid > 0.0001 && fraction < 1;
 }

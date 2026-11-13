@@ -50,7 +50,8 @@ class ReportsScreen extends ConsumerStatefulWidget {
 class _ReportsScreenState extends ConsumerState<ReportsScreen> {
   final _searchController = TextEditingController();
 
-  ReportDateFilter _dateFilter = ReportDateFilter.allTime;
+  // This month by default: totals for all time say little at a glance.
+  ReportDateFilter _dateFilter = ReportDateFilter.thisMonth;
   ActivityTypeFilter _typeFilter = ActivityTypeFilter.all;
   PaymentMethod? _methodFilter;
   DateTimeRange? _customRange;
@@ -142,26 +143,80 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
     }
   }
 
-  Future<void> _pickMethod() async {
-    final choice = await showModalBottomSheet<Object>(
+  /// Type and payment method, the filters used less often, together in one
+  /// sheet. Changes apply as you tap.
+  int get _activeFilters => (_typeFilter != ActivityTypeFilter.all ? 1 : 0) + (_methodFilter != null ? 1 : 0);
+
+  Future<void> _openFilters() {
+    return showModalBottomSheet<void>(
       context: context,
       useRootNavigator: true,
-      builder: (ctx) => SafeArea(
-        child: RadioGroup<Object>(
-          groupValue: _methodFilter ?? 'any',
-          onChanged: (v) => Navigator.of(ctx).pop(v),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const RadioListTile<Object>(value: 'any', title: Text('Any method')),
-              for (final m in PaymentMethodX.ordered) RadioListTile<Object>(value: m, title: Text(m.label)),
-            ],
-          ),
-        ),
+      showDragHandle: true,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSheet) {
+          void update(VoidCallback change) {
+            setState(change);
+            setSheet(() {});
+          }
+
+          final theme = Theme.of(ctx);
+          Widget heading(String text) => Padding(
+                padding: const EdgeInsets.only(top: AppSpace.lg, bottom: AppSpace.sm),
+                child: Text(text, style: theme.textTheme.titleSmall),
+              );
+          Widget choice(String label, bool selected, VoidCallback onTap) =>
+              ChoiceChip(label: Text(label), selected: selected, onSelected: (_) => update(onTap));
+
+          return SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(AppSpace.screenGutter, 0, AppSpace.screenGutter, AppSpace.lg),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(child: Text('Filters', style: theme.textTheme.titleLarge)),
+                      if (_activeFilters > 0)
+                        TextButton(
+                          onPressed: () => update(() {
+                            _typeFilter = ActivityTypeFilter.all;
+                            _methodFilter = null;
+                          }),
+                          child: const Text('Clear'),
+                        ),
+                    ],
+                  ),
+                  heading('Show'),
+                  Wrap(
+                    spacing: AppSpace.sm,
+                    runSpacing: AppSpace.sm,
+                    children: [
+                      for (final e in _typeLabels.entries)
+                        choice(e.value, _typeFilter == e.key, () => _typeFilter = e.key),
+                    ],
+                  ),
+                  heading('Paid with'),
+                  Wrap(
+                    spacing: AppSpace.sm,
+                    runSpacing: AppSpace.sm,
+                    children: [
+                      choice('Any', _methodFilter == null, () => _methodFilter = null),
+                      for (final m in PaymentMethodX.ordered) choice(m.label, _methodFilter == m, () => _methodFilter = m),
+                    ],
+                  ),
+                  const SizedBox(height: AppSpace.lg),
+                  SizedBox(
+                    width: double.infinity,
+                    child: FilledButton(onPressed: () => Navigator.of(ctx).pop(), child: const Text('Done')),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
       ),
     );
-    if (choice == null) return;
-    setState(() => _methodFilter = choice is PaymentMethod ? choice : null);
   }
 
   @override
@@ -270,41 +325,15 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
             padding: const EdgeInsets.fromLTRB(AppSpace.lg, AppSpace.md, AppSpace.lg, 0),
             child: Row(
               children: [
-                _MenuChip(
-                  label: _typeLabels[_typeFilter]!,
-                  active: _typeFilter != ActivityTypeFilter.all,
-                  onTap: () async {
-                    final v = await showModalBottomSheet<ActivityTypeFilter>(
-                      context: context,
-                      useRootNavigator: true,
-                      builder: (ctx) => SafeArea(
-                        child: RadioGroup<ActivityTypeFilter>(
-                          groupValue: _typeFilter,
-                          onChanged: (v) => Navigator.of(ctx).pop(v),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              for (final e in _typeLabels.entries)
-                                RadioListTile<ActivityTypeFilter>(value: e.key, title: Text(e.value)),
-                            ],
-                          ),
-                        ),
-                      ),
-                    );
-                    if (v != null) setState(() => _typeFilter = v);
-                  },
-                ),
+                // The period stays in view: the totals below depend on it.
+                _MenuChip(label: _periodLabel, onTap: _pickPeriod),
                 const SizedBox(width: AppSpace.sm),
-                _MenuChip(
-                  label: _periodLabel,
-                  active: _dateFilter != ReportDateFilter.allTime,
-                  onTap: _pickPeriod,
-                ),
-                const SizedBox(width: AppSpace.sm),
-                _MenuChip(
-                  label: _methodFilter?.label ?? 'Any method',
-                  active: _methodFilter != null,
-                  onTap: _pickMethod,
+                FilterChip(
+                  avatar: const Icon(Icons.tune_rounded, size: 18),
+                  label: Text(_activeFilters == 0 ? 'Filters' : 'Filters · $_activeFilters'),
+                  selected: _activeFilters > 0,
+                  showCheckmark: false,
+                  onSelected: (_) => _openFilters(),
                 ),
               ],
             ),
@@ -372,10 +401,9 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
 /// A chip that opens a choice sheet and shows the current choice.
 class _MenuChip extends StatelessWidget {
   final String label;
-  final bool active;
   final VoidCallback onTap;
 
-  const _MenuChip({required this.label, required this.active, required this.onTap});
+  const _MenuChip({required this.label, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -388,7 +416,6 @@ class _MenuChip extends StatelessWidget {
           const Icon(Icons.arrow_drop_down_rounded, size: 20),
         ],
       ),
-      selected: active,
       onSelected: (_) => onTap(),
     );
   }

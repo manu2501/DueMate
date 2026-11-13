@@ -11,6 +11,7 @@ import 'package:duemate/core/widgets/avatar_widget.dart';
 import 'package:duemate/core/widgets/confirm_dialog.dart';
 import 'package:duemate/core/widgets/person_picker_sheet.dart';
 import 'package:duemate/core/widgets/return_by_field.dart';
+import 'package:duemate/core/widgets/ui_kit.dart' show ChipRow;
 import 'package:duemate/core/widgets/upi_widgets.dart';
 import 'package:duemate/data/database/tables.dart';
 import 'package:duemate/data/providers/app_providers.dart';
@@ -303,9 +304,7 @@ class _LedgerEntrySheetState extends ConsumerState<LedgerEntrySheet> with Widget
                       onChanged: () => setState(() {}),
                     ),
                     const SizedBox(height: 12),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
+                    ChipRow(
                       children: [
                         for (final p in _presets)
                           ActionChip(
@@ -315,9 +314,7 @@ class _LedgerEntrySheetState extends ConsumerState<LedgerEntrySheet> with Widget
                       ],
                     ),
                     const SizedBox(height: 20),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
+                    ChipRow(
                       children: [
                         for (final method in PaymentMethodX.ordered)
                           ChoiceChip(
@@ -538,8 +535,8 @@ class _PersonPanel extends StatelessWidget {
               child: ActionChip(
                 avatar: Icon(Icons.done_all_rounded, size: 16, color: accent),
                 label: Text(isGive
-                    ? 'Pay back all ${money(settleAmount)}'
-                    : 'Settle full balance ${money(settleAmount)}'),
+                    ? 'Pay back all ${money(settleAmount, exact: true)}'
+                    : 'Settle full balance ${money(settleAmount, exact: true)}'),
                 onPressed: () => onSettle(settleAmount),
               ),
             ),

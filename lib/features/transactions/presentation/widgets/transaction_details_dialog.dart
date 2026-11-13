@@ -264,7 +264,7 @@ class TransactionDetailsDialog extends ConsumerWidget {
                 children: [
                   Text(
                     ref.watch(hideBalancesProvider)
-                        ? ref.watch(displayMoneyProvider)(transaction.amount)
+                        ? ref.watch(displayMoneyProvider)(transaction.amount, exact: true)
                         : '${isReceived ? '+' : '-'}${CurrencyFormatter.format(transaction.amount, symbol: currencySymbol)}',
                     style: TextStyle(
                       fontWeight: FontWeight.w600,

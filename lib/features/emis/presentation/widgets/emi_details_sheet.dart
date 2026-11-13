@@ -154,9 +154,9 @@ class EmiDetailsSheet extends ConsumerWidget {
           const SizedBox(height: AppSpace.xl),
           Row(
             children: [
-              figure('Each month', money(emi.monthlyInstallment)),
-              figure('Paid', money(state.paidAmount)),
-              figure('Left', money(state.remainingAmount)),
+              figure('Each month', money(emi.monthlyInstallment, exact: true)),
+              figure('Paid', money(state.paidAmount, exact: true)),
+              figure('Left', money(state.remainingAmount, exact: true)),
             ],
           ),
           const SizedBox(height: AppSpace.lg),
@@ -198,7 +198,7 @@ class EmiDetailsSheet extends ConsumerWidget {
                 _ScheduleRow(
                   number: k,
                   date: emi.getDueDateForInstallment(k),
-                  amount: money(emi.getMonthlyInstallmentFor(k)),
+                  amount: money(emi.getMonthlyInstallmentFor(k), exact: true),
                   status: _statusOf(state, posted, k, today),
                   isNext: k == next,
                   onTap: () => showEmiInstallmentActions(context, ref, state: state, posted: posted, k: k, person: person),
