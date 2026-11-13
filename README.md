@@ -69,7 +69,7 @@ Everything stays on the phone. There is no account, no server and no analytics.
 - **Lending trends**: money lent vs collected, month by month (chart icon on People).
 - **Hide amounts**: the eye icon on Home (or the switch in Settings) replaces every balance and total with dots, e.g. when using the app in public. Amounts you're typing, exports and shared messages are never hidden. The choice is remembered, and showing amounts again asks for fingerprint, face or screen lock.
 - **App Lock**: ask for fingerprint, face or the phone's screen lock to open DueMate, on launch and after you've been away for a chosen time. Balances are hidden from the recent-apps view while it's on.
-- **Settings**: theme (system / light / dark), hide amounts, App Lock, currency (₹, $, €, £, AED, S$, A$, C$), monthly budget, notifications, backup and restore, CSV export, erase all data.
+- **Settings**: theme (system / light / dark), hide amounts, App Lock, currency (₹, $, €, £, AED, S$, A$, C$), monthly budget, notifications, backup and restore, CSV export, erase all data, and the version with **What's new** (from [CHANGELOG.md](CHANGELOG.md)).
 
 ## Design
 
@@ -160,6 +160,10 @@ The logo is defined once in `lib/core/widgets/app_logo.dart`. After changing it,
 ```bash
 flutter test test_screens/logo_export_test.dart --update-goldens
 ```
+
+## Changelog
+
+See [CHANGELOG.md](CHANGELOG.md) (also in the app under Settings › What's new). Current version: **1.1.0 (build 2)**.
 
 ## License
 

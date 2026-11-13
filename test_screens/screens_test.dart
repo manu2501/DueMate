@@ -257,6 +257,8 @@ void main() {
       await shot('05_activity');
       await go('/settings');
       await shot('06_settings');
+      await go('/changelog');
+      await shot('23_whats_new');
       await go('/add-emi');
       await shot('07_add_emi');
       Future<void> home() async {

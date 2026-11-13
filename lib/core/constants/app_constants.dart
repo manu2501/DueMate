@@ -5,10 +5,14 @@ class AppConstants {
   static const String appName = 'DueMate';
   static const String appTagline = 'Personal Lending & Repayment Tracker';
 
-  // App Versioning
-  static const String appVersion = '1.0.0';
-  static const int appBuildNumber = 1;
+  // App version. Keep in step with `version:` in pubspec.yaml and the newest
+  // entry in CHANGELOG.md (test/unit/changelog_test.dart checks all three).
+  static const String appVersion = '1.1.0';
+  static const int appBuildNumber = 2;
   static const String appVersionString = 'v$appVersion+$appBuildNumber';
+
+  /// As Settings shows it: "1.1.0 (build 2)".
+  static const String appVersionLabel = '$appVersion (build $appBuildNumber)';
 
   // Self / Personal Vault Constants
   static const String selfPersonId = 'self_person_me';

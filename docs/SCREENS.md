@@ -167,7 +167,18 @@ Your own EMIs are spending, not lending, so they're left out.
 
 Theme, hide amounts and currency; monthly budget and your UPI ID (₹ only); App Lock and how soon it locks after you leave
 the app; notifications (EMI reminders and a test notification); backup, **restore from a backup**,
-CSV export, and erase all data (asks first).
+CSV export, and erase all data (asks first). **About** shows the version (e.g. *1.1.0 (build 2)*)
+and **What's new**, which carries a *New* badge after an update until you open it.
+
+### What's new
+
+<p>
+  <img src="screenshots/23_whats_new.png" width="260" alt="What's new, light" />
+  <img src="screenshots/23_whats_new_dark.png" width="260" alt="What's new, dark" />
+</p>
+
+What changed in each version, newest first, grouped into *New*, *Improved* and *Fixed*, with the
+installed version marked. It is read from [`CHANGELOG.md`](../CHANGELOG.md), the same file GitHub shows.
 
 **EMI reminders.** With notifications on, DueMate reminds you at 9:00 the day before each EMI
 installment is due (on the day, if that's already passed), for the next three installments of every

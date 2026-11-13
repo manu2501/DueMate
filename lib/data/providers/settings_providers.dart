@@ -1,10 +1,12 @@
 /// User settings persisted in SharedPreferences.
 library;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:duemate/core/constants/app_constants.dart';
 import 'package:duemate/core/utils/display_money.dart';
+import 'package:duemate/domain/changelog.dart';
 import 'package:duemate/domain/upi.dart';
 
 /// Preferences loaded before `runApp`, so every setting is right on the very
@@ -161,3 +163,32 @@ final upiAvailableProvider =
 final upiIdForRemindersProvider = Provider<String?>(
   (ref) => ref.watch(upiAvailableProvider) ? ref.watch(upiProfileProvider).id : null,
 );
+
+/// What changed in each version: CHANGELOG.md, bundled with the app.
+final changelogProvider = FutureProvider<List<Release>>(
+  (ref) async => Changelog.parse(await rootBundle.loadString('CHANGELOG.md')),
+);
+
+/// The last app version whose "What's new" was opened.
+class SeenReleaseNotifier extends PrefsNotifier<String?> {
+  static const _key = 'duemate_seen_release';
+
+  @override
+  String? get initial => null;
+
+  @override
+  String? read(SharedPreferences prefs) => prefs.getString(_key);
+
+  /// This version's notes have been seen: the "New" badge goes away.
+  Future<void> markSeen() async {
+    if (state == AppConstants.appVersion) return;
+    state = AppConstants.appVersion;
+    await putString(_key, state);
+  }
+}
+
+final seenReleaseProvider = NotifierProvider<SeenReleaseNotifier, String?>(SeenReleaseNotifier.new);
+
+/// "What's new" in Settings shows a "New" badge until this version's notes
+/// are opened (after an update, or once after installing).
+final hasUnseenReleaseProvider = Provider<bool>((ref) => ref.watch(seenReleaseProvider) != AppConstants.appVersion);

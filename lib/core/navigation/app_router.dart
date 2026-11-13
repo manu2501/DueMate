@@ -12,6 +12,7 @@ import 'package:duemate/features/people/presentation/screens/add_edit_person_scr
 import 'package:duemate/features/people/presentation/screens/people_screen.dart';
 import 'package:duemate/features/people/presentation/screens/person_details_screen.dart';
 import 'package:duemate/features/reports/presentation/screens/reports_screen.dart';
+import 'package:duemate/features/settings/presentation/screens/changelog_screen.dart';
 import 'package:duemate/features/settings/presentation/screens/settings_screen.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
@@ -99,6 +100,15 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           context: context,
           state: state,
           child: const SettingsScreen(),
+        ),
+      ),
+      GoRoute(
+        parentNavigatorKey: _rootNavigatorKey,
+        path: '/changelog',
+        pageBuilder: (context, state) => _buildSlideTransition(
+          context: context,
+          state: state,
+          child: const ChangelogScreen(),
         ),
       ),
       GoRoute(

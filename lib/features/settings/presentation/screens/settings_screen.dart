@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:duemate/core/constants/app_constants.dart';
 import 'package:duemate/core/services/app_lock_service.dart';
 import 'package:duemate/core/services/notification_service.dart';
@@ -294,6 +295,34 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             ],
           ),
 
+          const SectionHeader('About'),
+          GroupCard(
+            children: [
+              const ListTile(
+                title: Text('Version'),
+                trailing: Text(AppConstants.appVersionLabel),
+              ),
+              ListTile(
+                title: const Text("What's new"),
+                subtitle: const Text('What changed in each version'),
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (ref.watch(hasUnseenReleaseProvider))
+                      Badge(
+                        label: const Text('New'),
+                        backgroundColor: cs.primary,
+                        textColor: cs.onPrimary,
+                        padding: const EdgeInsets.symmetric(horizontal: AppSpace.sm),
+                      ),
+                    const Icon(Icons.chevron_right_rounded),
+                  ],
+                ),
+                onTap: () => context.push('/changelog'),
+              ),
+            ],
+          ),
+
           Padding(
             padding: const EdgeInsets.fromLTRB(AppSpace.screenGutter, AppSpace.xxl, AppSpace.screenGutter, 0),
             child: Row(
@@ -304,7 +333,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('${AppConstants.appName} ${AppConstants.appVersionString}', style: theme.textTheme.titleSmall),
+                      Text(AppConstants.appName, style: theme.textTheme.titleSmall),
                       Text(
                         'Your data stays on this phone. No account, no tracking.',
                         style: theme.textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
