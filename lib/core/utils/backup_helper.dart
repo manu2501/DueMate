@@ -75,6 +75,9 @@ class BackupContents {
           b.insertAllOnConflictUpdate(db.expenses, expenses);
           b.insertAllOnConflictUpdate(db.recurringExpenses, recurring);
         });
+        // Backups from before schema v11 hold your own EMI installments as
+        // ledger entries.
+        await db.moveSelfEmiPostingsToExpenses();
       });
 
   static DateTime _date(Object? v) => DateTime.parse(v as String);
@@ -151,6 +154,8 @@ class BackupContents {
         paymentMethod: Value(PaymentMethod.values[x['paymentMethod'] as int]),
         notes: Value(x['notes'] as String?),
         recurringId: Value(x['recurringId'] as String?),
+        emiId: Value(x['emiId'] as String?), // absent before schema v11
+        installmentNumber: Value(x['installmentNumber'] as int?),
         createdAt: Value(_date(x['createdAt'])),
         updatedAt: Value(_date(x['updatedAt'])),
       );
@@ -253,6 +258,8 @@ class BackupHelper {
                 'paymentMethod': x.paymentMethod.index,
                 'notes': x.notes,
                 'recurringId': x.recurringId,
+                'emiId': x.emiId,
+                'installmentNumber': x.installmentNumber,
                 'createdAt': x.createdAt.toIso8601String(),
                 'updatedAt': x.updatedAt.toIso8601String(),
               })

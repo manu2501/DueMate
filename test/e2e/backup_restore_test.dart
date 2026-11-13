@@ -64,6 +64,19 @@ Future<void> _seed(AppDatabase db, {String prefix = ''}) async {
     createdAt: _t,
     updatedAt: _t,
   ));
+  // An installment of your own EMI, posted as an expense (schema v11).
+  await ExpenseRepositoryImpl(db).createExpense(PersonalExpense(
+    id: '${prefix}x2',
+    title: 'Phone',
+    amount: 1500,
+    category: ExpenseCategory.emi,
+    expenseDate: _t,
+    paymentMethod: PaymentMethod.card,
+    emiId: '${prefix}emi-self',
+    installmentNumber: 3,
+    createdAt: _t,
+    updatedAt: _t,
+  ));
 }
 
 /// Every row of every table, as comparable strings.
@@ -161,7 +174,7 @@ void main() {
       final db = await open(tester, json);
 
       expect(find.text('Replace all data?'), findsOneWidget);
-      expect(find.textContaining('1 person, 1 entry, 1 EMI and 1 expense'), findsOneWidget);
+      expect(find.textContaining('1 person, 1 entry, 1 EMI and 2 expenses'), findsOneWidget);
 
       await tester.tap(find.text('Replace everything'));
       await tester.pump();

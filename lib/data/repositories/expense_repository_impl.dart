@@ -18,6 +18,8 @@ class ExpenseRepositoryImpl implements ExpenseRepository {
       paymentMethod: row.paymentMethod,
       notes: row.notes,
       recurringId: row.recurringId,
+      emiId: row.emiId,
+      installmentNumber: row.installmentNumber,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
     );
@@ -70,6 +72,8 @@ class ExpenseRepositoryImpl implements ExpenseRepository {
             paymentMethod: expense.paymentMethod,
             notes: Value(expense.notes),
             recurringId: Value(expense.recurringId),
+            emiId: Value(expense.emiId),
+            installmentNumber: Value(expense.installmentNumber),
             createdAt: expense.createdAt,
             updatedAt: expense.updatedAt,
           ),
@@ -92,7 +96,10 @@ class ExpenseRepositoryImpl implements ExpenseRepository {
   }
 
   @override
-  Future<void> deleteExpense(String id) async {
-    await (_db.delete(_db.expenses)..where((t) => t.id.equals(id))).go();
-  }
+  Future<void> deleteExpense(String id) => _db.transaction(() async {
+        final row = await (_db.select(_db.expenses)..where((t) => t.id.equals(id))).getSingleOrNull();
+        await (_db.delete(_db.expenses)..where((t) => t.id.equals(id))).go();
+        // An EMI installment removed from expenses counts as unpaid again.
+        if (row?.emiId case final emiId?) await _db.recountSelfEmiPaid(emiId);
+      });
 }

@@ -10,7 +10,35 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? e]) : super(e ?? driftDatabase(name: 'duemate_db'));
 
   @override
-  int get schemaVersion => 10;
+  int get schemaVersion => 11;
+
+  /// Your own EMI installments used to be posted to the hidden "self" ledger.
+  /// They are spending, so they move into expenses (same id, amount and date).
+  /// Runs on upgrade to v11 and after restoring an older backup; does nothing
+  /// once there is nothing left to move.
+  Future<void> moveSelfEmiPostingsToExpenses() => transaction(() async {
+        const self = AppConstants.selfPersonId;
+        await customStatement(
+          'INSERT OR IGNORE INTO expenses (id, title, amount, category, expense_date, payment_method, notes, '
+          'emi_id, installment_number, created_at, updated_at) '
+          "SELECT t.id, coalesce(e.item_name, 'EMI'), t.amount, ${ExpenseCategory.emi.index}, t.transaction_date, "
+          "t.payment_method, coalesce('EMI ' || t.installment_number || '/' || e.total_tenure_months || ' · ' || e.card_name, t.note), "
+          't.emi_id, t.installment_number, t.created_at, t.updated_at '
+          'FROM transactions t LEFT JOIN credit_card_emis e ON e.id = t.emi_id '
+          "WHERE t.person_id = '$self' AND t.emi_id IS NOT NULL",
+        );
+        await customStatement("DELETE FROM transactions WHERE person_id = '$self' AND emi_id IS NOT NULL");
+      });
+
+  /// Sets your own EMI's paid count from the expenses it posted, and reopens
+  /// it if one was removed. Call after deleting such an expense.
+  Future<void> recountSelfEmiPaid(String emiId) => customUpdate(
+        'UPDATE credit_card_emis SET installments_paid = (SELECT COUNT(*) FROM expenses WHERE emi_id = ?1), '
+        "status = CASE WHEN status = 'completed' AND (SELECT COUNT(*) FROM expenses WHERE emi_id = ?1) < total_tenure_months "
+        "THEN 'active' ELSE status END WHERE id = ?1",
+        variables: [Variable.withString(emiId)],
+        updates: {creditCardEmis},
+      );
 
   /// Deletes every person, transaction, EMI, expense and recurring expense,
   /// in one transaction.
@@ -71,6 +99,11 @@ class AppDatabase extends _$AppDatabase {
       if (from < 10) {
         await m.addColumn(transactions, transactions.dueDate);
       }
+      if (from < 11) {
+        await m.addColumn(expenses, expenses.emiId);
+        await m.addColumn(expenses, expenses.installmentNumber);
+        await moveSelfEmiPostingsToExpenses();
+      }
     },
     beforeOpen: (details) async {
       await customStatement('PRAGMA foreign_keys = ON');
@@ -89,6 +122,7 @@ class AppDatabase extends _$AppDatabase {
       await customStatement('CREATE INDEX IF NOT EXISTS idx_transactions_emi_id ON transactions(emi_id)');
       await customStatement('CREATE INDEX IF NOT EXISTS idx_emis_person_id ON credit_card_emis(person_id)');
       await customStatement('CREATE INDEX IF NOT EXISTS idx_expenses_date ON expenses(expense_date DESC)');
+      await customStatement('CREATE INDEX IF NOT EXISTS idx_expenses_emi_id ON expenses(emi_id)');
     },
   );
 }

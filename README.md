@@ -52,10 +52,10 @@ Everything stays on the phone. There is no account, no server and no analytics.
   - **I know the EMI**: type the monthly EMI from your bank; add the original amount to see the extra you pay and the effective yearly rate.
 - Charges and fees, with an 18% GST helper applied to fee + interest (never principal).
 - Set a different amount for specific months (e.g. a first month with a fee).
-- Installments are added to the ledger on their due dates automatically; "Record now" posts the next one early.
+- Installments are posted automatically on their due dates: your own EMIs and loans to expenses (in the month each was due, including ones already paid when you add it), shared ones to the person's ledger. "Pay" records one or more months early, dated the day you paid.
 
 **Spending**
-- Log expenses by category (groceries, bills, rent, fuel, food, shopping, entertainment, health, other) in a few taps; the amount comes first and a description is optional.
+- Log expenses by category (groceries, bills, rent, fuel, food, shopping, entertainment, health, EMIs & loans, other) in a few taps; the amount comes first and a description is optional.
 - A monthly budget with a clear "left / over" status on Home and Expenses.
 - Spending trends: month-by-month bars for any year, where the money went by category, and every expense of a past month (editable).
 

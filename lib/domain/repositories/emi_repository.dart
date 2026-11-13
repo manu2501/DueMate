@@ -5,6 +5,7 @@ abstract class EmiRepository {
   Stream<List<CreditCardEmi>> watchEmisForPerson(String personId);
   Future<List<CreditCardEmi>> getEmisForPerson(String personId);
   Future<List<CreditCardEmi>> getActiveEmis();
+  Future<List<CreditCardEmi>> getAllEmis();
   Future<CreditCardEmi?> getEmiById(String id);
   Future<void> createEmi(CreditCardEmi emi);
   Future<void> updateEmi(CreditCardEmi emi);

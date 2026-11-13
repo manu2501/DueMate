@@ -240,7 +240,7 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
             child: EmptyStateWidget(
               icon: Icons.event_repeat_outlined,
               title: 'No EMIs or loans here',
-              description: 'Track card EMIs and loans; installments are added to the ledger on their due dates.',
+              description: 'Track card EMIs and loans. On each due date, yours are added to expenses and shared ones to the ledger.',
               actionLabel: 'Add EMI or loan',
               onActionPressed: () => AddEditEmiScreen.show(context),
             ),

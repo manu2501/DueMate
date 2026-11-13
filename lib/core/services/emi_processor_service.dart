@@ -17,6 +17,13 @@ class EmiProcessorResult {
   });
 }
 
+/// Posts EMI installments where they belong:
+/// - your own EMIs and loans become **expenses** (category EMI), in the month
+///   each was paid;
+/// - EMIs shared with someone become **ledger entries** on that person.
+///
+/// Every posting carries the EMI id and installment number, so nothing is
+/// posted twice.
 class EmiProcessorService {
   final EmiRepository emiRepository;
   final TransactionRepository transactionRepository;
@@ -28,126 +35,138 @@ class EmiProcessorService {
     required this.database,
   });
 
-  /// Automatically scans all active EMIs and generates any due monthly installment transactions
+  /// Posts every installment that is due by [referenceDate] (default now).
+  ///
+  /// Your own EMIs: installments marked paid on the form (even before the
+  /// app tracked them) are posted too, each in its own due month; ones marked
+  /// paid ahead of their due date are dated [referenceDate].
+  /// Shared EMIs: installments marked paid on the form are treated as settled
+  /// before tracking and are not posted.
   Future<EmiProcessorResult> processDueInstallments({DateTime? referenceDate}) async {
     final now = referenceDate ?? DateTime.now();
-    final activeEmis = await emiRepository.getActiveEmis();
-    int generatedCount = 0;
+    // Active EMIs, plus your own finished ones: their installments marked
+    // paid on the form still need posting to expenses.
+    final activeEmis = (await emiRepository.getAllEmis())
+        .where((e) => e.status == 'active' || (e.isForSelf && e.status == 'completed'))
+        .toList();
+    var generated = 0;
 
     for (final emi in activeEmis) {
-      int newlyGeneratedForEmi = 0;
-
-      // Installments the user declared as already paid have no ledger rows.
-      // Treat them as a baseline so they are never re-posted.
-      final postedBefore = await countPostedInstallments(emi.id);
-      final prepaid = (emi.installmentsPaid - postedBefore).clamp(0, emi.totalTenureMonths);
-
-      for (int k = prepaid + 1; k <= emi.totalTenureMonths; k++) {
-        final dueDate = emi.getDueDateForInstallment(k);
-
-        // Check if installment is due as of the reference date
-        if (dueDate.isBefore(now) || _isSameDay(dueDate, now)) {
-          final alreadyPosted = await _isInstallmentPosted(emi.id, k);
-
-          if (!alreadyPosted) {
-            final tx = LedgerTransaction(
-              id: const Uuid().v4(),
-              personId: emi.personId,
-              type: emi.isPaidByMe ? TransactionType.moneyGiven : TransactionType.paymentReceived,
-              amount: emi.getMonthlyInstallmentFor(k),
-              transactionDate: dueDate,
-              paymentMethod: PaymentMethod.card,
-              note: 'EMI $k/${emi.totalTenureMonths}: ${emi.itemName} (${emi.cardName})',
-              emiId: emi.id,
-              installmentNumber: k,
-              createdAt: DateTime.now(),
-              updatedAt: DateTime.now(),
-            );
-
-            await transactionRepository.addTransaction(tx);
-            generatedCount++;
-            newlyGeneratedForEmi++;
-          }
+      final due = dueCount(emi, now);
+      generated += await database.transaction(() async {
+        final posted = await postedInstallments(emi);
+        final prepaid = _prepaid(emi, posted);
+        final upTo = emi.isForSelf ? (emi.installmentsPaid > due ? emi.installmentsPaid : due) : due;
+        var added = 0;
+        for (var k = prepaid + 1; k <= upTo; k++) {
+          if (posted.contains(k)) continue;
+          final dueDate = emi.getDueDateForInstallment(k);
+          await _post(emi, k, dueDate.isAfter(now) ? now : dueDate);
+          posted.add(k);
+          added++;
         }
-      }
-
-      // Re-query total posted installments to update emi status accurately
-      final totalPosted = prepaid + await countPostedInstallments(emi.id);
-      final isNowCompleted = totalPosted >= emi.totalTenureMonths;
-
-      if (totalPosted != emi.installmentsPaid || isNowCompleted || newlyGeneratedForEmi > 0) {
-        final updatedEmi = emi.copyWith(
-          installmentsPaid: totalPosted,
-          status: isNowCompleted ? 'completed' : emi.status,
-          lastProcessedDate: now,
-          updatedAt: DateTime.now(),
-        );
-        await emiRepository.updateEmi(updatedEmi);
-      }
+        await _savePaid(emi, prepaid + posted.length, now, force: added > 0);
+        return added;
+      });
     }
 
-    return EmiProcessorResult(
-      emisChecked: activeEmis.length,
-      installmentsGenerated: generatedCount,
-    );
+    return EmiProcessorResult(emisChecked: activeEmis.length, installmentsGenerated: generated);
   }
 
-  /// Manually posts the next installment for an EMI immediately
-  Future<bool> postNextInstallment(CreditCardEmi emi) async {
-    if (emi.isCompleted || emi.installmentsPaid >= emi.totalTenureMonths) {
-      return false;
+  /// Records the next [count] unpaid installments as paid on [paidOn]
+  /// (default today), including ones not due yet (paying ahead). Returns how
+  /// many were recorded.
+  Future<int> payInstallments(CreditCardEmi emi, {int count = 1, DateTime? paidOn}) {
+    final date = paidOn ?? DateTime.now();
+    return database.transaction(() async {
+      final posted = await postedInstallments(emi);
+      final prepaid = _prepaid(emi, posted);
+      var added = 0;
+      for (var k = prepaid + 1; k <= emi.totalTenureMonths && added < count; k++) {
+        if (posted.contains(k)) continue;
+        await _post(emi, k, date);
+        posted.add(k);
+        added++;
+      }
+      if (added > 0) await _savePaid(emi, prepaid + posted.length, date, force: true);
+      return added;
+    });
+  }
+
+  /// Installments due on or before [now].
+  static int dueCount(CreditCardEmi emi, DateTime now) {
+    var n = 0;
+    while (n < emi.totalTenureMonths && !_dayOf(emi.getDueDateForInstallment(n + 1)).isAfter(_dayOf(now))) {
+      n++;
     }
+    return n;
+  }
 
-    final postedBefore = await countPostedInstallments(emi.id);
-    final nextNumber = emi.installmentsPaid + 1;
-    final alreadyPosted = await _isInstallmentPosted(emi.id, nextNumber);
-    if (alreadyPosted) return false;
+  /// Installment numbers already posted for [emi] (expenses for your own,
+  /// ledger entries for shared ones).
+  Future<Set<int>> postedInstallments(CreditCardEmi emi) async {
+    if (emi.isForSelf) {
+      final q = database.selectOnly(database.expenses)
+        ..addColumns([database.expenses.installmentNumber])
+        ..where(database.expenses.emiId.equals(emi.id));
+      return {for (final r in await q.get()) ?r.read(database.expenses.installmentNumber)};
+    }
+    final q = database.selectOnly(database.transactions)
+      ..addColumns([database.transactions.installmentNumber])
+      ..where(database.transactions.emiId.equals(emi.id));
+    return {for (final r in await q.get()) ?r.read(database.transactions.installmentNumber)};
+  }
 
-    final dueDate = emi.getDueDateForInstallment(nextNumber);
+  /// Shared EMIs only: installments declared paid that have no ledger entry.
+  /// Your own EMIs post every paid installment, so they have none.
+  int _prepaid(CreditCardEmi emi, Set<int> posted) =>
+      emi.isForSelf ? 0 : (emi.installmentsPaid - posted.length).clamp(0, emi.totalTenureMonths);
 
-    final tx = LedgerTransaction(
+  Future<void> _post(CreditCardEmi emi, int k, DateTime date) async {
+    final now = DateTime.now();
+    final amount = emi.getMonthlyInstallmentFor(k);
+    final note = 'EMI $k/${emi.totalTenureMonths} · ${emi.cardName}';
+    if (emi.isForSelf) {
+      await database.into(database.expenses).insert(db.ExpensesCompanion.insert(
+            id: const Uuid().v4(),
+            title: emi.itemName,
+            amount: amount,
+            category: ExpenseCategory.emi,
+            expenseDate: date,
+            paymentMethod: emi.isLoan ? PaymentMethod.bankTransfer : PaymentMethod.card,
+            notes: Value(note),
+            emiId: Value(emi.id),
+            installmentNumber: Value(k),
+            createdAt: now,
+            updatedAt: now,
+          ));
+      return;
+    }
+    await transactionRepository.addTransaction(LedgerTransaction(
       id: const Uuid().v4(),
       personId: emi.personId,
       type: emi.isPaidByMe ? TransactionType.moneyGiven : TransactionType.paymentReceived,
-      amount: emi.getMonthlyInstallmentFor(nextNumber),
-      transactionDate: dueDate,
-      paymentMethod: PaymentMethod.card,
-      note: 'EMI $nextNumber/${emi.totalTenureMonths}: ${emi.itemName} (${emi.cardName})',
+      amount: amount,
+      transactionDate: date,
+      paymentMethod: emi.isLoan ? PaymentMethod.bankTransfer : PaymentMethod.card,
+      note: '$note: ${emi.itemName}',
       emiId: emi.id,
-      installmentNumber: nextNumber,
-      createdAt: DateTime.now(),
+      installmentNumber: k,
+      createdAt: now,
+      updatedAt: now,
+    ));
+  }
+
+  Future<void> _savePaid(CreditCardEmi emi, int paid, DateTime processedAt, {required bool force}) async {
+    final status = paid >= emi.totalTenureMonths ? 'completed' : emi.status;
+    if (!force && paid == emi.installmentsPaid && status == emi.status) return;
+    await emiRepository.updateEmi(emi.copyWith(
+      installmentsPaid: paid,
+      status: status,
+      lastProcessedDate: processedAt,
       updatedAt: DateTime.now(),
-    );
-
-    await transactionRepository.addTransaction(tx);
-
-    final prepaid = (emi.installmentsPaid - postedBefore).clamp(0, emi.totalTenureMonths);
-    final totalPosted = prepaid + await countPostedInstallments(emi.id);
-    final updated = emi.copyWith(
-      installmentsPaid: totalPosted,
-      status: totalPosted >= emi.totalTenureMonths ? 'completed' : emi.status,
-      lastProcessedDate: DateTime.now(),
-      updatedAt: DateTime.now(),
-    );
-    await emiRepository.updateEmi(updated);
-
-    return true;
+    ));
   }
 
-  Future<bool> _isInstallmentPosted(String emiId, int installmentNumber) async {
-    final query = database.select(database.transactions)
-      ..where((tbl) => tbl.emiId.equals(emiId) & tbl.installmentNumber.equals(installmentNumber));
-    final count = await query.get();
-    return count.isNotEmpty;
-  }
-
-  Future<int> countPostedInstallments(String emiId) async {
-    final query = database.select(database.transactions)..where((tbl) => tbl.emiId.equals(emiId));
-    final rows = await query.get();
-    return rows.length;
-  }
-
-  bool _isSameDay(DateTime a, DateTime b) {
-    return a.year == b.year && a.month == b.month && a.day == b.day;
-  }
+  static DateTime _dayOf(DateTime d) => DateTime(d.year, d.month, d.day);
 }

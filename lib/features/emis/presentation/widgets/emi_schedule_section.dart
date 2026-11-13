@@ -3,7 +3,8 @@ import 'package:duemate/core/theme/app_theme.dart';
 import 'package:duemate/core/utils/date_formatter.dart';
 
 /// First due date and installments already paid, with a nudge when past
-/// installments would be back-filled into the ledger.
+/// installments would be back-filled into the ledger. Your own EMIs post
+/// every paid installment to expenses, in the month it was due.
 class EmiScheduleSection extends StatelessWidget {
   final DateTime firstDueDate;
   final int dueDayOfMonth;
@@ -14,6 +15,9 @@ class EmiScheduleSection extends StatelessWidget {
   /// How many installments have already fallen due as of today.
   final int dueSoFar;
   final bool isEditing;
+
+  /// Your own EMI or loan (installments go to expenses).
+  final bool isForSelf;
   final VoidCallback onPickDate;
 
   const EmiScheduleSection({
@@ -25,6 +29,7 @@ class EmiScheduleSection extends StatelessWidget {
     required this.installmentsPaid,
     required this.dueSoFar,
     required this.isEditing,
+    required this.isForSelf,
     required this.onPickDate,
   });
 
@@ -61,7 +66,9 @@ class EmiScheduleSection extends StatelessWidget {
             labelText: 'Already paid',
             hintText: '0',
             prefixIcon: const Icon(Icons.history_rounded),
-            helperText: "Installments paid before you started tracking. They won't be added to the ledger.",
+            helperText: isForSelf
+                ? 'Installments you have paid so far. Each is added to your expenses in the month it was due.'
+                : "Installments paid before you started tracking. They won't be added to the ledger.",
             helperMaxLines: 3,
             border: border,
           ),
@@ -73,7 +80,7 @@ class EmiScheduleSection extends StatelessWidget {
             return null;
           },
         ),
-        if (!isEditing && unpaidDue > 0) ...[
+        if (!isEditing && !isForSelf && unpaidDue > 0) ...[
           const SizedBox(height: 10),
           Container(
             padding: const EdgeInsets.all(AppSpace.md),

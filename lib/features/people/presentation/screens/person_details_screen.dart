@@ -116,7 +116,7 @@ class PersonDetailsScreen extends ConsumerWidget {
   }
 }
 
-enum _MenuAction { statement, shareText, details, edit, addEmi, archive, delete }
+enum _MenuAction { statement, shareText, details, edit, archive, delete }
 
 class _PersonLedger extends ConsumerWidget {
   final PersonSummary summary;
@@ -166,6 +166,10 @@ class _PersonLedger extends ConsumerWidget {
           context: context,
         );
 
+    void addEmi() => AddEditEmiScreen.show(context, personId: person.id);
+    // Three actions share the row: trim the side padding so labels fit on one line.
+    final actionStyle = FilledButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: AppSpace.sm));
+
     void onMenu(_MenuAction a) {
       switch (a) {
         case _MenuAction.statement:
@@ -189,8 +193,6 @@ class _PersonLedger extends ConsumerWidget {
           PersonInfoSheet.show(context, person: person, summary: summary, currencySymbol: symbol);
         case _MenuAction.edit:
           AddEditPersonScreen.show(context, personToEdit: person);
-        case _MenuAction.addEmi:
-          AddEditEmiScreen.show(context, personId: person.id);
         case _MenuAction.archive:
           onArchive();
         case _MenuAction.delete:
@@ -242,7 +244,6 @@ class _PersonLedger extends ConsumerWidget {
                   item(_MenuAction.shareText, Icons.ios_share_rounded, 'Share balance as text'),
                   item(_MenuAction.details, Icons.info_outline_rounded, 'Contact details'),
                   item(_MenuAction.edit, Icons.edit_outlined, 'Edit'),
-                  item(_MenuAction.addEmi, Icons.event_repeat_outlined, 'Add EMI or loan'),
                   const PopupMenuDivider(),
                   item(_MenuAction.archive, Icons.archive_outlined, person.isArchived ? 'Unarchive' : 'Archive'),
                   item(_MenuAction.delete, Icons.delete_outline_rounded, 'Delete', color: cs.error),
@@ -295,6 +296,7 @@ class _PersonLedger extends ConsumerWidget {
                 children: [
                   Expanded(
                     child: FilledButton.tonalIcon(
+                      style: actionStyle,
                       onPressed: () => QuickGiveSheet.show(context, personId: person.id),
                       icon: const Icon(Icons.north_east_rounded, size: 20),
                       label: const Text('Give'),
@@ -303,9 +305,19 @@ class _PersonLedger extends ConsumerWidget {
                   const SizedBox(width: AppSpace.sm),
                   Expanded(
                     child: FilledButton.tonalIcon(
+                      style: actionStyle,
                       onPressed: () => QuickReceiveSheet.show(context, personId: person.id),
                       icon: const Icon(Icons.south_west_rounded, size: 20),
                       label: const Text('Receive'),
+                    ),
+                  ),
+                  const SizedBox(width: AppSpace.sm),
+                  Expanded(
+                    child: FilledButton.tonalIcon(
+                      style: actionStyle,
+                      onPressed: addEmi,
+                      icon: const Icon(Icons.credit_card_outlined, size: 20),
+                      label: const Text('EMI'),
                     ),
                   ),
                 ],
@@ -313,20 +325,24 @@ class _PersonLedger extends ConsumerWidget {
             ),
           ),
 
-          if (emis.isNotEmpty) ...[
-            SliverToBoxAdapter(
-              child: SectionHeader(
-                'EMIs and loans',
-                actionLabel: 'Add',
-                onAction: () => AddEditEmiScreen.show(context, personId: person.id),
-              ),
+          SliverToBoxAdapter(
+            child: SectionHeader('EMIs and loans', actionLabel: 'Add', onAction: addEmi),
+          ),
+          SliverToBoxAdapter(
+            child: GroupCard(
+              children: emis.isEmpty
+                  ? [
+                      ListTile(
+                        onTap: addEmi,
+                        leading: const IconBadge(Icons.credit_card_outlined),
+                        title: const Text('Card EMI or loan'),
+                        subtitle: Text("Each installment is added to ${person.name.split(' ').first}'s ledger on its due date"),
+                        trailing: const Icon(Icons.chevron_right_rounded),
+                      ),
+                    ]
+                  : [for (final e in emis) EmiCard(emi: e, person: person, currencySymbol: symbol)],
             ),
-            SliverToBoxAdapter(
-              child: GroupCard(
-                children: [for (final e in emis) EmiCard(emi: e, person: person, currencySymbol: symbol)],
-              ),
-            ),
-          ],
+          ),
 
           if (transactions.isEmpty)
             SliverToBoxAdapter(

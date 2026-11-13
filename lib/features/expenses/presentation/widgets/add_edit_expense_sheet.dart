@@ -210,7 +210,7 @@ class _AddEditExpenseSheetState extends ConsumerState<AddEditExpenseSheet> {
               spacing: AppSpace.sm,
               runSpacing: AppSpace.sm,
               children: [
-                for (final c in ExpenseCategory.values)
+                for (final c in ExpenseCategoryX.ordered)
                   ChoiceChip(
                     avatar: Icon(c.icon, size: 18),
                     label: Text(c.label),

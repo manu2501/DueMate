@@ -82,6 +82,10 @@ class EmiRepositoryImpl implements EmiRepository {
   }
 
   @override
+  Future<List<domain.CreditCardEmi>> getAllEmis() async =>
+      (await _database.select(_database.creditCardEmis).get()).map(_toDomain).toList();
+
+  @override
   Future<domain.CreditCardEmi?> getEmiById(String id) async {
     final query = _database.select(_database.creditCardEmis)..where((tbl) => tbl.id.equals(id));
     final row = await query.getSingleOrNull();

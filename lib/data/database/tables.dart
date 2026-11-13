@@ -23,6 +23,10 @@ enum ExpenseCategory {
   entertainment,
   health,
   other,
+
+  /// Installments of your own EMIs and loans. Appended last because the enum
+  /// is stored by index. Since schema v11.
+  emi,
 }
 
 class Persons extends Table {
@@ -109,6 +113,11 @@ class Expenses extends Table {
   /// The [RecurringExpenses] rule that posted it, if any. No foreign key:
   /// stopping a rule keeps the expenses it posted. Since schema v9.
   TextColumn get recurringId => text().nullable()();
+
+  /// Your own EMI or loan that posted it, and which installment. No foreign
+  /// key: deleting the EMI keeps what you already paid. Since schema v11.
+  TextColumn get emiId => text().nullable()();
+  IntColumn get installmentNumber => integer().nullable()();
   DateTimeColumn get createdAt => dateTime()();
   DateTimeColumn get updatedAt => dateTime()();
 

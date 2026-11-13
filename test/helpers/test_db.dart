@@ -21,8 +21,17 @@ Future<void> downgradeToV8(AppDatabase db) async {
   await db.customStatement('PRAGMA user_version = 8');
 }
 
+/// Turns a current database back into schema v10 (before EMI expenses).
+Future<void> downgradeToV10(AppDatabase db) async {
+  await db.customStatement('DROP INDEX IF EXISTS idx_expenses_emi_id');
+  await db.customStatement('ALTER TABLE expenses DROP COLUMN emi_id');
+  await db.customStatement('ALTER TABLE expenses DROP COLUMN installment_number');
+  await db.customStatement('PRAGMA user_version = 10');
+}
+
 /// Turns a current database back into schema v9 (before loan due dates).
 Future<void> downgradeToV9(AppDatabase db) async {
+  await downgradeToV10(db);
   await db.customStatement('ALTER TABLE transactions DROP COLUMN due_date');
   await db.customStatement('PRAGMA user_version = 9');
 }

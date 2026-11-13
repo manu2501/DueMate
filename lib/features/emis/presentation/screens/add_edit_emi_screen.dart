@@ -799,6 +799,7 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
               installmentsPaid: _installmentsPaid,
               dueSoFar: _dueSoFar,
               isEditing: isEditing,
+              isForSelf: _isForSelf,
               onPickDate: _selectStartDate,
             ),
             const SizedBox(height: 20),

@@ -119,10 +119,11 @@ exports the filtered entries as PDF or CSV.
 </p>
 
 Who owes whom and how much, a larger repayment bar (*Paid ₹2,500 of ₹15,000 · 16%*), when money
-is due back (or overdue), then **Give** / **Receive** for this
-person. Their EMIs follow, then history by month. The top bar has a WhatsApp reminder (when they
+is due back (or overdue), then **Give** / **Receive** / **EMI** for this
+person. *EMIs and loans* follows (always shown: add a card EMI or loan for them; each installment
+is added to their ledger on its due date), then history by month. The top bar has a WhatsApp reminder (when they
 owe you and have a number) and a menu: share statement, share balance as text, contact details,
-edit, add EMI or loan, archive, delete.
+edit, archive, delete.
 
 ### Spending trends
 
@@ -241,7 +242,8 @@ amount, entered either way:
   extra you pay and the effective yearly rate.
 
 A live summary shows the EMI, totals and last installment; *Make some months different* sets
-uneven months. Finally the first due date and installments already paid.
+uneven months. Finally the first due date and installments already paid (for your own EMIs,
+each paid installment is added to expenses in the month it was due).
 
 ### EMI schedule
 
@@ -251,7 +253,9 @@ uneven months. Finally the first due date and installments already paid.
 </p>
 
 Monthly amount, paid and left, progress, then every installment. Tap a month to change its
-amount; **Record now** posts the next one to the ledger early. Edit and delete at the bottom
+amount; **Pay** records the next installment(s) as paid on the day you choose, so you can pay
+ahead (they are not posted again on their due dates). Your own EMIs and loans go to expenses
+(category *EMIs & loans*), shared ones to the person's ledger. Edit and delete at the bottom
 (and a WhatsApp reminder for shared EMIs).
 
 ### Entry details

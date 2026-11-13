@@ -2775,6 +2775,26 @@ class $ExpensesTable extends Expenses with TableInfo<$ExpensesTable, Expense> {
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _emiIdMeta = const VerificationMeta('emiId');
+  @override
+  late final GeneratedColumn<String> emiId = GeneratedColumn<String>(
+    'emi_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _installmentNumberMeta = const VerificationMeta(
+    'installmentNumber',
+  );
+  @override
+  late final GeneratedColumn<int> installmentNumber = GeneratedColumn<int>(
+    'installment_number',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
   );
@@ -2807,6 +2827,8 @@ class $ExpensesTable extends Expenses with TableInfo<$ExpensesTable, Expense> {
     paymentMethod,
     notes,
     recurringId,
+    emiId,
+    installmentNumber,
     createdAt,
     updatedAt,
   ];
@@ -2866,6 +2888,21 @@ class $ExpensesTable extends Expenses with TableInfo<$ExpensesTable, Expense> {
         recurringId.isAcceptableOrUnknown(
           data['recurring_id']!,
           _recurringIdMeta,
+        ),
+      );
+    }
+    if (data.containsKey('emi_id')) {
+      context.handle(
+        _emiIdMeta,
+        emiId.isAcceptableOrUnknown(data['emi_id']!, _emiIdMeta),
+      );
+    }
+    if (data.containsKey('installment_number')) {
+      context.handle(
+        _installmentNumberMeta,
+        installmentNumber.isAcceptableOrUnknown(
+          data['installment_number']!,
+          _installmentNumberMeta,
         ),
       );
     }
@@ -2930,6 +2967,14 @@ class $ExpensesTable extends Expenses with TableInfo<$ExpensesTable, Expense> {
         DriftSqlType.string,
         data['${effectivePrefix}recurring_id'],
       ),
+      emiId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}emi_id'],
+      ),
+      installmentNumber: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}installment_number'],
+      ),
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
@@ -2964,6 +3009,11 @@ class Expense extends DataClass implements Insertable<Expense> {
   /// The [RecurringExpenses] rule that posted it, if any. No foreign key:
   /// stopping a rule keeps the expenses it posted. Since schema v9.
   final String? recurringId;
+
+  /// Your own EMI or loan that posted it, and which installment. No foreign
+  /// key: deleting the EMI keeps what you already paid. Since schema v11.
+  final String? emiId;
+  final int? installmentNumber;
   final DateTime createdAt;
   final DateTime updatedAt;
   const Expense({
@@ -2975,6 +3025,8 @@ class Expense extends DataClass implements Insertable<Expense> {
     required this.paymentMethod,
     this.notes,
     this.recurringId,
+    this.emiId,
+    this.installmentNumber,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -3001,6 +3053,12 @@ class Expense extends DataClass implements Insertable<Expense> {
     if (!nullToAbsent || recurringId != null) {
       map['recurring_id'] = Variable<String>(recurringId);
     }
+    if (!nullToAbsent || emiId != null) {
+      map['emi_id'] = Variable<String>(emiId);
+    }
+    if (!nullToAbsent || installmentNumber != null) {
+      map['installment_number'] = Variable<int>(installmentNumber);
+    }
     map['created_at'] = Variable<DateTime>(createdAt);
     map['updated_at'] = Variable<DateTime>(updatedAt);
     return map;
@@ -3020,6 +3078,12 @@ class Expense extends DataClass implements Insertable<Expense> {
       recurringId: recurringId == null && nullToAbsent
           ? const Value.absent()
           : Value(recurringId),
+      emiId: emiId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(emiId),
+      installmentNumber: installmentNumber == null && nullToAbsent
+          ? const Value.absent()
+          : Value(installmentNumber),
       createdAt: Value(createdAt),
       updatedAt: Value(updatedAt),
     );
@@ -3043,6 +3107,8 @@ class Expense extends DataClass implements Insertable<Expense> {
       ),
       notes: serializer.fromJson<String?>(json['notes']),
       recurringId: serializer.fromJson<String?>(json['recurringId']),
+      emiId: serializer.fromJson<String?>(json['emiId']),
+      installmentNumber: serializer.fromJson<int?>(json['installmentNumber']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
     );
@@ -3063,6 +3129,8 @@ class Expense extends DataClass implements Insertable<Expense> {
       ),
       'notes': serializer.toJson<String?>(notes),
       'recurringId': serializer.toJson<String?>(recurringId),
+      'emiId': serializer.toJson<String?>(emiId),
+      'installmentNumber': serializer.toJson<int?>(installmentNumber),
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
     };
@@ -3077,6 +3145,8 @@ class Expense extends DataClass implements Insertable<Expense> {
     PaymentMethod? paymentMethod,
     Value<String?> notes = const Value.absent(),
     Value<String?> recurringId = const Value.absent(),
+    Value<String?> emiId = const Value.absent(),
+    Value<int?> installmentNumber = const Value.absent(),
     DateTime? createdAt,
     DateTime? updatedAt,
   }) => Expense(
@@ -3088,6 +3158,10 @@ class Expense extends DataClass implements Insertable<Expense> {
     paymentMethod: paymentMethod ?? this.paymentMethod,
     notes: notes.present ? notes.value : this.notes,
     recurringId: recurringId.present ? recurringId.value : this.recurringId,
+    emiId: emiId.present ? emiId.value : this.emiId,
+    installmentNumber: installmentNumber.present
+        ? installmentNumber.value
+        : this.installmentNumber,
     createdAt: createdAt ?? this.createdAt,
     updatedAt: updatedAt ?? this.updatedAt,
   );
@@ -3107,6 +3181,10 @@ class Expense extends DataClass implements Insertable<Expense> {
       recurringId: data.recurringId.present
           ? data.recurringId.value
           : this.recurringId,
+      emiId: data.emiId.present ? data.emiId.value : this.emiId,
+      installmentNumber: data.installmentNumber.present
+          ? data.installmentNumber.value
+          : this.installmentNumber,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
     );
@@ -3123,6 +3201,8 @@ class Expense extends DataClass implements Insertable<Expense> {
           ..write('paymentMethod: $paymentMethod, ')
           ..write('notes: $notes, ')
           ..write('recurringId: $recurringId, ')
+          ..write('emiId: $emiId, ')
+          ..write('installmentNumber: $installmentNumber, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt')
           ..write(')'))
@@ -3139,6 +3219,8 @@ class Expense extends DataClass implements Insertable<Expense> {
     paymentMethod,
     notes,
     recurringId,
+    emiId,
+    installmentNumber,
     createdAt,
     updatedAt,
   );
@@ -3154,6 +3236,8 @@ class Expense extends DataClass implements Insertable<Expense> {
           other.paymentMethod == this.paymentMethod &&
           other.notes == this.notes &&
           other.recurringId == this.recurringId &&
+          other.emiId == this.emiId &&
+          other.installmentNumber == this.installmentNumber &&
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt);
 }
@@ -3167,6 +3251,8 @@ class ExpensesCompanion extends UpdateCompanion<Expense> {
   final Value<PaymentMethod> paymentMethod;
   final Value<String?> notes;
   final Value<String?> recurringId;
+  final Value<String?> emiId;
+  final Value<int?> installmentNumber;
   final Value<DateTime> createdAt;
   final Value<DateTime> updatedAt;
   final Value<int> rowid;
@@ -3179,6 +3265,8 @@ class ExpensesCompanion extends UpdateCompanion<Expense> {
     this.paymentMethod = const Value.absent(),
     this.notes = const Value.absent(),
     this.recurringId = const Value.absent(),
+    this.emiId = const Value.absent(),
+    this.installmentNumber = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.rowid = const Value.absent(),
@@ -3192,6 +3280,8 @@ class ExpensesCompanion extends UpdateCompanion<Expense> {
     required PaymentMethod paymentMethod,
     this.notes = const Value.absent(),
     this.recurringId = const Value.absent(),
+    this.emiId = const Value.absent(),
+    this.installmentNumber = const Value.absent(),
     required DateTime createdAt,
     required DateTime updatedAt,
     this.rowid = const Value.absent(),
@@ -3212,6 +3302,8 @@ class ExpensesCompanion extends UpdateCompanion<Expense> {
     Expression<int>? paymentMethod,
     Expression<String>? notes,
     Expression<String>? recurringId,
+    Expression<String>? emiId,
+    Expression<int>? installmentNumber,
     Expression<DateTime>? createdAt,
     Expression<DateTime>? updatedAt,
     Expression<int>? rowid,
@@ -3225,6 +3317,8 @@ class ExpensesCompanion extends UpdateCompanion<Expense> {
       if (paymentMethod != null) 'payment_method': paymentMethod,
       if (notes != null) 'notes': notes,
       if (recurringId != null) 'recurring_id': recurringId,
+      if (emiId != null) 'emi_id': emiId,
+      if (installmentNumber != null) 'installment_number': installmentNumber,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
       if (rowid != null) 'rowid': rowid,
@@ -3240,6 +3334,8 @@ class ExpensesCompanion extends UpdateCompanion<Expense> {
     Value<PaymentMethod>? paymentMethod,
     Value<String?>? notes,
     Value<String?>? recurringId,
+    Value<String?>? emiId,
+    Value<int?>? installmentNumber,
     Value<DateTime>? createdAt,
     Value<DateTime>? updatedAt,
     Value<int>? rowid,
@@ -3253,6 +3349,8 @@ class ExpensesCompanion extends UpdateCompanion<Expense> {
       paymentMethod: paymentMethod ?? this.paymentMethod,
       notes: notes ?? this.notes,
       recurringId: recurringId ?? this.recurringId,
+      emiId: emiId ?? this.emiId,
+      installmentNumber: installmentNumber ?? this.installmentNumber,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       rowid: rowid ?? this.rowid,
@@ -3290,6 +3388,12 @@ class ExpensesCompanion extends UpdateCompanion<Expense> {
     if (recurringId.present) {
       map['recurring_id'] = Variable<String>(recurringId.value);
     }
+    if (emiId.present) {
+      map['emi_id'] = Variable<String>(emiId.value);
+    }
+    if (installmentNumber.present) {
+      map['installment_number'] = Variable<int>(installmentNumber.value);
+    }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
@@ -3313,6 +3417,8 @@ class ExpensesCompanion extends UpdateCompanion<Expense> {
           ..write('paymentMethod: $paymentMethod, ')
           ..write('notes: $notes, ')
           ..write('recurringId: $recurringId, ')
+          ..write('emiId: $emiId, ')
+          ..write('installmentNumber: $installmentNumber, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('rowid: $rowid')
@@ -5716,6 +5822,8 @@ typedef $$ExpensesTableCreateCompanionBuilder = ExpensesCompanion Function({
   required PaymentMethod paymentMethod,
   Value<String?> notes,
   Value<String?> recurringId,
+  Value<String?> emiId,
+  Value<int?> installmentNumber,
   required DateTime createdAt,
   required DateTime updatedAt,
   Value<int> rowid,
@@ -5729,6 +5837,8 @@ typedef $$ExpensesTableUpdateCompanionBuilder = ExpensesCompanion Function({
   Value<PaymentMethod> paymentMethod,
   Value<String?> notes,
   Value<String?> recurringId,
+  Value<String?> emiId,
+  Value<int?> installmentNumber,
   Value<DateTime> createdAt,
   Value<DateTime> updatedAt,
   Value<int> rowid,
@@ -5782,6 +5892,16 @@ class $$ExpensesTableFilterComposer
 
   ColumnFilters<String> get recurringId => $composableBuilder(
     column: $table.recurringId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get emiId => $composableBuilder(
+    column: $table.emiId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get installmentNumber => $composableBuilder(
+    column: $table.installmentNumber,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -5845,6 +5965,16 @@ class $$ExpensesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get emiId => $composableBuilder(
+    column: $table.emiId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get installmentNumber => $composableBuilder(
+    column: $table.installmentNumber,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get createdAt => $composableBuilder(
     column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
@@ -5896,6 +6026,14 @@ class $$ExpensesTableAnnotationComposer
     builder: (column) => column,
   );
 
+  GeneratedColumn<String> get emiId =>
+      $composableBuilder(column: $table.emiId, builder: (column) => column);
+
+  GeneratedColumn<int> get installmentNumber => $composableBuilder(
+    column: $table.installmentNumber,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
 
@@ -5939,6 +6077,8 @@ class $$ExpensesTableTableManager
                 Value<PaymentMethod> paymentMethod = const Value.absent(),
                 Value<String?> notes = const Value.absent(),
                 Value<String?> recurringId = const Value.absent(),
+                Value<String?> emiId = const Value.absent(),
+                Value<int?> installmentNumber = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
@@ -5951,6 +6091,8 @@ class $$ExpensesTableTableManager
                 paymentMethod: paymentMethod,
                 notes: notes,
                 recurringId: recurringId,
+                emiId: emiId,
+                installmentNumber: installmentNumber,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 rowid: rowid,
@@ -5965,6 +6107,8 @@ class $$ExpensesTableTableManager
                 required PaymentMethod paymentMethod,
                 Value<String?> notes = const Value.absent(),
                 Value<String?> recurringId = const Value.absent(),
+                Value<String?> emiId = const Value.absent(),
+                Value<int?> installmentNumber = const Value.absent(),
                 required DateTime createdAt,
                 required DateTime updatedAt,
                 Value<int> rowid = const Value.absent(),
@@ -5977,6 +6121,8 @@ class $$ExpensesTableTableManager
                 paymentMethod: paymentMethod,
                 notes: notes,
                 recurringId: recurringId,
+                emiId: emiId,
+                installmentNumber: installmentNumber,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
                 rowid: rowid,

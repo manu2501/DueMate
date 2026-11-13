@@ -13,6 +13,7 @@ import 'package:duemate/domain/entities/credit_card_emi.dart';
 import 'package:duemate/domain/entities/person.dart';
 import 'package:duemate/features/emis/presentation/screens/add_edit_emi_screen.dart';
 import 'package:duemate/features/emis/presentation/widgets/emi_card.dart';
+import 'package:duemate/features/emis/presentation/widgets/emi_pay_dialog.dart';
 
 class EmiDetailsSheet extends ConsumerWidget {
   final CreditCardEmi emi;
@@ -101,7 +102,9 @@ class EmiDetailsSheet extends ConsumerWidget {
       context,
       title: 'Delete this schedule?',
       message:
-          "The schedule is removed. Installments already posted to the ledger stay there, so balances don't change.",
+          emi.isForSelf
+          ? "The schedule is removed. Installments already in your expenses stay there."
+          : "The schedule is removed. Installments already posted to the ledger stay there, so balances don't change.",
       confirmLabel: 'Delete',
       destructive: true,
     );
@@ -137,12 +140,15 @@ class EmiDetailsSheet extends ConsumerWidget {
           ),
         );
 
-    Future<void> recordNow(int k) async {
+    Future<void> recordPayment() async {
       final messenger = ScaffoldMessenger.of(context);
-      final ok = await ref.read(emiProcessorServiceProvider).postNextInstallment(emi);
+      final choice = await EmiPayDialog.show(context, emi: emi, symbol: symbol);
+      if (choice == null) return;
+      final n = await ref.read(emiProcessorServiceProvider).payInstallments(emi, count: choice.count, paidOn: choice.paidOn);
       if (context.mounted) Navigator.of(context).pop();
+      final where = emi.isForSelf ? 'your expenses' : 'the ledger';
       messenger.showSnackBar(SnackBar(
-        content: Text(ok ? 'Installment $k added to the ledger' : "Couldn't record installment $k"),
+        content: Text(n == 0 ? "Couldn't record the payment" : (n == 1 ? 'Installment added to $where' : '$n installments added to $where')),
       ));
     }
 
@@ -217,7 +223,7 @@ class EmiDetailsSheet extends ConsumerWidget {
                   paid: k <= emi.installmentsPaid,
                   isNext: k == emi.installmentsPaid + 1 && !done,
                   onTap: () => _editSingleInstallmentAmount(context, ref, k),
-                  onRecordNow: () => recordNow(k),
+                  onRecordNow: recordPayment,
                 ),
             ],
           ),
@@ -314,7 +320,7 @@ class _ScheduleRow extends StatelessWidget {
                     minimumSize: const Size(0, 36),
                     padding: const EdgeInsets.symmetric(horizontal: AppSpace.md),
                   ),
-                  child: const Text('Record now'),
+                  child: const Text('Pay'),
                 ),
               ],
             )

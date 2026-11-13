@@ -208,7 +208,7 @@ class _EmisAndCards extends ConsumerWidget {
                     onTap: () => AddEditEmiScreen.show(context),
                     leading: const IconBadge(Icons.credit_card_outlined),
                     title: const Text('Add an EMI or loan'),
-                    subtitle: const Text('Installments go into the ledger on their due dates'),
+                    subtitle: const Text('Yours go to expenses, shared ones to the ledger, on their due dates'),
                     trailing: const Icon(Icons.chevron_right_rounded),
                   ),
                 ]

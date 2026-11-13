@@ -41,7 +41,7 @@ What's done, what's known to be missing, and what's next.
 
 - [x] **EMI reminders:** the day before each of the next three installments of every active EMI, re-planned automatically from the EMI table (`EmiReminderPlanner` + `emiReminderSyncProvider`).
 - [x] **Restore from backup:** Settings › Restore from a backup; validated before anything changes, replaces all data in one transaction.
-- [ ] **Shared loan direction needs a decision.** For loans you lend or borrow in installments, each installment is posted as money *given* (lent) or *received* (borrowed), so balances move the opposite way to a typical repayment loan, and the principal is never posted up front. Card EMIs paid on someone's behalf are correct. Decide the intended model, then change `EmiProcessorService` with a migration for existing loans.
+- [x] **Your EMIs and loans are expenses** (schema v11): each installment is posted to expenses (category *EMIs & loans*) in its own month, including ones marked already paid; installments on the old self ledger are moved over. **Pay** records months ahead on the day paid. Shared loans keep posting like card EMIs (decided). An **EMI** button sits next to Give / Receive on a person.
 
 ---
 
