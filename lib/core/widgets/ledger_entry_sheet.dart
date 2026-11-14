@@ -426,7 +426,6 @@ class _Header extends StatelessWidget {
             tooltip: 'Close',
             onPressed: () => Navigator.of(context).pop(),
             icon: const Icon(Icons.close_rounded),
-            visualDensity: VisualDensity.compact,
           ),
         ],
       ),

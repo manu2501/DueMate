@@ -134,7 +134,7 @@ class _ExpenseChartsScreenState extends ConsumerState<ExpenseChartsScreen> {
                     leading: IconBadge(e.category.icon),
                     title: Text(e.title, maxLines: 1, overflow: TextOverflow.ellipsis),
                     subtitle: Text('${DateHeader.label(e.expenseDate)} · ${e.paymentMethod.label}'),
-                    trailing: MoneyText(e.amount, symbol: symbol, sign: '−'),
+                    trailing: MoneyText(e.amount, symbol: symbol, sign: '−', meaning: 'spent'),
                   ),
               ],
             ),
@@ -181,6 +181,7 @@ class _MonthBars extends StatelessWidget {
                 button: true,
                 selected: i == selected,
                 label: '${labels[i]}: ${money.hidden ? DisplayMoney.hiddenLabel : money(totals[i])}',
+                excludeSemantics: true,
                 child: InkWell(
                   onTap: () => onSelect(i),
                   borderRadius: BorderRadius.circular(AppRadius.sm),

@@ -49,9 +49,9 @@ class LedgerColors extends ThemeExtension<LedgerColors> {
   final Color overpaid;
 
   static const light = LedgerColors(
-    owedToYou: Color(0xFF0B7A43),
+    owedToYou: Color(0xFF0A7440),
     youOwe: Color(0xFFB42318),
-    cashIn: Color(0xFF0B7A43),
+    cashIn: Color(0xFF0A7440),
     cashOut: Color(0xFF2C3531),
     settled: Color(0xFF5B635F),
     overpaid: Color(0xFFB42318),
@@ -110,7 +110,7 @@ class AppTheme {
   static const Color brandAccent = Color(0xFF9BE7CF);
 
   // Kept for a few remaining call sites; prefer colorScheme / LedgerColors.
-  static const Color receivedColor = Color(0xFF0B7A43);
+  static const Color receivedColor = Color(0xFF0A7440);
   static const Color mutedLabel = Color(0xFF5B635F);
   static const Color darkBannerBackground = Color(0xFF13201C);
   static const Color peachAccent = Color(0xFFFDECEA);
@@ -160,7 +160,7 @@ class AppTheme {
       onSecondary: Colors.white,
       secondaryContainer: Color(0xFFE3E9E5),
       onSecondaryContainer: Color(0xFF1B2521),
-      tertiary: Color(0xFFB7791F),
+      tertiary: Color(0xFF8A5A00),
       onTertiary: Colors.white,
       tertiaryContainer: Color(0xFFF8E9C7),
       onTertiaryContainer: Color(0xFF3B2A00),

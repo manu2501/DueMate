@@ -30,6 +30,7 @@ What's done, what's known to be missing, and what's next.
 - [x] Activity timeline grouped by day with search, type / period / method filters, PDF / CSV export.
 - [x] Settings: theme, currency, monthly budget, notifications permission, backup, CSV export, erase all data (now also removes expenses and EMIs).
 - [x] Android back button closes forms and sheets opened over a tab instead of jumping Home.
+- [x] Accessibility: amounts say "received" / "given" / "spent" to screen readers, every button labelled and at least 48dp, text contrast 4.5:1 in both themes (`test/accessibility_test.dart`).
 - [x] Hide amounts: eye toggle on Home and a Settings switch mask every on-screen balance and total (remembered; typing, exports and shared messages unaffected).
 - [x] EMIs & cards shortcut on Home.
 - [x] MIT license; screen-by-screen docs with generated screenshots (`docs/SCREENS.md`).

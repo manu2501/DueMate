@@ -287,7 +287,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(label, style: theme.textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant)),
-              MoneyText(v, symbol: symbol, tone: v == 0 ? MoneyTone.muted : tone, sign: v == 0 ? '' : sign),
+              MoneyText(v, symbol: symbol, tone: v == 0 ? MoneyTone.muted : tone, sign: v == 0 ? '' : sign, meaning: ''),
             ],
           ),
         );
@@ -373,7 +373,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                         leading: IconBadge(item.expense!.category.icon),
                         title: Text(item.expense!.title, maxLines: 1, overflow: TextOverflow.ellipsis),
                         subtitle: Text('Expense · ${item.expense!.category.label}'),
-                        trailing: MoneyText(item.expense!.amount, symbol: symbol, sign: '−'),
+                        trailing: MoneyText(item.expense!.amount, symbol: symbol, sign: '−', meaning: 'spent'),
                       )
                     else
                       TransactionTile(

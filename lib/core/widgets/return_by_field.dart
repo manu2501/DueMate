@@ -71,7 +71,6 @@ class _ReturnByFieldState extends State<ReturnByField> {
             // Back to the single link; clears any date chosen.
             IconButton(
               tooltip: 'No return-by date',
-              visualDensity: VisualDensity.compact,
               icon: const Icon(Icons.close_rounded, size: 20),
               onPressed: () {
                 widget.onChanged(null);
