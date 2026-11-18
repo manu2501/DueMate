@@ -57,6 +57,7 @@ What's done, what's known to be missing, and what's next.
 - [ ] **Loan prepayment:** remaining principal vs interest, and a close-early calculator.
 
 ### Spending
+- [x] **Compare with last month:** the Expenses header says how this month's spending so far compares with last month by the same day (`SpendingPace`).
 - [x] **Recurring expenses:** monthly repeats (schema v9), posted on open with catch-up, managed under Expenses › Repeats every month.
 - [x] **Tap a reminder to open its EMI.**
 

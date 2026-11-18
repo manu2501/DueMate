@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:duemate/domain/entities/personal_expense.dart';
 import 'package:duemate/domain/entities/recurring_expense.dart';
+import 'package:duemate/domain/spending_pace.dart';
 import 'database_providers.dart';
 import 'settings_providers.dart';
 
@@ -21,6 +22,12 @@ final monthlyExpenseTotalProvider = Provider<double>((ref) {
     data: (list) => list.fold(0.0, (sum, item) => sum + item.amount),
     orElse: () => 0.0,
   );
+});
+
+/// This month so far vs last month by the same day (Expenses header).
+final spendingPaceProvider = Provider<SpendingPace>((ref) {
+  final expenses = ref.watch(allExpensesProvider).value ?? const <PersonalExpense>[];
+  return SpendingPace.of(expenses, DateTime.now());
 });
 
 class MonthlyBudgetNotifier extends PrefsNotifier<double> {
