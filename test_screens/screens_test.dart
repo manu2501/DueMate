@@ -162,6 +162,17 @@ Future<void> _seed(AppDatabase db) async {
   await x('Electricity bill', 1890, ExpenseCategory.utilities, 3);
   await x('Petrol', 1500, ExpenseCategory.fuel, 5);
   await x('Dinner out', 1200, ExpenseCategory.food, 6);
+  // Last month, early on: the Expenses header compares with it.
+  await expenses.createExpense(PersonalExpense(
+    id: 'x_last',
+    title: 'Groceries',
+    amount: 4100,
+    category: ExpenseCategory.groceries,
+    expenseDate: DateTime(now.year, now.month - 1, 1),
+    paymentMethod: PaymentMethod.upi,
+    createdAt: now,
+    updatedAt: now,
+  ));
   // Rent repeats every month: shows under "Repeats every month".
   final rentDay = DateTime(now.year, now.month, (now.day - 9).clamp(1, 28));
   final rent = RecurringExpense(

@@ -147,10 +147,10 @@ class _FlowCard extends StatelessWidget {
     return GroupCard(
       dividerIndent: AppSpace.screenGutter,
       children: [
-        ListTile(title: const Text('Lent'), trailing: MoneyText(flow.lent, symbol: symbol, sign: flow.lent > 0 ? '−' : '')),
+        ListTile(title: const Text('Lent'), trailing: MoneyText(flow.lent, symbol: symbol, sign: flow.lent > 0 ? '−' : '', meaning: '')),
         ListTile(
           title: const Text('Collected'),
-          trailing: MoneyText(flow.collected, symbol: symbol, sign: flow.collected > 0 ? '+' : '', tone: MoneyTone.positive),
+          trailing: MoneyText(flow.collected, symbol: symbol, sign: flow.collected > 0 ? '+' : '', tone: MoneyTone.positive, meaning: ''),
         ),
         ListTile(title: const Text('Net'), trailing: _Net(flow: flow, symbol: symbol)),
       ],

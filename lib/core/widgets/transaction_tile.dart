@@ -73,6 +73,7 @@ class TransactionTile extends StatelessWidget {
         t.amount,
         symbol: currencySymbol,
         sign: isIn ? '+' : '−',
+        meaning: isIn ? 'received' : 'given',
         tone: isIn ? MoneyTone.positive : MoneyTone.neutral,
       ),
     );

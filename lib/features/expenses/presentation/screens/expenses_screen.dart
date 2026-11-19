@@ -1,15 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 import 'package:go_router/go_router.dart';
 import 'package:duemate/core/constants/app_constants.dart';
 import 'package:duemate/core/constants/expense_category_x.dart';
 import 'package:duemate/core/theme/app_theme.dart';
 import 'package:duemate/core/utils/date_formatter.dart';
+import 'package:duemate/core/utils/display_money.dart';
 import 'package:duemate/core/widgets/empty_state_widget.dart';
 import 'package:duemate/core/widgets/ui_kit.dart';
 import 'package:duemate/data/providers/app_providers.dart';
 import 'package:duemate/domain/emi_installments.dart';
 import 'package:duemate/domain/entities/personal_expense.dart';
+import 'package:duemate/domain/spending_pace.dart';
 import 'package:duemate/features/emis/presentation/screens/add_edit_emi_screen.dart';
 import 'package:duemate/features/emis/presentation/widgets/emi_card.dart';
 import 'package:duemate/features/expenses/presentation/widgets/add_edit_expense_sheet.dart';
@@ -148,6 +151,7 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
               symbol: symbol,
               tone: MoneyTone.muted,
               style: Theme.of(context).textTheme.labelLarge,
+              meaning: 'spent that day',
             ),
           ),
         ),
@@ -160,7 +164,7 @@ class _ExpensesScreenState extends ConsumerState<ExpensesScreen> {
                   leading: IconBadge(e.category.icon),
                   title: Text(e.title, maxLines: 1, overflow: TextOverflow.ellipsis),
                   subtitle: Text(_expenseSubtitle(e)),
-                  trailing: MoneyText(e.amount, symbol: symbol, sign: '−'),
+                  trailing: MoneyText(e.amount, symbol: symbol, sign: '−', meaning: 'spent'),
                 ),
             ],
           ),
@@ -261,6 +265,17 @@ class _MonthHeader extends ConsumerWidget {
 
   const _MonthHeader({required this.symbol, required this.onEditBudget});
 
+  /// "₹2,300 more than by this day in October"; null with nothing to compare.
+  /// Neutral colour: spending more or less is information, not good or bad.
+  static String? _paceLine(SpendingPace pace, DisplayMoney money) {
+    if (!pace.hasComparison) return null;
+    final month = DateFormat.MMMM().format(pace.lastMonthStart);
+    final when = pace.wholeLastMonth ? 'in $month' : 'by this day in $month';
+    final diff = pace.difference;
+    if (diff.abs() < 1) return 'About the same as $when';
+    return '${money(diff.abs())} ${diff > 0 ? 'more' : 'less'} than $when';
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
@@ -307,6 +322,8 @@ class _MonthHeader extends ConsumerWidget {
               TextButton(onPressed: onEditBudget, child: const Text('Edit budget')),
             ],
           ),
+          if (_paceLine(ref.watch(spendingPaceProvider), money) case final line?)
+            Text(line, style: theme.textTheme.bodyMedium?.copyWith(color: cs.onSurfaceVariant)),
         ],
       ),
     );

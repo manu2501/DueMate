@@ -137,9 +137,9 @@ class _PersonPickerSheetState extends ConsumerState<PersonPickerSheet> {
                 ),
                 const Spacer(),
                 IconButton(
+                  tooltip: 'Close',
                   icon: const Icon(Icons.close_rounded),
                   onPressed: () => Navigator.of(context).pop(),
-                  visualDensity: VisualDensity.compact,
                 ),
               ],
             ),
@@ -157,6 +157,7 @@ class _PersonPickerSheetState extends ConsumerState<PersonPickerSheet> {
               trailing: [
                 if (_searchQuery.isNotEmpty)
                   IconButton(
+                    tooltip: 'Clear search',
                     icon: const Icon(Icons.clear_rounded, size: 18),
                     onPressed: () {
                       _searchController.clear();

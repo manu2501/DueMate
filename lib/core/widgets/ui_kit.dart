@@ -144,6 +144,11 @@ class MoneyText extends ConsumerWidget {
   /// Keep paise. Off by default: lists and totals show whole rupees.
   final bool exact;
 
+  /// What screen readers say before the amount instead of the sign, e.g.
+  /// "received" or "spent", since "+" and "−" alone don't say which way the
+  /// money moved. Defaults to "plus" / "minus" for a signed amount.
+  final String? meaning;
+
   const MoneyText(
     this.amount, {
     super.key,
@@ -153,7 +158,19 @@ class MoneyText extends ConsumerWidget {
     this.style,
     this.textAlign,
     this.exact = false,
+    this.meaning,
   });
+
+  /// The spoken form: the meaning (or sign in words), then the amount.
+  static String spoken(String formatted, {String sign = '', String? meaning}) {
+    final words = meaning ??
+        switch (sign) {
+          '+' => 'plus',
+          '−' || '-' => 'minus',
+          _ => '',
+        };
+    return words.isEmpty ? formatted : '$words $formatted';
+  }
 
   static Color colorFor(BuildContext context, MoneyTone tone) {
     final ledger = LedgerColors.of(context);
@@ -170,9 +187,12 @@ class MoneyText extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final base = style ?? Theme.of(context).textTheme.titleSmall;
     final hidden = ref.watch(hideBalancesProvider);
+    final formatted = CurrencyFormatter.format(amount.abs(), symbol: symbol, whole: !exact);
     return Text(
-      hidden ? '$symbol${DisplayMoney.mask}' : '$sign${CurrencyFormatter.format(amount.abs(), symbol: symbol, whole: !exact)}',
-      semanticsLabel: hidden ? DisplayMoney.hiddenLabel : null,
+      hidden ? '$symbol${DisplayMoney.mask}' : '$sign$formatted',
+      semanticsLabel: hidden
+          ? (meaning?.isNotEmpty ?? false ? '$meaning, ${DisplayMoney.hiddenLabel.toLowerCase()}' : DisplayMoney.hiddenLabel)
+          : spoken(formatted, sign: sign, meaning: meaning),
       textAlign: textAlign,
       maxLines: 1,
       style: base?.copyWith(color: colorFor(context, tone)),

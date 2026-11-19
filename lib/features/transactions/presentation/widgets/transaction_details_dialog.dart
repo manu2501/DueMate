@@ -245,9 +245,9 @@ class TransactionDetailsDialog extends ConsumerWidget {
                   ),
                 ),
                 IconButton(
+                  tooltip: 'Close',
                   icon: const Icon(Icons.close_rounded),
                   onPressed: () => Navigator.of(context).pop(),
-                  visualDensity: VisualDensity.compact,
                 ),
               ],
             ),

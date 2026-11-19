@@ -78,7 +78,9 @@ so it's never red). Repayments pay off the oldest loans first, so only the unpai
   <img src="screenshots/04_expenses_dark.png" width="260" alt="Expenses, dark" />
 </p>
 
-This month's spending against the budget (*left*, *only … left* from 85%, *over* in red), then
+This month's spending against the budget (*left*, *only … left* from 85%, *over* in red), and how it
+compares with last month by the same day (*₹2,300 more than by this day in October*; on the last
+day of the month, all of last month), shown once last month has something to compare. Then
 **This month's expenses** grouped by day with a daily total; ones added automatically say so
 (*Monthly* for repeats, *Installment 3* for your EMIs). Tap an expense to edit or delete it.
 *Earlier months* and the chart icon open **Spending trends**.
