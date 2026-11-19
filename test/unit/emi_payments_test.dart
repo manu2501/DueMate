@@ -14,7 +14,8 @@ import 'package:duemate/domain/entities/credit_card_emi.dart';
 
 import '../helpers/test_db.dart';
 
-/// Your own EMIs and loans post to expenses, in the month each was paid.
+/// Your own EMIs and loans post EMI payments (repayments, never expenses),
+/// in the month each was paid.
 void main() {
   late db.AppDatabase database;
   late EmiRepositoryImpl emiRepo;
@@ -52,12 +53,14 @@ void main() {
         updatedAt: DateTime(2026, 7, 1),
       );
 
+  Future<List<db.EmiPaymentRow>> payments() => database.select(database.emiPayments).get();
+
   Future<Map<int, DateTime>> postedDates() async => {
-        for (final e in await expenseRepo.getAllExpenses())
-          if (e.emiId == 'loan-1') e.installmentNumber!: e.expenseDate,
+        for (final p in await payments())
+          if (p.emiId == 'loan-1') p.installmentNumber: p.paidOn,
       };
 
-  test('due installments become EMI expenses in their own months, not ledger entries', () async {
+  test('due installments become EMI payments in their own months, not expenses or ledger entries', () async {
     await emiRepo.createEmi(homeLoan());
     final result = await processor.processDueInstallments(referenceDate: DateTime(2026, 9, 10));
 
@@ -67,9 +70,10 @@ void main() {
       2: DateTime(2026, 8, 5),
       3: DateTime(2026, 9, 5),
     });
-    final expenses = await expenseRepo.getAllExpenses();
-    expect(expenses.every((e) => e.category == ExpenseCategory.emi && e.amount == 5000), isTrue);
-    expect(expenses.first.paymentMethod, PaymentMethod.bankTransfer);
+    final paid = await payments();
+    expect(paid.every((p) => p.amount == 5000 && p.note == 'EMI ${p.installmentNumber}/6 · SBI'), isTrue);
+    expect(paid.first.paymentMethod, PaymentMethod.bankTransfer);
+    expect(await expenseRepo.getAllExpenses(), isEmpty, reason: 'repayments are not spending');
     expect(await database.select(database.transactions).get(), isEmpty);
     expect((await emiRepo.getEmiById('loan-1'))!.installmentsPaid, 3);
 
@@ -109,14 +113,13 @@ void main() {
     expect((await postedDates())[4], DateTime(2026, 10, 5));
   });
 
-  test('paying the last installments completes the loan; deleting one reopens it', () async {
+  test('paying the last installments completes the loan; unmarking one reopens it', () async {
     await emiRepo.createEmi(homeLoan());
     final emi = (await emiRepo.getEmiById('loan-1'))!;
     expect(await processor.payInstallments(emi, count: 10, paidOn: DateTime(2026, 7, 1)), 6);
     expect((await emiRepo.getEmiById('loan-1'))!.isCompleted, isTrue);
 
-    final last = (await expenseRepo.getAllExpenses()).firstWhere((e) => e.installmentNumber == 6);
-    await expenseRepo.deleteExpense(last.id);
+    await processor.markUnpaid((await emiRepo.getEmiById('loan-1'))!, 6);
     final reopened = (await emiRepo.getEmiById('loan-1'))!;
     expect(reopened.installmentsPaid, 5);
     expect(reopened.status, 'active');
@@ -145,21 +148,77 @@ void main() {
           updatedAt: DateTime(2026, 7, 5),
         ));
 
-    await database.moveSelfEmiPostingsToExpenses();
+    await database.moveEmiPostingsToPayments();
 
     expect(await database.select(database.transactions).get(), isEmpty);
-    final moved = await expenseRepo.getExpenseById('old-tx');
-    expect(moved!.title, 'Home loan');
-    expect(moved.category, ExpenseCategory.emi);
-    expect(moved.expenseDate, DateTime(2026, 7, 5));
-    expect(moved.installmentNumber, 1);
-    expect(moved.notes, 'EMI 1/6 · SBI');
+    final moved = (await payments()).single;
+    expect((moved.id, moved.emiId, moved.installmentNumber), ('old-tx', 'loan-1', 1));
+    expect((moved.amount, moved.paidOn), (5000.0, DateTime(2026, 7, 5)));
+    expect(moved.note, 'EMI 1/6 · SBI');
+    expect(await expenseRepo.getAllExpenses(), isEmpty);
 
     // Not posted twice afterwards.
     expect((await processor.processDueInstallments(referenceDate: DateTime(2026, 7, 10))).installmentsGenerated, 0);
   });
 
-  test('upgrading a v10 database moves your EMI installments into expenses', () async {
+  test('installments posted as v11 expenses move to payments; a purchase expense stays', () async {
+    await emiRepo.createEmi(homeLoan(paid: 1));
+    Future<void> expense(String id, int? k) => database.into(database.expenses).insert(db.ExpensesCompanion.insert(
+          id: id,
+          title: 'Home loan',
+          amount: k == null ? 30000 : 5000,
+          category: k == null ? ExpenseCategory.other : ExpenseCategory.emi,
+          expenseDate: DateTime(2026, 7, 5),
+          paymentMethod: PaymentMethod.bankTransfer,
+          notes: const Value('EMI 1/6 · SBI'),
+          emiId: const Value('loan-1'),
+          installmentNumber: Value(k),
+          createdAt: DateTime(2026, 7, 5),
+          updatedAt: DateTime(2026, 7, 5),
+        ));
+    await expense('v11-emi', 1);
+    await expense('purchase', null);
+
+    await database.moveEmiPostingsToPayments();
+
+    final moved = (await payments()).single;
+    expect((moved.id, moved.installmentNumber, moved.amount, moved.note), ('v11-emi', 1, 5000.0, 'EMI 1/6 · SBI'));
+    expect((await expenseRepo.getAllExpenses()).map((e) => e.id), ['purchase']);
+    // Running again moves nothing more.
+    await database.moveEmiPostingsToPayments();
+    expect((await payments()).length, 1);
+  });
+
+  test('upgrading a v11 database moves EMI expenses into payments', () async {
+    final dir = await Directory.systemTemp.createTemp('duemate_v11_');
+    addTearDown(() => dir.delete(recursive: true));
+    final file = File('${dir.path}/db.sqlite');
+
+    var old = db.AppDatabase(NativeDatabase(file));
+    await EmiRepositoryImpl(old).createEmi(homeLoan());
+    await downgradeToV11(old);
+    await old.into(old.expenses).insert(db.ExpensesCompanion.insert(
+          id: 'v11-emi',
+          title: 'Home loan',
+          amount: 5000,
+          category: ExpenseCategory.emi,
+          expenseDate: DateTime(2026, 7, 5),
+          paymentMethod: PaymentMethod.bankTransfer,
+          emiId: const Value('loan-1'),
+          installmentNumber: const Value(1),
+          createdAt: DateTime(2026, 7, 5),
+          updatedAt: DateTime(2026, 7, 5),
+        ));
+    await old.close();
+
+    old = db.AppDatabase(NativeDatabase(file));
+    addTearDown(old.close);
+    expect(await old.select(old.expenses).get(), isEmpty);
+    final moved = await old.select(old.emiPayments).getSingle();
+    expect((moved.id, moved.emiId, moved.installmentNumber), ('v11-emi', 'loan-1', 1));
+  });
+
+  test('upgrading a v10 database moves your EMI installments into payments', () async {
     final dir = await Directory.systemTemp.createTemp('duemate_v10_');
     addTearDown(() => dir.delete(recursive: true));
     final file = File('${dir.path}/db.sqlite');
@@ -184,11 +243,12 @@ void main() {
     old = db.AppDatabase(NativeDatabase(file));
     addTearDown(old.close);
     expect(await old.select(old.transactions).get(), isEmpty);
-    final moved = await (old.select(old.expenses)..where((e) => e.id.equals('old-tx'))).getSingle();
-    expect((moved.category, moved.emiId, moved.installmentNumber), (ExpenseCategory.emi, 'loan-1', 1));
+    expect(await old.select(old.expenses).get(), isEmpty);
+    final moved = await old.select(old.emiPayments).getSingle();
+    expect((moved.id, moved.emiId, moved.installmentNumber), ('old-tx', 'loan-1', 1));
   });
 
-  test('shared EMIs still post to the ledger, not expenses', () async {
+  test('shared EMIs still post to the ledger, not payments or expenses', () async {
     await database.into(database.persons).insert(db.PersonsCompanion.insert(
           id: 'p1',
           name: 'Asha',
@@ -198,6 +258,7 @@ void main() {
     await emiRepo.createEmi(homeLoan().copyWith(personId: 'p1', kind: 'card'));
     await processor.processDueInstallments(referenceDate: DateTime(2026, 7, 10));
     expect(await expenseRepo.getAllExpenses(), isEmpty);
+    expect(await payments(), isEmpty);
     expect((await database.select(database.transactions).get()).single.personId, 'p1');
   });
 
@@ -244,9 +305,9 @@ void main() {
       );
       await processor.processDueInstallments(referenceDate: oct10);
 
-      final expenses = await expenseRepo.getAllExpenses();
-      expect(expenses.length, 5);
-      expect(expenses.every((e) => e.amount == 5500 && e.title == 'Car loan'), isTrue);
+      final paid = await payments();
+      expect(paid.length, 5);
+      expect(paid.every((p) => p.amount == 5500), isTrue);
       expect((await postedDates())[5], oct10, reason: 'not due yet: paid ahead, dated today');
     });
 
@@ -305,7 +366,7 @@ void main() {
       return (await database.select(database.persons).get()).firstWhere((p) => p.id == 'p1');
     }
 
-    test('marking a middle one unpaid removes its expense and leaves a gap that stays', () async {
+    test('marking a middle one unpaid removes its payment and leaves a gap that stays', () async {
       expect(await processor.markUnpaid(await fourPaid(), 2), isTrue);
       expect((await postedDates()).keys, unorderedEquals([1, 3, 4]));
       expect((await loan()).installmentsPaid, 3);
@@ -369,14 +430,14 @@ void main() {
       expect((reopened.installmentsPaid, reopened.status), (5, 'active'));
     });
 
-    test('a new amount for a paid month updates its expense; for an unpaid one, only the plan', () async {
+    test('a new amount for a paid month updates its payment; for an unpaid one, only the plan', () async {
       final emi = await fourPaid();
       await processor.setInstallmentAmount(emi, 2, 6200);
       await processor.setInstallmentAmount(await loan(), 5, 4800);
 
-      final expenses = await expenseRepo.getAllExpenses();
-      expect(expenses.firstWhere((e) => e.installmentNumber == 2).amount, 6200);
-      expect(expenses.where((e) => e.amount != 5000).length, 1);
+      final paid = await payments();
+      expect(paid.firstWhere((p) => p.installmentNumber == 2).amount, 6200);
+      expect(paid.where((p) => p.amount != 5000).length, 1);
       final updated = await loan();
       expect((updated.getMonthlyInstallmentFor(2), updated.getMonthlyInstallmentFor(5)), (6200.0, 4800.0));
       expect(updated.installmentsPaid, 4, reason: 'the edit must not undo the paid count');
@@ -429,9 +490,10 @@ void main() {
           updatedAt: DateTime(2026, 1, 1),
         ));
 
-    test('yours: its expenses go with it; other expenses stay', () async {
+    test('yours: its payments and purchase go with it; other expenses stay', () async {
       await emiRepo.createEmi(homeLoan());
       await processor.processDueInstallments(referenceDate: DateTime(2026, 10, 10));
+      await processor.setPurchaseCounted((await emiRepo.getEmiById('loan-1'))!, true);
       await database.into(database.expenses).insert(db.ExpensesCompanion.insert(
             id: 'groceries',
             title: 'Groceries',
@@ -447,6 +509,7 @@ void main() {
 
       expect(await emiRepo.getEmiById('loan-1'), isNull);
       expect((await expenseRepo.getAllExpenses()).map((e) => e.id), ['groceries']);
+      expect(await payments(), isEmpty);
     });
 
     test('shared: its ledger entries go with it and the balance follows; other entries stay', () async {
@@ -470,6 +533,65 @@ void main() {
 
       expect((await database.select(database.transactions).get()).map((t) => t.id), ['lent']);
       expect((await txRepo.watchPersonSummary('p1').first)!.balance, 2000);
+    });
+  });
+
+  group('counting the purchase in spending', () {
+    test('adds one expense for the price, a month before the first EMI', () async {
+      final emi = homeLoan().copyWith(kind: 'card', principal: 27000);
+      await emiRepo.createEmi(emi);
+      await processor.setPurchaseCounted(emi, true);
+      await processor.processDueInstallments(referenceDate: DateTime(2026, 9, 10));
+
+      final purchase = (await expenseRepo.getAllExpenses()).single;
+      expect((purchase.amount, purchase.expenseDate, purchase.emiId), (27000.0, DateTime(2026, 6, 5), 'loan-1'));
+      expect((purchase.category, purchase.paymentMethod), (ExpenseCategory.shopping, PaymentMethod.card));
+      expect(purchase.isEmiPurchase, isTrue);
+      expect(await processor.countedPurchase('loan-1'), 27000);
+      // Installments are still payments, never expenses.
+      expect((await payments()).length, 3);
+    });
+
+    test('without a known price, the total of the installments counts', () async {
+      await emiRepo.createEmi(homeLoan());
+      await processor.setPurchaseCounted(homeLoan(), true);
+      expect(await processor.countedPurchase('loan-1'), 30000);
+    });
+
+    test('saving again updates it in place, keeping edits to its category; turning it off removes it', () async {
+      await emiRepo.createEmi(homeLoan());
+      await processor.setPurchaseCounted(homeLoan(), true);
+      final first = (await expenseRepo.getAllExpenses()).single;
+      await expenseRepo.updateExpense(first.copyWith(category: ExpenseCategory.health));
+
+      await processor.setPurchaseCounted(homeLoan().copyWith(itemName: 'Car loan', principal: 25000), true);
+      final again = (await expenseRepo.getAllExpenses()).single;
+      expect((again.id, again.title, again.amount, again.category), (first.id, 'Car loan', 25000.0, ExpenseCategory.health));
+
+      await processor.setPurchaseCounted(homeLoan(), false);
+      expect(await expenseRepo.getAllExpenses(), isEmpty);
+      expect(await processor.countedPurchase('loan-1'), isNull);
+    });
+
+    test('is never dated after today', () async {
+      final now = DateTime.now();
+      final emi = homeLoan().copyWith(startDate: DateTime(now.year, now.month, now.day));
+      await emiRepo.createEmi(emi);
+      await processor.setPurchaseCounted(emi.copyWith(startDate: DateTime(now.year, now.month + 3, 1)), true);
+      expect((await expenseRepo.getAllExpenses()).single.expenseDate.isAfter(now), isFalse);
+    });
+
+    test('moving the EMI to someone else removes the purchase', () async {
+      await database.into(database.persons).insert(db.PersonsCompanion.insert(
+            id: 'p1',
+            name: 'Asha',
+            createdAt: DateTime(2026, 1, 1),
+            updatedAt: DateTime(2026, 1, 1),
+          ));
+      await emiRepo.createEmi(homeLoan());
+      await processor.setPurchaseCounted(homeLoan(), true);
+      await processor.applyEdit(homeLoan(), homeLoan().copyWith(personId: 'p1'), now: DateTime(2026, 7, 1));
+      expect(await expenseRepo.getAllExpenses(), isEmpty);
     });
   });
 }

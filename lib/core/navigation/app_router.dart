@@ -5,6 +5,7 @@ import 'package:duemate/core/theme/app_motion.dart';
 import 'package:duemate/core/widgets/dock_nav_icon.dart';
 import 'package:duemate/features/dashboard/presentation/screens/dashboard_screen.dart';
 import 'package:duemate/features/emis/presentation/screens/add_edit_emi_screen.dart';
+import 'package:duemate/features/emis/presentation/screens/emis_screen.dart';
 import 'package:duemate/features/expenses/presentation/screens/expense_charts_screen.dart';
 import 'package:duemate/features/people/presentation/screens/lending_trends_screen.dart';
 import 'package:duemate/features/expenses/presentation/screens/expenses_screen.dart';
@@ -77,10 +78,20 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: '/expenses',
+            // EMIs used to be a view inside Expenses (/expenses?tab=emis).
+            redirect: (context, state) => state.uri.queryParameters['tab'] == 'emis' ? '/emis' : null,
             pageBuilder: (context, state) => _buildTabTransition(
               context: context,
               state: state,
-              child: ExpensesScreen(initialTab: state.uri.queryParameters['tab']),
+              child: const ExpensesScreen(),
+            ),
+          ),
+          GoRoute(
+            path: '/emis',
+            pageBuilder: (context, state) => _buildTabTransition(
+              context: context,
+              state: state,
+              child: const EmisScreen(),
             ),
           ),
           GoRoute(
@@ -176,7 +187,8 @@ class AppShell extends StatelessWidget {
     if (location == '/') return 0;
     if (location.startsWith('/people')) return 1;
     if (location.startsWith('/expenses')) return 2;
-    if (location.startsWith('/reports')) return 3;
+    if (location.startsWith('/emis')) return 3;
+    if (location.startsWith('/reports')) return 4;
     return 0;
   }
 
@@ -192,6 +204,9 @@ class AppShell extends StatelessWidget {
         context.go('/expenses');
         break;
       case 3:
+        context.go('/emis');
+        break;
+      case 4:
         context.go('/reports');
         break;
     }
@@ -233,7 +248,7 @@ class _AppNavBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const labels = ['Home', 'People', 'Expenses', 'Activity'];
+    const labels = ['Home', 'People', 'Expenses', 'EMIs', 'Activity'];
 
     return NavigationBar(
       selectedIndex: selectedIndex,

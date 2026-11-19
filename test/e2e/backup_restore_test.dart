@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -64,16 +65,27 @@ Future<void> _seed(AppDatabase db, {String prefix = ''}) async {
     createdAt: _t,
     updatedAt: _t,
   ));
-  // An installment of your own EMI, posted as an expense (schema v11).
+  // The purchase of your own EMI, counted in spending.
   await ExpenseRepositoryImpl(db).createExpense(PersonalExpense(
     id: '${prefix}x2',
     title: 'Phone',
-    amount: 1500,
-    category: ExpenseCategory.emi,
+    amount: 12000,
+    category: ExpenseCategory.shopping,
     expenseDate: _t,
     paymentMethod: PaymentMethod.card,
-    emiId: '${prefix}emi-self',
+    emiId: '${prefix}e1',
+    createdAt: _t,
+    updatedAt: _t,
+  ));
+  // An installment of it, paid (schema v12).
+  await db.into(db.emiPayments).insert(EmiPaymentsCompanion.insert(
+    id: '${prefix}p3',
+    emiId: '${prefix}e1',
     installmentNumber: 3,
+    amount: 1500,
+    paidOn: _t,
+    paymentMethod: PaymentMethod.card,
+    note: const Value('EMI 3/12 · HDFC'),
     createdAt: _t,
     updatedAt: _t,
   ));
@@ -85,6 +97,7 @@ Future<List<String>> _dump(AppDatabase db) async => [
       for (final r in await db.select(db.transactions).get()) r.toString(),
       for (final r in await db.select(db.creditCardEmis).get()) r.toString(),
       for (final r in await db.select(db.expenses).get()) r.toString(),
+      for (final r in await db.select(db.emiPayments).get()) r.toString(),
     ];
 
 void main() {
@@ -109,6 +122,29 @@ void main() {
       expect(restored.peopleCount, 1);
       expect(restored.transactions, hasLength(1));
       expect(await _dump(target), await _dump(source), reason: 'every field round-trips; old data is gone');
+    });
+
+    test('an older backup with EMI installments as expenses restores them as payments', () async {
+      await _seed(source);
+      final data = jsonDecode(await BackupHelper.buildBackupJson(source)) as Map<String, dynamic>;
+      // A v11 file: no emiPayments; the installment is an expense.
+      final payment = (data.remove('emiPayments') as List).single as Map<String, dynamic>;
+      (data['expenses'] as List).add({
+        'id': payment['id'],
+        'title': 'Phone',
+        'amount': payment['amount'],
+        'category': ExpenseCategory.emi.index,
+        'expenseDate': payment['paidOn'],
+        'paymentMethod': payment['paymentMethod'],
+        'notes': payment['note'],
+        'emiId': payment['emiId'],
+        'installmentNumber': payment['installmentNumber'],
+        'createdAt': payment['createdAt'],
+        'updatedAt': payment['updatedAt'],
+      });
+
+      await BackupHelper.restoreBackup(target, jsonEncode(data));
+      expect(await _dump(target), await _dump(source));
     });
 
     test('a file that is not a backup is refused and changes nothing', () async {

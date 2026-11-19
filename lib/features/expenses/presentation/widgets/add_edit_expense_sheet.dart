@@ -211,7 +211,8 @@ class _AddEditExpenseSheetState extends ConsumerState<AddEditExpenseSheet> {
               spacing: AppSpace.sm,
               runSpacing: AppSpace.sm,
               children: [
-                for (final c in ExpenseCategoryX.ordered)
+                // An old expense filed under EMIs keeps its category until changed.
+                for (final c in [...ExpenseCategoryX.ordered, if (_category == ExpenseCategory.emi) ExpenseCategory.emi])
                   ChoiceChip(
                     avatar: Icon(c.icon, size: 18),
                     label: Text(c.label),

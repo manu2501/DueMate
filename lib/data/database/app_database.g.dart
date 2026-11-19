@@ -3010,8 +3010,10 @@ class Expense extends DataClass implements Insertable<Expense> {
   /// stopping a rule keeps the expenses it posted. Since schema v9.
   final String? recurringId;
 
-  /// Your own EMI or loan that posted it, and which installment. No foreign
-  /// key: deleting the EMI keeps what you already paid. Since schema v11.
+  /// Your own EMI or loan whose purchase this is ("Count the purchase in
+  /// spending"; installment number null). Since schema v12 installments are
+  /// [EmiPayments], not expenses: v11 rows with an installment number move
+  /// there. No foreign key: deleting the EMI removes it explicitly.
   final String? emiId;
   final int? installmentNumber;
   final DateTime createdAt;
@@ -4121,6 +4123,569 @@ class RecurringExpensesCompanion extends UpdateCompanion<RecurringExpense> {
   }
 }
 
+class $EmiPaymentsTable extends EmiPayments
+    with TableInfo<$EmiPaymentsTable, EmiPaymentRow> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $EmiPaymentsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _emiIdMeta = const VerificationMeta('emiId');
+  @override
+  late final GeneratedColumn<String> emiId = GeneratedColumn<String>(
+    'emi_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _installmentNumberMeta = const VerificationMeta(
+    'installmentNumber',
+  );
+  @override
+  late final GeneratedColumn<int> installmentNumber = GeneratedColumn<int>(
+    'installment_number',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _amountMeta = const VerificationMeta('amount');
+  @override
+  late final GeneratedColumn<double> amount = GeneratedColumn<double>(
+    'amount',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _paidOnMeta = const VerificationMeta('paidOn');
+  @override
+  late final GeneratedColumn<DateTime> paidOn = GeneratedColumn<DateTime>(
+    'paid_on',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  late final GeneratedColumnWithTypeConverter<PaymentMethod, int>
+  paymentMethod = GeneratedColumn<int>(
+    'payment_method',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  ).withConverter<PaymentMethod>($EmiPaymentsTable.$converterpaymentMethod);
+  static const VerificationMeta _noteMeta = const VerificationMeta('note');
+  @override
+  late final GeneratedColumn<String> note = GeneratedColumn<String>(
+    'note',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+    'updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    emiId,
+    installmentNumber,
+    amount,
+    paidOn,
+    paymentMethod,
+    note,
+    createdAt,
+    updatedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'emi_payments';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<EmiPaymentRow> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('emi_id')) {
+      context.handle(
+        _emiIdMeta,
+        emiId.isAcceptableOrUnknown(data['emi_id']!, _emiIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_emiIdMeta);
+    }
+    if (data.containsKey('installment_number')) {
+      context.handle(
+        _installmentNumberMeta,
+        installmentNumber.isAcceptableOrUnknown(
+          data['installment_number']!,
+          _installmentNumberMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_installmentNumberMeta);
+    }
+    if (data.containsKey('amount')) {
+      context.handle(
+        _amountMeta,
+        amount.isAcceptableOrUnknown(data['amount']!, _amountMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_amountMeta);
+    }
+    if (data.containsKey('paid_on')) {
+      context.handle(
+        _paidOnMeta,
+        paidOn.isAcceptableOrUnknown(data['paid_on']!, _paidOnMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_paidOnMeta);
+    }
+    if (data.containsKey('note')) {
+      context.handle(
+        _noteMeta,
+        note.isAcceptableOrUnknown(data['note']!, _noteMeta),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_updatedAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  EmiPaymentRow map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return EmiPaymentRow(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      emiId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}emi_id'],
+      )!,
+      installmentNumber: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}installment_number'],
+      )!,
+      amount: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}amount'],
+      )!,
+      paidOn: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}paid_on'],
+      )!,
+      paymentMethod: $EmiPaymentsTable.$converterpaymentMethod.fromSql(
+        attachedDatabase.typeMapping.read(
+          DriftSqlType.int,
+          data['${effectivePrefix}payment_method'],
+        )!,
+      ),
+      note: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}note'],
+      ),
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}updated_at'],
+      )!,
+    );
+  }
+
+  @override
+  $EmiPaymentsTable createAlias(String alias) {
+    return $EmiPaymentsTable(attachedDatabase, alias);
+  }
+
+  static JsonTypeConverter2<PaymentMethod, int, int> $converterpaymentMethod =
+      const EnumIndexConverter<PaymentMethod>(PaymentMethod.values);
+}
+
+class EmiPaymentRow extends DataClass implements Insertable<EmiPaymentRow> {
+  final String id;
+  final String emiId;
+  final int installmentNumber;
+  final double amount;
+  final DateTime paidOn;
+  final PaymentMethod paymentMethod;
+  final String? note;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+  const EmiPaymentRow({
+    required this.id,
+    required this.emiId,
+    required this.installmentNumber,
+    required this.amount,
+    required this.paidOn,
+    required this.paymentMethod,
+    this.note,
+    required this.createdAt,
+    required this.updatedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['emi_id'] = Variable<String>(emiId);
+    map['installment_number'] = Variable<int>(installmentNumber);
+    map['amount'] = Variable<double>(amount);
+    map['paid_on'] = Variable<DateTime>(paidOn);
+    {
+      map['payment_method'] = Variable<int>(
+        $EmiPaymentsTable.$converterpaymentMethod.toSql(paymentMethod),
+      );
+    }
+    if (!nullToAbsent || note != null) {
+      map['note'] = Variable<String>(note);
+    }
+    map['created_at'] = Variable<DateTime>(createdAt);
+    map['updated_at'] = Variable<DateTime>(updatedAt);
+    return map;
+  }
+
+  EmiPaymentsCompanion toCompanion(bool nullToAbsent) {
+    return EmiPaymentsCompanion(
+      id: Value(id),
+      emiId: Value(emiId),
+      installmentNumber: Value(installmentNumber),
+      amount: Value(amount),
+      paidOn: Value(paidOn),
+      paymentMethod: Value(paymentMethod),
+      note: note == null && nullToAbsent ? const Value.absent() : Value(note),
+      createdAt: Value(createdAt),
+      updatedAt: Value(updatedAt),
+    );
+  }
+
+  factory EmiPaymentRow.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return EmiPaymentRow(
+      id: serializer.fromJson<String>(json['id']),
+      emiId: serializer.fromJson<String>(json['emiId']),
+      installmentNumber: serializer.fromJson<int>(json['installmentNumber']),
+      amount: serializer.fromJson<double>(json['amount']),
+      paidOn: serializer.fromJson<DateTime>(json['paidOn']),
+      paymentMethod: $EmiPaymentsTable.$converterpaymentMethod.fromJson(
+        serializer.fromJson<int>(json['paymentMethod']),
+      ),
+      note: serializer.fromJson<String?>(json['note']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'emiId': serializer.toJson<String>(emiId),
+      'installmentNumber': serializer.toJson<int>(installmentNumber),
+      'amount': serializer.toJson<double>(amount),
+      'paidOn': serializer.toJson<DateTime>(paidOn),
+      'paymentMethod': serializer.toJson<int>(
+        $EmiPaymentsTable.$converterpaymentMethod.toJson(paymentMethod),
+      ),
+      'note': serializer.toJson<String?>(note),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+    };
+  }
+
+  EmiPaymentRow copyWith({
+    String? id,
+    String? emiId,
+    int? installmentNumber,
+    double? amount,
+    DateTime? paidOn,
+    PaymentMethod? paymentMethod,
+    Value<String?> note = const Value.absent(),
+    DateTime? createdAt,
+    DateTime? updatedAt,
+  }) => EmiPaymentRow(
+    id: id ?? this.id,
+    emiId: emiId ?? this.emiId,
+    installmentNumber: installmentNumber ?? this.installmentNumber,
+    amount: amount ?? this.amount,
+    paidOn: paidOn ?? this.paidOn,
+    paymentMethod: paymentMethod ?? this.paymentMethod,
+    note: note.present ? note.value : this.note,
+    createdAt: createdAt ?? this.createdAt,
+    updatedAt: updatedAt ?? this.updatedAt,
+  );
+  EmiPaymentRow copyWithCompanion(EmiPaymentsCompanion data) {
+    return EmiPaymentRow(
+      id: data.id.present ? data.id.value : this.id,
+      emiId: data.emiId.present ? data.emiId.value : this.emiId,
+      installmentNumber: data.installmentNumber.present
+          ? data.installmentNumber.value
+          : this.installmentNumber,
+      amount: data.amount.present ? data.amount.value : this.amount,
+      paidOn: data.paidOn.present ? data.paidOn.value : this.paidOn,
+      paymentMethod: data.paymentMethod.present
+          ? data.paymentMethod.value
+          : this.paymentMethod,
+      note: data.note.present ? data.note.value : this.note,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('EmiPaymentRow(')
+          ..write('id: $id, ')
+          ..write('emiId: $emiId, ')
+          ..write('installmentNumber: $installmentNumber, ')
+          ..write('amount: $amount, ')
+          ..write('paidOn: $paidOn, ')
+          ..write('paymentMethod: $paymentMethod, ')
+          ..write('note: $note, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    emiId,
+    installmentNumber,
+    amount,
+    paidOn,
+    paymentMethod,
+    note,
+    createdAt,
+    updatedAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is EmiPaymentRow &&
+          other.id == this.id &&
+          other.emiId == this.emiId &&
+          other.installmentNumber == this.installmentNumber &&
+          other.amount == this.amount &&
+          other.paidOn == this.paidOn &&
+          other.paymentMethod == this.paymentMethod &&
+          other.note == this.note &&
+          other.createdAt == this.createdAt &&
+          other.updatedAt == this.updatedAt);
+}
+
+class EmiPaymentsCompanion extends UpdateCompanion<EmiPaymentRow> {
+  final Value<String> id;
+  final Value<String> emiId;
+  final Value<int> installmentNumber;
+  final Value<double> amount;
+  final Value<DateTime> paidOn;
+  final Value<PaymentMethod> paymentMethod;
+  final Value<String?> note;
+  final Value<DateTime> createdAt;
+  final Value<DateTime> updatedAt;
+  final Value<int> rowid;
+  const EmiPaymentsCompanion({
+    this.id = const Value.absent(),
+    this.emiId = const Value.absent(),
+    this.installmentNumber = const Value.absent(),
+    this.amount = const Value.absent(),
+    this.paidOn = const Value.absent(),
+    this.paymentMethod = const Value.absent(),
+    this.note = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  EmiPaymentsCompanion.insert({
+    required String id,
+    required String emiId,
+    required int installmentNumber,
+    required double amount,
+    required DateTime paidOn,
+    required PaymentMethod paymentMethod,
+    this.note = const Value.absent(),
+    required DateTime createdAt,
+    required DateTime updatedAt,
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       emiId = Value(emiId),
+       installmentNumber = Value(installmentNumber),
+       amount = Value(amount),
+       paidOn = Value(paidOn),
+       paymentMethod = Value(paymentMethod),
+       createdAt = Value(createdAt),
+       updatedAt = Value(updatedAt);
+  static Insertable<EmiPaymentRow> custom({
+    Expression<String>? id,
+    Expression<String>? emiId,
+    Expression<int>? installmentNumber,
+    Expression<double>? amount,
+    Expression<DateTime>? paidOn,
+    Expression<int>? paymentMethod,
+    Expression<String>? note,
+    Expression<DateTime>? createdAt,
+    Expression<DateTime>? updatedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (emiId != null) 'emi_id': emiId,
+      if (installmentNumber != null) 'installment_number': installmentNumber,
+      if (amount != null) 'amount': amount,
+      if (paidOn != null) 'paid_on': paidOn,
+      if (paymentMethod != null) 'payment_method': paymentMethod,
+      if (note != null) 'note': note,
+      if (createdAt != null) 'created_at': createdAt,
+      if (updatedAt != null) 'updated_at': updatedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  EmiPaymentsCompanion copyWith({
+    Value<String>? id,
+    Value<String>? emiId,
+    Value<int>? installmentNumber,
+    Value<double>? amount,
+    Value<DateTime>? paidOn,
+    Value<PaymentMethod>? paymentMethod,
+    Value<String?>? note,
+    Value<DateTime>? createdAt,
+    Value<DateTime>? updatedAt,
+    Value<int>? rowid,
+  }) {
+    return EmiPaymentsCompanion(
+      id: id ?? this.id,
+      emiId: emiId ?? this.emiId,
+      installmentNumber: installmentNumber ?? this.installmentNumber,
+      amount: amount ?? this.amount,
+      paidOn: paidOn ?? this.paidOn,
+      paymentMethod: paymentMethod ?? this.paymentMethod,
+      note: note ?? this.note,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (emiId.present) {
+      map['emi_id'] = Variable<String>(emiId.value);
+    }
+    if (installmentNumber.present) {
+      map['installment_number'] = Variable<int>(installmentNumber.value);
+    }
+    if (amount.present) {
+      map['amount'] = Variable<double>(amount.value);
+    }
+    if (paidOn.present) {
+      map['paid_on'] = Variable<DateTime>(paidOn.value);
+    }
+    if (paymentMethod.present) {
+      map['payment_method'] = Variable<int>(
+        $EmiPaymentsTable.$converterpaymentMethod.toSql(paymentMethod.value),
+      );
+    }
+    if (note.present) {
+      map['note'] = Variable<String>(note.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('EmiPaymentsCompanion(')
+          ..write('id: $id, ')
+          ..write('emiId: $emiId, ')
+          ..write('installmentNumber: $installmentNumber, ')
+          ..write('amount: $amount, ')
+          ..write('paidOn: $paidOn, ')
+          ..write('paymentMethod: $paymentMethod, ')
+          ..write('note: $note, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -4130,6 +4695,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $ExpensesTable expenses = $ExpensesTable(this);
   late final $RecurringExpensesTable recurringExpenses =
       $RecurringExpensesTable(this);
+  late final $EmiPaymentsTable emiPayments = $EmiPaymentsTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -4140,6 +4706,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     creditCardEmis,
     expenses,
     recurringExpenses,
+    emiPayments,
   ];
   @override
   StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules([
@@ -6503,6 +7070,297 @@ typedef $$RecurringExpensesTableProcessedTableManager =
       RecurringExpense,
       PrefetchHooks Function()
     >;
+typedef $$EmiPaymentsTableCreateCompanionBuilder =
+    EmiPaymentsCompanion Function({
+      required String id,
+      required String emiId,
+      required int installmentNumber,
+      required double amount,
+      required DateTime paidOn,
+      required PaymentMethod paymentMethod,
+      Value<String?> note,
+      required DateTime createdAt,
+      required DateTime updatedAt,
+      Value<int> rowid,
+    });
+typedef $$EmiPaymentsTableUpdateCompanionBuilder =
+    EmiPaymentsCompanion Function({
+      Value<String> id,
+      Value<String> emiId,
+      Value<int> installmentNumber,
+      Value<double> amount,
+      Value<DateTime> paidOn,
+      Value<PaymentMethod> paymentMethod,
+      Value<String?> note,
+      Value<DateTime> createdAt,
+      Value<DateTime> updatedAt,
+      Value<int> rowid,
+    });
+
+class $$EmiPaymentsTableFilterComposer
+    extends Composer<_$AppDatabase, $EmiPaymentsTable> {
+  $$EmiPaymentsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get emiId => $composableBuilder(
+    column: $table.emiId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get installmentNumber => $composableBuilder(
+    column: $table.installmentNumber,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get amount => $composableBuilder(
+    column: $table.amount,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get paidOn => $composableBuilder(
+    column: $table.paidOn,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnWithTypeConverterFilters<PaymentMethod, PaymentMethod, int>
+  get paymentMethod => $composableBuilder(
+    column: $table.paymentMethod,
+    builder: (column) => ColumnWithTypeConverterFilters(column),
+  );
+
+  ColumnFilters<String> get note => $composableBuilder(
+    column: $table.note,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$EmiPaymentsTableOrderingComposer
+    extends Composer<_$AppDatabase, $EmiPaymentsTable> {
+  $$EmiPaymentsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get emiId => $composableBuilder(
+    column: $table.emiId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get installmentNumber => $composableBuilder(
+    column: $table.installmentNumber,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get amount => $composableBuilder(
+    column: $table.amount,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get paidOn => $composableBuilder(
+    column: $table.paidOn,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get paymentMethod => $composableBuilder(
+    column: $table.paymentMethod,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get note => $composableBuilder(
+    column: $table.note,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$EmiPaymentsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $EmiPaymentsTable> {
+  $$EmiPaymentsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get emiId =>
+      $composableBuilder(column: $table.emiId, builder: (column) => column);
+
+  GeneratedColumn<int> get installmentNumber => $composableBuilder(
+    column: $table.installmentNumber,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get amount =>
+      $composableBuilder(column: $table.amount, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get paidOn =>
+      $composableBuilder(column: $table.paidOn, builder: (column) => column);
+
+  GeneratedColumnWithTypeConverter<PaymentMethod, int> get paymentMethod =>
+      $composableBuilder(
+        column: $table.paymentMethod,
+        builder: (column) => column,
+      );
+
+  GeneratedColumn<String> get note =>
+      $composableBuilder(column: $table.note, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+}
+
+class $$EmiPaymentsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $EmiPaymentsTable,
+          EmiPaymentRow,
+          $$EmiPaymentsTableFilterComposer,
+          $$EmiPaymentsTableOrderingComposer,
+          $$EmiPaymentsTableAnnotationComposer,
+          $$EmiPaymentsTableCreateCompanionBuilder,
+          $$EmiPaymentsTableUpdateCompanionBuilder,
+          (
+            EmiPaymentRow,
+            BaseReferences<_$AppDatabase, $EmiPaymentsTable, EmiPaymentRow>,
+          ),
+          EmiPaymentRow,
+          PrefetchHooks Function()
+        > {
+  $$EmiPaymentsTableTableManager(_$AppDatabase db, $EmiPaymentsTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$EmiPaymentsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$EmiPaymentsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$EmiPaymentsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> emiId = const Value.absent(),
+                Value<int> installmentNumber = const Value.absent(),
+                Value<double> amount = const Value.absent(),
+                Value<DateTime> paidOn = const Value.absent(),
+                Value<PaymentMethod> paymentMethod = const Value.absent(),
+                Value<String?> note = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => EmiPaymentsCompanion(
+                id: id,
+                emiId: emiId,
+                installmentNumber: installmentNumber,
+                amount: amount,
+                paidOn: paidOn,
+                paymentMethod: paymentMethod,
+                note: note,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String emiId,
+                required int installmentNumber,
+                required double amount,
+                required DateTime paidOn,
+                required PaymentMethod paymentMethod,
+                Value<String?> note = const Value.absent(),
+                required DateTime createdAt,
+                required DateTime updatedAt,
+                Value<int> rowid = const Value.absent(),
+              }) => EmiPaymentsCompanion.insert(
+                id: id,
+                emiId: emiId,
+                installmentNumber: installmentNumber,
+                amount: amount,
+                paidOn: paidOn,
+                paymentMethod: paymentMethod,
+                note: note,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$EmiPaymentsTable, EmiPaymentRow>(table),
+                  BaseReferences<
+                    _$AppDatabase,
+                    $EmiPaymentsTable,
+                    EmiPaymentRow
+                  >(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$EmiPaymentsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $EmiPaymentsTable,
+      EmiPaymentRow,
+      $$EmiPaymentsTableFilterComposer,
+      $$EmiPaymentsTableOrderingComposer,
+      $$EmiPaymentsTableAnnotationComposer,
+      $$EmiPaymentsTableCreateCompanionBuilder,
+      $$EmiPaymentsTableUpdateCompanionBuilder,
+      (
+        EmiPaymentRow,
+        BaseReferences<_$AppDatabase, $EmiPaymentsTable, EmiPaymentRow>,
+      ),
+      EmiPaymentRow,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -6517,4 +7375,6 @@ class $AppDatabaseManager {
       $$ExpensesTableTableManager(_db, _db.expenses);
   $$RecurringExpensesTableTableManager get recurringExpenses =>
       $$RecurringExpensesTableTableManager(_db, _db.recurringExpenses);
+  $$EmiPaymentsTableTableManager get emiPayments =>
+      $$EmiPaymentsTableTableManager(_db, _db.emiPayments);
 }

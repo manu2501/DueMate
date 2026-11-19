@@ -7,6 +7,16 @@ Versions are `major.minor.patch+build`, the same as `version:` in `pubspec.yaml`
 `AppConstants.appVersion` / `appBuildNumber` (a test keeps the three in step). Start a new
 `## version · date` section for each release, with `### New`, `### Improved` and `### Fixed` as needed.
 
+## 1.2.0+3 · 2026-11-19
+
+### New
+- EMIs and loans have their own tab. It starts with what is due this month and what is left to pay in all.
+- Optionally count what you bought on EMI in your spending, once, when you add it.
+
+### Improved
+- EMI and loan installments are repayments, so they no longer count as spending or against your monthly budget. Your spending, trends and budget now show only what you actually spent.
+- Activity lists EMI payments separately, with their own filter.
+
 ## 1.1.0+2 · 2026-11-13
 
 ### New

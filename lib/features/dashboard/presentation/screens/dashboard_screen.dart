@@ -179,7 +179,7 @@ class _PrimaryActions extends StatelessWidget {
 }
 
 /// EMIs in one row: the next installment due, with how many are active and
-/// what goes out each month. "See all" opens the EMI list.
+/// what is still due this month. "See all" opens the EMIs tab.
 class _NextEmi extends ConsumerWidget {
   final String symbol;
   const _NextEmi({required this.symbol});
@@ -196,15 +196,13 @@ class _NextEmi extends ConsumerWidget {
     ]..sort((a, b) => a.nextDueDate!.compareTo(b.nextDueDate!));
     if (upcoming.isEmpty) return const SizedBox.shrink();
     final next = upcoming.first;
-    // What leaves your account each month: your own EMIs and those on your card.
-    final monthly = upcoming
-        .where((s) => s.emi.isForSelf || s.emi.isPaidByMe)
-        .fold<double>(0, (sum, s) => sum + s.nextAmount);
+    // Still to pay this month: your own EMIs and those on your card.
+    final due = ref.watch(emiOutlookProvider).dueThisMonth;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        SectionHeader('EMIs & loans', actionLabel: 'See all', onAction: () => context.go('/expenses?tab=emis')),
+        SectionHeader('EMIs & loans', actionLabel: 'See all', onAction: () => context.go('/emis')),
         GroupCard(
           children: [
             ListTile(
@@ -214,7 +212,7 @@ class _NextEmi extends ConsumerWidget {
               subtitle: Text([
                 'Due ${DateFormatter.formatRelative(next.nextDueDate!)}',
                 '${emis.length} active',
-                if (monthly > 0) '${ref.watch(displayMoneyProvider)(monthly)} a month',
+                if (due > 0) '${ref.watch(displayMoneyProvider)(due)} due this month',
               ].join(' · ')),
               trailing: MoneyText(next.nextAmount, symbol: symbol),
             ),

@@ -31,8 +31,8 @@ Then, most important first, and each only once it has something to show:
 
 - **Balances**: the largest open balances (who owes you, whom you owe).
 - **Spent in &lt;month&gt;**: spent so far against the monthly budget.
-- **EMIs & loans**: one row with the next installment due, how many are active and what goes
-  out each month; *See all* opens the EMI list.
+- **EMIs & loans**: one row with the next installment due, how many are active and what is
+  still due this month; *See all* opens the **EMIs** tab.
 - **Recent**: the last five entries.
 - With no data yet, Home shows a short welcome with *Add a person* and *Add an expense*.
 
@@ -82,7 +82,9 @@ This month's spending against the budget (*left*, *only … left* from 85%, *ove
 compares with last month by the same day (*₹2,300 more than by this day in October*; on the last
 day of the month, all of last month), shown once last month has something to compare. Then
 **This month's expenses** grouped by day with a daily total; ones added automatically say so
-(*Monthly* for repeats, *Installment 3* for your EMIs). Tap an expense to edit or delete it.
+(*Monthly* for repeats, *On EMI* for a purchase you chose to count). Tap an expense to edit or
+delete it. EMI and loan installments never show here: they repay something already bought, so
+they live on the **EMIs** tab and don't count against the budget.
 *Earlier months* and the chart icon open **Spending trends**.
 
 **Repeats every month** sits above them as one collapsed card, a plan rather than spending: how
@@ -97,13 +99,19 @@ expenses it already added stay).
   <img src="screenshots/21_recurring_dark.png" width="260" alt="Recurring expense, dark" />
 </p>
 
+### EMIs
+
 <p>
-  <img src="screenshots/10_expenses_emis.png" width="260" alt="Expenses, EMIs view, light" />
-  <img src="screenshots/10_expenses_emis_dark.png" width="260" alt="Expenses, EMIs view, dark" />
+  <img src="screenshots/10_emis.png" width="260" alt="EMIs and loans, light" />
+  <img src="screenshots/10_emis_dark.png" width="260" alt="EMIs and loans, dark" />
 </p>
 
-**EMIs & loans** view: the monthly outgo on active EMIs, then each EMI with progress and the next
-due date, in two sections: **Yours** and **With people**. Tap one for its schedule.
+Card EMIs and loans, apart from spending. It leads with **Due in &lt;month&gt;**: unpaid installments
+due by the end of the month (yours and those on your card for someone else), how many, what is
+already paid this month and what is **left to pay in all**. Then each EMI with progress and the
+next due date: **Due this month** first, then **Yours** and **With people**; finished ones fold
+away under *Finished*. Tap one for its schedule and **Pay**. Installments of your own EMIs are
+recorded as EMI payments, never as expenses.
 
 ### Activity
 
@@ -112,10 +120,11 @@ due date, in two sections: **Yours** and **With people**. Tap one for its schedu
   <img src="screenshots/05_activity_dark.png" width="260" alt="Activity, dark" />
 </p>
 
-Every ledger entry and expense in one timeline, grouped by day, for **this month** by default.
-The period chip (this month, last month, this year, all time, custom dates) stays in view, since
-the totals for money in, money out and spent follow it. **Filters** holds the rest: what to show
-(everything / lending / expenses) and payment method; it shows a count while any are on. The
+Every ledger entry, expense and EMI payment in one timeline, grouped by day, for **this month** by
+default. The period chip (this month, last month, this year, all time, custom dates) stays in view,
+since the totals for money in, money out and spent follow it; EMI payments get their own line
+(*paid towards EMIs and loans*), not counted as spent. **Filters** holds the rest: what to show
+(everything / lending / expenses / EMI payments) and payment method; it shows a count while any are on. The
 share icon exports the filtered entries as PDF or CSV.
 
 ---
@@ -266,7 +275,9 @@ amount, entered either way:
 
 **More options** (folded away; opens by itself when editing an EMI that uses any of them):
 interest (reducing or flat) when splitting a total, or the original amount when you know the EMI
-(shows the extra you pay and the effective yearly rate); charges with an 18% GST helper; notes.
+(shows the extra you pay and the effective yearly rate); charges with an 18% GST helper; notes;
+and, for your own EMIs, **Count the purchase in spending** (off by default): adds what you bought
+to your expenses once, a month before the first EMI. The installments never count as spending.
 One **Add EMI** / **Save changes** button stays at the bottom of the screen.
 
 A live summary shows the EMI, totals and last installment; *Make some months different* sets

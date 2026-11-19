@@ -29,8 +29,9 @@ enum ExpenseCategory {
   health,
   other,
 
-  /// Installments of your own EMIs and loans. Appended last because the enum
-  /// is stored by index. Since schema v11.
+  /// Installments of your own EMIs and loans, from schema v11 until v12 moved
+  /// them to [EmiPayments]. Kept because the enum is stored by index; hidden
+  /// from pickers and charts.
   emi,
 }
 
@@ -119,10 +120,31 @@ class Expenses extends Table {
   /// stopping a rule keeps the expenses it posted. Since schema v9.
   TextColumn get recurringId => text().nullable()();
 
-  /// Your own EMI or loan that posted it, and which installment. No foreign
-  /// key: deleting the EMI keeps what you already paid. Since schema v11.
+  /// Your own EMI or loan whose purchase this is ("Count the purchase in
+  /// spending"; installment number null). Since schema v12 installments are
+  /// [EmiPayments], not expenses: v11 rows with an installment number move
+  /// there. No foreign key: deleting the EMI removes it explicitly.
   TextColumn get emiId => text().nullable()();
   IntColumn get installmentNumber => integer().nullable()();
+  DateTimeColumn get createdAt => dateTime()();
+  DateTimeColumn get updatedAt => dateTime()();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
+/// One paid installment of your own EMI or loan: a repayment, not spending,
+/// so it is kept apart from [Expenses]. Since schema v12. No foreign key (like
+/// the other postings): deleting the EMI removes them explicitly.
+@DataClassName('EmiPaymentRow')
+class EmiPayments extends Table {
+  TextColumn get id => text()();
+  TextColumn get emiId => text()();
+  IntColumn get installmentNumber => integer()();
+  RealColumn get amount => real()();
+  DateTimeColumn get paidOn => dateTime()();
+  IntColumn get paymentMethod => intEnum<PaymentMethod>()();
+  TextColumn get note => text().nullable()();
   DateTimeColumn get createdAt => dateTime()();
   DateTimeColumn get updatedAt => dateTime()();
 

@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:drift/drift.dart';
 import '../../domain/entities/credit_card_emi.dart' as domain;
+import '../../domain/entities/emi_payment.dart';
 import '../../domain/repositories/emi_repository.dart';
 import '../database/app_database.dart' as db;
 
@@ -47,6 +48,25 @@ class EmiRepositoryImpl implements EmiRepository {
       (tbl) => OrderingTerm.desc(tbl.createdAt),
     ]);
     return query.watch().map((rows) => rows.map(_toDomain).toList());
+  }
+
+  @override
+  Stream<List<EmiPayment>> watchAllPayments() {
+    final query = _database.select(_database.emiPayments)..orderBy([(t) => OrderingTerm.desc(t.paidOn)]);
+    return query.watch().map((rows) => [
+          for (final r in rows)
+            EmiPayment(
+              id: r.id,
+              emiId: r.emiId,
+              installmentNumber: r.installmentNumber,
+              amount: r.amount,
+              paidOn: r.paidOn,
+              paymentMethod: r.paymentMethod,
+              note: r.note,
+              createdAt: r.createdAt,
+              updatedAt: r.updatedAt,
+            ),
+        ]);
   }
 
   @override
@@ -154,6 +174,7 @@ class EmiRepositoryImpl implements EmiRepository {
   @override
   Future<void> deleteEmi(String id) => _database.transaction(() async {
         // Postings have no foreign key to the EMI: remove them explicitly.
+        await (_database.delete(_database.emiPayments)..where((t) => t.emiId.equals(id))).go();
         await (_database.delete(_database.expenses)..where((t) => t.emiId.equals(id))).go();
         await (_database.delete(_database.transactions)..where((t) => t.emiId.equals(id))).go();
         await (_database.delete(_database.creditCardEmis)..where((tbl) => tbl.id.equals(id))).go();

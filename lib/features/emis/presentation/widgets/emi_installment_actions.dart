@@ -10,10 +10,10 @@ import 'package:duemate/domain/emi_installments.dart';
 import 'package:duemate/domain/entities/credit_card_emi.dart';
 import 'package:duemate/domain/entities/person.dart';
 
-/// Where an EMI's payments are recorded, for messages: "your expenses" or
+/// Where an EMI's payments are recorded, for messages: "your EMI payments" or
 /// "Asha's ledger".
 String emiPostingPlace(CreditCardEmi emi, Person? person) =>
-    emi.isForSelf ? 'your expenses' : "${person?.name.split(' ').first ?? 'their'}'s ledger";
+    emi.isForSelf ? 'your EMI payments' : "${person?.name.split(' ').first ?? 'their'}'s ledger";
 
 /// What you can do with one installment: mark it paid (on the day you paid)
 /// or unpaid, and change its amount.

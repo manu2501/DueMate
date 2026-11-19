@@ -24,9 +24,11 @@ class BackupContents {
   final List<CreditCardEmisCompanion> emis;
   final List<ExpensesCompanion> expenses;
   final List<RecurringExpensesCompanion> recurring;
+  final List<EmiPaymentsCompanion> emiPayments;
   final DateTime? exportedAt;
 
-  const BackupContents._(this.persons, this.transactions, this.emis, this.expenses, this.recurring, this.exportedAt);
+  const BackupContents._(
+      this.persons, this.transactions, this.emis, this.expenses, this.recurring, this.emiPayments, this.exportedAt);
 
   /// People in the backup, not counting your own "self" row.
   int get peopleCount => persons.where((p) => p.id.value != _selfId).length;
@@ -56,6 +58,7 @@ class BackupContents {
         rows('creditCardEmis', _emi),
         rows('expenses', _expense),
         rows('recurringExpenses', _recurring), // absent before schema v9
+        rows('emiPayments', _emiPayment), // absent before schema v12
         DateTime.tryParse(decoded['exportedAt'] as String? ?? ''),
       );
     } catch (_) {
@@ -74,10 +77,11 @@ class BackupContents {
           b.insertAllOnConflictUpdate(db.transactions, transactions);
           b.insertAllOnConflictUpdate(db.expenses, expenses);
           b.insertAllOnConflictUpdate(db.recurringExpenses, recurring);
+          b.insertAllOnConflictUpdate(db.emiPayments, emiPayments);
         });
-        // Backups from before schema v11 hold your own EMI installments as
-        // ledger entries.
-        await db.moveSelfEmiPostingsToExpenses();
+        // Backups from before schema v12 hold your own EMI installments as
+        // ledger entries (before v11) or expenses (v11).
+        await db.moveEmiPostingsToPayments();
       });
 
   static DateTime _date(Object? v) => DateTime.parse(v as String);
@@ -160,6 +164,18 @@ class BackupContents {
         updatedAt: Value(_date(x['updatedAt'])),
       );
 
+  static EmiPaymentsCompanion _emiPayment(Map<String, dynamic> p) => EmiPaymentsCompanion(
+        id: Value(p['id'] as String),
+        emiId: Value(p['emiId'] as String),
+        installmentNumber: Value(p['installmentNumber'] as int),
+        amount: Value(_num(p['amount'])),
+        paidOn: Value(_date(p['paidOn'])),
+        paymentMethod: Value(PaymentMethod.values[p['paymentMethod'] as int]),
+        note: Value(p['note'] as String?),
+        createdAt: Value(_date(p['createdAt'])),
+        updatedAt: Value(_date(p['updatedAt'])),
+      );
+
   static RecurringExpensesCompanion _recurring(Map<String, dynamic> r) => RecurringExpensesCompanion(
         id: Value(r['id'] as String),
         title: Value(r['title'] as String),
@@ -178,12 +194,13 @@ class BackupContents {
 class BackupHelper {
   /// The whole database as backup JSON (format version 2).
   static Future<String> buildBackupJson(AppDatabase db) async {
-    final (persons, transactions, emis, expenses, recurring) = await (
+    final (persons, transactions, emis, expenses, recurring, payments) = await (
       db.select(db.persons).get(),
       db.select(db.transactions).get(),
       db.select(db.creditCardEmis).get(),
       db.select(db.expenses).get(),
       db.select(db.recurringExpenses).get(),
+      db.select(db.emiPayments).get(),
     ).wait;
 
     final backupData = {
@@ -277,6 +294,19 @@ class BackupHelper {
                 'lastPostedDate': r.lastPostedDate?.toIso8601String(),
                 'createdAt': r.createdAt.toIso8601String(),
                 'updatedAt': r.updatedAt.toIso8601String(),
+              })
+          .toList(),
+      'emiPayments': payments
+          .map((p) => {
+                'id': p.id,
+                'emiId': p.emiId,
+                'installmentNumber': p.installmentNumber,
+                'amount': p.amount,
+                'paidOn': p.paidOn.toIso8601String(),
+                'paymentMethod': p.paymentMethod.index,
+                'note': p.note,
+                'createdAt': p.createdAt.toIso8601String(),
+                'updatedAt': p.updatedAt.toIso8601String(),
               })
           .toList(),
     };

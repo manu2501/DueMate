@@ -39,12 +39,16 @@ class EmiDetailsSheet extends ConsumerWidget {
   }
 
   /// Asks first, saying exactly what goes: the EMI and every payment it
-  /// recorded (your expenses, or the person's ledger and so their balance).
+  /// recorded (your EMI payments and purchase expense, or the person's
+  /// ledger and so their balance).
   Future<void> _confirmDelete(BuildContext context, WidgetRef ref, CreditCardEmi emi, Set<int> posted) async {
     final what = emi.isLoan ? 'loan' : 'EMI';
     final total = posted.fold<double>(0, (s, k) => s + emi.getMonthlyInstallmentFor(k));
     final payments = posted.length == 1 ? '1 payment' : '${posted.length} payments';
     final place = emiPostingPlace(emi, person);
+    final money = ref.read(displayMoneyProvider);
+    final purchase = await ref.read(emiProcessorServiceProvider).countedPurchase(emi.id);
+    if (!context.mounted) return;
     final ok = await showConfirmDialog(
       context,
       title: 'Delete ${emi.itemName}?',
@@ -52,10 +56,10 @@ class EmiDetailsSheet extends ConsumerWidget {
         if (posted.isEmpty)
           'The $what and its schedule are deleted. No payments were recorded for it.'
         else ...[
-          'The $what, its schedule and its $payments in $place '
-              '(${ref.read(displayMoneyProvider)(total)}) are deleted.',
+          'The $what, its schedule and its $payments in $place (${money(total)}) are deleted.',
           if (!emi.isForSelf) "${person?.name.split(' ').first ?? 'Their'}'s balance changes to match.",
         ],
+        if (purchase != null) 'Its purchase (${money(purchase)}) is removed from your expenses.',
         "This can't be undone.",
       ].join(' '),
       confirmLabel: 'Delete $what',

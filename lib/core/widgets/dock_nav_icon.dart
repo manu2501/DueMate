@@ -4,7 +4,8 @@ import 'package:flutter/material.dart';
 /// 0: Dashboard (Dashboard)
 /// 1: Directory (People)
 /// 2: Expenses (Wallet / Outflows)
-/// 3: Transactions (Activity)
+/// 3: EMIs and loans
+/// 4: Transactions (Activity)
 class DockNavIcon extends StatelessWidget {
   final int index;
   final bool isSelected;
@@ -33,6 +34,9 @@ class DockNavIcon extends StatelessWidget {
         icon = isSelected ? Icons.account_balance_wallet_rounded : Icons.account_balance_wallet_outlined;
         break;
       case 3:
+        icon = isSelected ? Icons.credit_card_rounded : Icons.credit_card_outlined;
+        break;
+      case 4:
       default:
         icon = isSelected ? Icons.receipt_long_rounded : Icons.receipt_long_outlined;
         break;

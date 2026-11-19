@@ -67,6 +67,11 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
 
   /// "More options" (interest or original amount, fees, notes) is open.
   bool _showMore = false;
+
+  /// Your own EMI: the purchase counts once in spending (one expense), since
+  /// the installments are repayments and never do. Off by default: many
+  /// people already logged the purchase.
+  bool _countPurchase = false;
   Map<int, double> _customScheduleMap = {};
 
   /// true: user types a total and we split it. false: user types the EMI.
@@ -193,6 +198,7 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
       _installmentsPaid = emi.installmentsPaid;
       _startDate = emi.startDate;
       _dueDayOfMonth = emi.dueDayOfMonth;
+      if (emi.isForSelf) _loadCountPurchase(emi.id);
     }
 
     _tenureController = TextEditingController(text: _tenureMonths.toString());
@@ -384,6 +390,7 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
         // Fixes up installments already posted (removed past the paid count,
         // re-dated to the new schedule) and saves.
         await processor.applyEdit(current, updated);
+        await processor.setPurchaseCounted(updated, _countPurchase);
       } else {
         final newEmi = CreditCardEmi(
           id: const Uuid().v4(),
@@ -410,6 +417,7 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
           updatedAt: DateTime.now(),
         );
         await emiRepo.createEmi(newEmi);
+        if (_countPurchase) await processor.setPurchaseCounted(newEmi, true);
       }
 
       // Check and process any pending installments right away (e.g. if started in past)
@@ -666,7 +674,31 @@ class _AddEditEmiScreenState extends ConsumerState<AddEditEmiScreen> {
           border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
         ),
       ),
+      if (_isForSelf) ...[
+        const SizedBox(height: 8),
+        SwitchListTile(
+          contentPadding: EdgeInsets.zero,
+          value: _countPurchase,
+          onChanged: (v) => setState(() => _countPurchase = v),
+          title: Text(isLoan ? 'Count the loan amount in spending' : 'Count the purchase in spending'),
+          subtitle: Text(
+            '${isLoan ? 'Adds the amount borrowed' : 'Adds what you bought'} to your expenses once, '
+            'a month before the first EMI. The monthly installments never count as spending.',
+          ),
+        ),
+      ],
     ];
+  }
+
+  /// Editing your own EMI: whether its purchase is counted (has an expense).
+  Future<void> _loadCountPurchase(String emiId) async {
+    final counted = await ref.read(emiProcessorServiceProvider).countedPurchase(emiId) != null;
+    if (mounted && counted) {
+      setState(() {
+        _countPurchase = true;
+        _showMore = true;
+      });
+    }
   }
 
   @override

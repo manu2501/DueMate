@@ -7,8 +7,8 @@ class AppConstants {
 
   // App version. Keep in step with `version:` in pubspec.yaml and the newest
   // entry in CHANGELOG.md (test/unit/changelog_test.dart checks all three).
-  static const String appVersion = '1.1.0';
-  static const int appBuildNumber = 2;
+  static const String appVersion = '1.2.0';
+  static const int appBuildNumber = 3;
   static const String appVersionString = 'v$appVersion+$appBuildNumber';
 
   /// As Settings shows it: "1.1.0 (build 2)".

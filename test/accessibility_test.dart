@@ -133,7 +133,7 @@ void main() {
       await settle(tester);
       await checkGuidelines(tester, 'Home');
 
-      for (final tab in ['People', 'Expenses', 'Activity']) {
+      for (final tab in ['People', 'Expenses', 'EMIs', 'Activity']) {
         await tester.tap(find.byTooltip(tab));
         await settle(tester);
         await checkGuidelines(tester, tab);

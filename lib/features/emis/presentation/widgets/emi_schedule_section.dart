@@ -4,7 +4,8 @@ import 'package:duemate/core/utils/date_formatter.dart';
 
 /// First due date and installments already paid, with a nudge when past
 /// installments would be back-filled into the ledger. Your own EMIs post
-/// every paid installment to expenses, in the month it was due.
+/// every paid installment as an EMI payment (not spending), in the month it
+/// was due.
 class EmiScheduleSection extends StatelessWidget {
   final DateTime firstDueDate;
   final int dueDayOfMonth;
@@ -16,7 +17,7 @@ class EmiScheduleSection extends StatelessWidget {
   final int dueSoFar;
   final bool isEditing;
 
-  /// Your own EMI or loan (installments go to expenses).
+  /// Your own EMI or loan (installments are recorded as EMI payments).
   final bool isForSelf;
   final VoidCallback onPickDate;
 
@@ -67,7 +68,7 @@ class EmiScheduleSection extends StatelessWidget {
             hintText: '0',
             prefixIcon: const Icon(Icons.history_rounded),
             helperText: isForSelf
-                ? 'Installments you have paid so far. Each is added to your expenses in the month it was due.'
+                ? 'Installments you have paid so far. Each is recorded as a payment in the month it was due, not as spending.'
                 : "Installments paid before you started tracking. They won't be added to the ledger.",
             helperMaxLines: 3,
             border: border,

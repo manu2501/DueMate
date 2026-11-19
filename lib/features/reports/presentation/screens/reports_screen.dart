@@ -12,34 +12,43 @@ import 'package:duemate/core/widgets/transaction_tile.dart';
 import 'package:duemate/core/widgets/ui_kit.dart';
 import 'package:duemate/data/database/tables.dart';
 import 'package:duemate/data/providers/app_providers.dart';
+import 'package:duemate/domain/entities/credit_card_emi.dart';
+import 'package:duemate/domain/entities/emi_payment.dart';
 import 'package:duemate/domain/entities/ledger_transaction.dart';
 import 'package:duemate/domain/entities/personal_expense.dart';
+import 'package:duemate/features/emis/presentation/widgets/emi_details_sheet.dart';
 import 'package:duemate/features/expenses/presentation/widgets/add_edit_expense_sheet.dart';
 import 'package:duemate/features/transactions/presentation/widgets/transaction_details_dialog.dart';
 
 enum ReportDateFilter { allTime, thisMonth, lastMonth, thisYear, custom }
 
-enum ActivityTypeFilter { all, ledger, expenses }
+enum ActivityTypeFilter { all, ledger, expenses, emis }
 
+/// One row of the timeline: a ledger entry, an expense or an EMI payment.
 class ActivityItem {
-  final bool isExpense;
   final DateTime date;
   final LedgerTransaction? transaction;
   final PersonalExpense? expense;
+  final EmiPayment? payment;
 
-  ActivityItem.transaction(this.transaction)
-      : isExpense = false,
-        date = transaction!.transactionDate,
+  ActivityItem.transaction(LedgerTransaction this.transaction)
+      : date = transaction.transactionDate,
+        expense = null,
+        payment = null;
+
+  ActivityItem.expense(PersonalExpense this.expense)
+      : date = expense.expenseDate,
+        transaction = null,
+        payment = null;
+
+  ActivityItem.payment(EmiPayment this.payment)
+      : date = payment.paidOn,
+        transaction = null,
         expense = null;
-
-  ActivityItem.expense(this.expense)
-      : isExpense = true,
-        date = expense!.expenseDate,
-        transaction = null;
 }
 
-/// Everything that happened, newest first: ledger entries and expenses in
-/// one timeline, with search and filters.
+/// Everything that happened, newest first: ledger entries, expenses and EMI
+/// payments in one timeline, with search and filters.
 class ReportsScreen extends ConsumerStatefulWidget {
   const ReportsScreen({super.key});
 
@@ -60,7 +69,10 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
     ActivityTypeFilter.all: 'Everything',
     ActivityTypeFilter.ledger: 'Lending',
     ActivityTypeFilter.expenses: 'Expenses',
+    ActivityTypeFilter.emis: 'EMI payments',
   };
+
+  bool _shows(ActivityTypeFilter type) => _typeFilter == ActivityTypeFilter.all || _typeFilter == type;
 
   @override
   void dispose() {
@@ -227,10 +239,12 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
     final people = ref.watch(personsMapProvider);
     final allTxs = ref.watch(allTransactionsProvider).value ?? const <LedgerTransaction>[];
     final allExpenses = ref.watch(allExpensesProvider).value ?? const <PersonalExpense>[];
+    final allPayments = ref.watch(emiPaymentsProvider).value ?? const <EmiPayment>[];
+    final emisById = {for (final e in ref.watch(allEmisProvider).value ?? const <CreditCardEmi>[]) e.id: e};
     final query = _searchController.text.trim().toLowerCase();
 
     final txs = allTxs.where((t) {
-      if (_typeFilter == ActivityTypeFilter.expenses) return false;
+      if (!_shows(ActivityTypeFilter.ledger)) return false;
       if (!_inPeriod(t.transactionDate)) return false;
       if (_methodFilter != null && t.paymentMethod != _methodFilter) return false;
       if (query.isEmpty) return true;
@@ -239,7 +253,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
     }).toList();
 
     final expenses = allExpenses.where((e) {
-      if (_typeFilter == ActivityTypeFilter.ledger) return false;
+      if (!_shows(ActivityTypeFilter.expenses)) return false;
       if (!_inPeriod(e.expenseDate)) return false;
       if (_methodFilter != null && e.paymentMethod != _methodFilter) return false;
       if (query.isEmpty) return true;
@@ -248,9 +262,20 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
           e.category.label.toLowerCase().contains(query);
     }).toList();
 
+    final payments = allPayments.where((p) {
+      if (!_shows(ActivityTypeFilter.emis)) return false;
+      if (!_inPeriod(p.paidOn)) return false;
+      if (_methodFilter != null && p.paymentMethod != _methodFilter) return false;
+      if (query.isEmpty) return true;
+      final emi = emisById[p.emiId];
+      return (emi?.itemName.toLowerCase().contains(query) ?? false) ||
+          (emi?.cardName.toLowerCase().contains(query) ?? false);
+    }).toList();
+
     final items = [
       ...txs.map(ActivityItem.transaction),
       ...expenses.map(ActivityItem.expense),
+      ...payments.map(ActivityItem.payment),
     ]..sort((a, b) => b.date.compareTo(a.date));
 
     double moneyIn = 0, moneyOut = 0, spent = 0;
@@ -260,6 +285,8 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
     for (final e in expenses) {
       spent += e.amount;
     }
+    // Repayments, not spending: told apart from "Spent".
+    final repaid = payments.fold<double>(0, (s, p) => s + p.amount);
 
     final byDay = <DateTime, List<ActivityItem>>{};
     for (final i in items) {
@@ -351,6 +378,16 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
             ),
           ),
         ),
+        if (repaid > 0)
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(AppSpace.screenGutter, AppSpace.sm, AppSpace.screenGutter, 0),
+              child: Text(
+                '${ref.watch(displayMoneyProvider)(repaid)} paid towards EMIs and loans',
+                style: theme.textTheme.bodyMedium?.copyWith(color: cs.onSurfaceVariant),
+              ),
+            ),
+          ),
         if (items.isEmpty)
           SliverFillRemaining(
             hasScrollBody: false,
@@ -367,14 +404,16 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
               child: GroupCard(
                 children: [
                   for (final item in entry.value)
-                    if (item.isExpense)
+                    if (item.expense case final e?)
                       ListTile(
-                        onTap: () => AddEditExpenseSheet.show(context, expenseToEdit: item.expense),
-                        leading: IconBadge(item.expense!.category.icon),
-                        title: Text(item.expense!.title, maxLines: 1, overflow: TextOverflow.ellipsis),
-                        subtitle: Text('Expense · ${item.expense!.category.label}'),
-                        trailing: MoneyText(item.expense!.amount, symbol: symbol, sign: '−', meaning: 'spent'),
+                        onTap: () => AddEditExpenseSheet.show(context, expenseToEdit: e),
+                        leading: IconBadge(e.category.icon),
+                        title: Text(e.title, maxLines: 1, overflow: TextOverflow.ellipsis),
+                        subtitle: Text('Expense · ${e.category.label}'),
+                        trailing: MoneyText(e.amount, symbol: symbol, sign: '−', meaning: 'spent'),
                       )
+                    else if (item.payment case final p?)
+                      _EmiPaymentTile(payment: p, emi: emisById[p.emiId], symbol: symbol)
                     else
                       TransactionTile(
                         transaction: item.transaction!,
@@ -394,6 +433,32 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
             ),
           ],
       ],
+    );
+  }
+}
+
+/// One paid installment of your EMI or loan: neutral, with a − sign (money
+/// out, but a repayment rather than spending). Opens the EMI.
+class _EmiPaymentTile extends StatelessWidget {
+  final EmiPayment payment;
+  final CreditCardEmi? emi;
+  final String symbol;
+
+  const _EmiPaymentTile({required this.payment, required this.emi, required this.symbol});
+
+  @override
+  Widget build(BuildContext context) {
+    final emi = this.emi;
+    return ListTile(
+      onTap: emi == null ? null : () => EmiDetailsSheet.show(context, emi: emi),
+      leading: IconBadge(emi?.isLoan ?? false ? Icons.account_balance_outlined : Icons.credit_card_outlined),
+      title: Text(emi?.itemName ?? 'EMI', maxLines: 1, overflow: TextOverflow.ellipsis),
+      subtitle: Text([
+        'EMI payment',
+        if (emi != null) '${payment.installmentNumber}/${emi.totalTenureMonths}' else '${payment.installmentNumber}',
+        ?emi?.cardName,
+      ].join(' · '), maxLines: 1, overflow: TextOverflow.ellipsis),
+      trailing: MoneyText(payment.amount, symbol: symbol, sign: '−', meaning: 'paid'),
     );
   }
 }

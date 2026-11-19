@@ -4,11 +4,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:duemate/core/services/emi_processor_service.dart';
 import 'package:duemate/domain/entities/credit_card_emi.dart';
 import 'package:duemate/domain/emi_installments.dart';
+import 'package:duemate/domain/emi_outlook.dart';
 import 'package:duemate/domain/entities/ledger_transaction.dart';
-import 'package:duemate/domain/entities/personal_expense.dart';
+import 'package:duemate/domain/entities/emi_payment.dart';
 import 'database_providers.dart';
-import 'expense_providers.dart';
 import 'ledger_providers.dart';
+
+export 'package:duemate/domain/emi_outlook.dart';
 
 final emiProcessorServiceProvider = Provider<EmiProcessorService>((ref) {
   return EmiProcessorService(
@@ -37,7 +39,12 @@ final emiAutoProcessorProvider = FutureProvider<EmiProcessorResult>((ref) async 
   return await processor.processDueInstallments();
 });
 
-/// Installment numbers posted per EMI id: expenses for your own EMIs, ledger
+/// Every paid installment of your own EMIs and loans, newest first.
+final emiPaymentsProvider = StreamProvider<List<EmiPayment>>((ref) {
+  return ref.watch(emiRepositoryProvider).watchAllPayments();
+});
+
+/// Installment numbers posted per EMI id: payments for your own EMIs, ledger
 /// entries for shared ones. Built from streams the app already watches.
 final emiPostingsProvider = Provider<Map<String, Set<int>>>((ref) {
   final out = <String, Set<int>>{};
@@ -48,10 +55,17 @@ final emiPostingsProvider = Provider<Map<String, Set<int>>>((ref) {
   for (final t in ref.watch(allTransactionsProvider).value ?? const <LedgerTransaction>[]) {
     add(t.emiId, t.installmentNumber);
   }
-  for (final e in ref.watch(allExpensesProvider).value ?? const <PersonalExpense>[]) {
-    add(e.emiId, e.installmentNumber);
+  for (final p in ref.watch(emiPaymentsProvider).value ?? const <EmiPayment>[]) {
+    add(p.emiId, p.installmentNumber);
   }
   return out;
+});
+
+/// [EmiOutlook] for every EMI, now.
+final emiOutlookProvider = Provider<EmiOutlook>((ref) {
+  final emis = ref.watch(allEmisProvider).value ?? const <CreditCardEmi>[];
+  final postings = ref.watch(emiPostingsProvider);
+  return EmiOutlook.of([for (final e in emis) EmiInstallments.of(e, postings[e.id] ?? const {})], DateTime.now());
 });
 
 /// Which installments of [emi] are paid. Until postings load, falls back to

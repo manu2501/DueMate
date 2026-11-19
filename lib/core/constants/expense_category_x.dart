@@ -3,10 +3,11 @@ import 'package:duemate/data/database/tables.dart';
 
 /// Single source for how an expense category is named, drawn and charted.
 extension ExpenseCategoryX on ExpenseCategory {
-  /// Order for pickers: "Other" last.
+  /// Order for pickers: "Other" last. Without [ExpenseCategory.emi]:
+  /// installments are EMI payments, not expenses (schema v12).
   static final ordered = [
     for (final c in ExpenseCategory.values)
-      if (c != ExpenseCategory.other) c,
+      if (c != ExpenseCategory.other && c != ExpenseCategory.emi) c,
     ExpenseCategory.other,
   ];
 
