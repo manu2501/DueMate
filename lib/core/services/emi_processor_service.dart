@@ -172,8 +172,6 @@ class EmiProcessorService {
     return database.transaction(() async {
       if (before.isForSelf != after.isForSelf) {
         await _deletePostings(before, (_) => true);
-        // A purchase is your spending only while the EMI is yours.
-        if (!after.isForSelf) await _deletePurchase(after.id);
       } else {
         await _deletePostings(after, (k) => k > after.installmentsPaid);
         await _restatePostings(before, after, today);
@@ -304,48 +302,6 @@ class EmiProcessorService {
     final rows = await (database.select(database.transactions)..where((t) => t.emiId.equals(emi.id))).get();
     return [for (final r in rows) (id: r.id, k: r.installmentNumber, date: r.transactionDate)];
   }
-
-  /// The amount of the purchase expense of your EMI [emiId], or null when the
-  /// purchase is not counted in spending.
-  Future<double?> countedPurchase(String emiId) async =>
-      (await (database.select(database.expenses)..where((t) => t.emiId.equals(emiId))).getSingleOrNull())?.amount;
-
-  /// "Count the purchase in spending": keeps one expense for the purchase of
-  /// your own [emi] (its price, a month before the first installment and not
-  /// after today), or removes it. An existing one keeps its date, category
-  /// and payment method; it takes the new name and price.
-  Future<void> setPurchaseCounted(CreditCardEmi emi, bool counted) => database.transaction(() async {
-        if (!counted || !emi.isForSelf) return _deletePurchase(emi.id);
-        final now = DateTime.now();
-        final existing =
-            await (database.select(database.expenses)..where((t) => t.emiId.equals(emi.id))).getSingleOrNull();
-        if (existing != null) {
-          await (database.update(database.expenses)..where((t) => t.id.equals(existing.id))).write(db.ExpensesCompanion(
-            title: Value(emi.itemName),
-            amount: Value(emi.purchaseAmount),
-            updatedAt: Value(now),
-          ));
-          return;
-        }
-        final start = emi.startDate;
-        final monthBefore = DateTime(start.year, start.month - 1, start.day.clamp(1, DateTime(start.year, start.month, 0).day));
-        final today = _dayOf(now);
-        await database.into(database.expenses).insert(db.ExpensesCompanion.insert(
-              id: const Uuid().v4(),
-              title: emi.itemName,
-              amount: emi.purchaseAmount,
-              category: emi.isLoan ? ExpenseCategory.other : ExpenseCategory.shopping,
-              expenseDate: monthBefore.isAfter(today) ? today : monthBefore,
-              paymentMethod: emi.isLoan ? PaymentMethod.bankTransfer : PaymentMethod.card,
-              notes: Value('Bought on ${emi.isLoan ? 'loan' : 'EMI'} · ${emi.cardName}'),
-              emiId: Value(emi.id),
-              createdAt: now,
-              updatedAt: now,
-            ));
-      });
-
-  Future<void> _deletePurchase(String emiId) =>
-      (database.delete(database.expenses)..where((t) => t.emiId.equals(emiId))).go();
 
   static String _note(CreditCardEmi emi, int k) => 'EMI $k/${emi.totalTenureMonths} · ${emi.cardName}';
 

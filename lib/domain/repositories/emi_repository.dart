@@ -13,8 +13,8 @@ abstract class EmiRepository {
   Future<CreditCardEmi?> getEmiById(String id);
   Future<void> createEmi(CreditCardEmi emi);
   Future<void> updateEmi(CreditCardEmi emi);
-  /// Deletes the EMI and everything it posted (your payments and purchase
-  /// expense, or the ledger entries), in one transaction.
+  /// Deletes the EMI and every installment it posted (your payments or the
+  /// ledger entries), in one transaction.
   Future<void> deleteEmi(String id);
 }
 

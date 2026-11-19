@@ -9,7 +9,7 @@ import 'package:duemate/data/providers/app_providers.dart';
 import 'package:duemate/main.dart';
 
 void main() {
-  testWidgets('DueMate launches directly into Dashboard with 5-tab navigation bar', (WidgetTester tester) async {
+  testWidgets('DueMate launches directly into Dashboard with 4-tab navigation bar', (WidgetTester tester) async {
     // No platform channels in tests: provide prefs in-memory and mark this
     // version as already seen so the dashboard doesn't open the permissions
     // sheet (which would need permission_handler's native side).

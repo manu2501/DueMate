@@ -109,8 +109,7 @@ class _EmisScreenState extends ConsumerState<EmisScreen> {
   }
 }
 
-/// The one number: what your EMIs take this month, with what is already
-/// paid and what is left in all.
+/// The one number: what your EMIs still need this month.
 class _OutlookHeader extends ConsumerWidget {
   final String symbol;
   final DateTime month;
@@ -121,33 +120,22 @@ class _OutlookHeader extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
-    final money = ref.watch(displayMoneyProvider);
-    final o = ref.watch(emiOutlookProvider);
-    final name = DateFormat.MMMM().format(month);
-    final muted = theme.textTheme.bodyMedium?.copyWith(color: cs.onSurfaceVariant);
+    final due = ref.watch(emiOutlookProvider).dueThisMonth;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: AppSpace.screenGutter),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Due in $name', style: theme.textTheme.labelLarge?.copyWith(color: cs.onSurfaceVariant)),
+          Text('Due in ${DateFormat.MMMM().format(month)}',
+              style: theme.textTheme.labelLarge?.copyWith(color: cs.onSurfaceVariant)),
           const SizedBox(height: AppSpace.xs),
-          MoneyText(o.dueThisMonth, symbol: symbol, style: theme.textTheme.displaySmall),
+          MoneyText(due, symbol: symbol, style: theme.textTheme.displaySmall),
           const SizedBox(height: AppSpace.sm),
           Text(
-            [
-              if (o.dueThisMonthCount > 0)
-                '${o.dueThisMonthCount} ${o.dueThisMonthCount == 1 ? 'installment' : 'installments'} to pay'
-              else
-                'Nothing left to pay this month',
-              if (o.paidThisMonth > 0) '${money(o.paidThisMonth)} paid',
-            ].join(' · '),
-            style: muted,
+            due > 0 ? 'Repayments, not counted in your spending.' : 'Nothing left to pay this month.',
+            style: theme.textTheme.bodyMedium?.copyWith(color: cs.onSurfaceVariant),
           ),
-          if (o.leftToPay > 0) Text('${money(o.leftToPay)} left to pay in all', style: muted),
-          const SizedBox(height: AppSpace.xs),
-          Text('Not counted in your spending or budget.', style: theme.textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant)),
         ],
       ),
     );

@@ -78,20 +78,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: '/expenses',
-            // EMIs used to be a view inside Expenses (/expenses?tab=emis).
-            redirect: (context, state) => state.uri.queryParameters['tab'] == 'emis' ? '/emis' : null,
             pageBuilder: (context, state) => _buildTabTransition(
               context: context,
               state: state,
               child: const ExpensesScreen(),
-            ),
-          ),
-          GoRoute(
-            path: '/emis',
-            pageBuilder: (context, state) => _buildTabTransition(
-              context: context,
-              state: state,
-              child: const EmisScreen(),
             ),
           ),
           GoRoute(
@@ -103,6 +93,15 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             ),
           ),
         ],
+      ),
+      GoRoute(
+        parentNavigatorKey: _rootNavigatorKey,
+        path: '/emis',
+        pageBuilder: (context, state) => _buildSlideTransition(
+          context: context,
+          state: state,
+          child: const EmisScreen(),
+        ),
       ),
       GoRoute(
         parentNavigatorKey: _rootNavigatorKey,
@@ -187,8 +186,7 @@ class AppShell extends StatelessWidget {
     if (location == '/') return 0;
     if (location.startsWith('/people')) return 1;
     if (location.startsWith('/expenses')) return 2;
-    if (location.startsWith('/emis')) return 3;
-    if (location.startsWith('/reports')) return 4;
+    if (location.startsWith('/reports')) return 3;
     return 0;
   }
 
@@ -204,9 +202,6 @@ class AppShell extends StatelessWidget {
         context.go('/expenses');
         break;
       case 3:
-        context.go('/emis');
-        break;
-      case 4:
         context.go('/reports');
         break;
     }
@@ -248,7 +243,7 @@ class _AppNavBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const labels = ['Home', 'People', 'Expenses', 'EMIs', 'Activity'];
+    const labels = ['Home', 'People', 'Expenses', 'Activity'];
 
     return NavigationBar(
       selectedIndex: selectedIndex,

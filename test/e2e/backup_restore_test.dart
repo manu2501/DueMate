@@ -65,19 +65,7 @@ Future<void> _seed(AppDatabase db, {String prefix = ''}) async {
     createdAt: _t,
     updatedAt: _t,
   ));
-  // The purchase of your own EMI, counted in spending.
-  await ExpenseRepositoryImpl(db).createExpense(PersonalExpense(
-    id: '${prefix}x2',
-    title: 'Phone',
-    amount: 12000,
-    category: ExpenseCategory.shopping,
-    expenseDate: _t,
-    paymentMethod: PaymentMethod.card,
-    emiId: '${prefix}e1',
-    createdAt: _t,
-    updatedAt: _t,
-  ));
-  // An installment of it, paid (schema v12).
+  // An installment of your own EMI, paid (schema v12).
   await db.into(db.emiPayments).insert(EmiPaymentsCompanion.insert(
     id: '${prefix}p3',
     emiId: '${prefix}e1',
@@ -210,7 +198,7 @@ void main() {
       final db = await open(tester, json);
 
       expect(find.text('Replace all data?'), findsOneWidget);
-      expect(find.textContaining('1 person, 1 entry, 1 EMI and 2 expenses'), findsOneWidget);
+      expect(find.textContaining('1 person, 1 entry, 1 EMI and 1 expense'), findsOneWidget);
 
       await tester.tap(find.text('Replace everything'));
       await tester.pump();

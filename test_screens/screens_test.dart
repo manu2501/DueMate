@@ -289,7 +289,8 @@ void main() {
       await shot('09_expense_sheet');
 
       await home();
-      await go('/emis');
+      await go('/expenses');
+      await tester.tap(find.text('EMIs & loans'));
       await shot('10_emis');
 
       await go('/expense-charts');
@@ -300,7 +301,9 @@ void main() {
       await go('/add-person');
       await shot('12_add_person');
 
-      await go('/emis');
+      await go('/expenses');
+      await tester.tap(find.text('EMIs & loans'));
+      await settle();
       await tester.tap(find.text('iPhone 16').first);
       await shot('13_emi_details');
       // One installment's actions: mark paid/unpaid, change amount.

@@ -59,11 +59,6 @@ class CreditCardEmi {
   bool get isLoan => kind == 'loan';
   bool get isSplitPlan => planMode == 'split';
 
-  /// What was bought (or borrowed): the original amount if known, else the
-  /// total of the installments. The spending when "Count the purchase in
-  /// spending" is on; interest and charges are not part of it.
-  double get purchaseAmount => principal > 0 ? principal : totalAmount;
-
   /// Best guess for data that predates the stored [kind] column (old backups).
   static String inferKind({required String cardName, required String itemName, String? notes}) {
     final card = cardName.toLowerCase();

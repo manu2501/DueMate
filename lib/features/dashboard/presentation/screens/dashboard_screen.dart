@@ -202,7 +202,7 @@ class _NextEmi extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        SectionHeader('EMIs & loans', actionLabel: 'See all', onAction: () => context.go('/emis')),
+        SectionHeader('EMIs & loans', actionLabel: 'See all', onAction: () => context.push('/emis')),
         GroupCard(
           children: [
             ListTile(

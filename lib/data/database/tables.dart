@@ -120,10 +120,9 @@ class Expenses extends Table {
   /// stopping a rule keeps the expenses it posted. Since schema v9.
   TextColumn get recurringId => text().nullable()();
 
-  /// Your own EMI or loan whose purchase this is ("Count the purchase in
-  /// spending"; installment number null). Since schema v12 installments are
-  /// [EmiPayments], not expenses: v11 rows with an installment number move
-  /// there. No foreign key: deleting the EMI removes it explicitly.
+  /// Schema v11 only: your own EMI installment posted as an expense, and its
+  /// number. Since v12 installments are [EmiPayments]; these rows move there
+  /// on upgrade or restore, so new expenses leave both empty.
   TextColumn get emiId => text().nullable()();
   IntColumn get installmentNumber => integer().nullable()();
   DateTimeColumn get createdAt => dateTime()();

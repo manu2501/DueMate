@@ -16,8 +16,7 @@ class AppDatabase extends _$AppDatabase {
   /// versions posted them to the hidden "self" ledger (before v11) or to
   /// expenses (v11); both move here with the same id, amount and date. Runs
   /// on upgrade to v12 and after restoring an older backup; does nothing once
-  /// there is nothing left to move. A purchase expense (EMI id without an
-  /// installment number) stays in expenses.
+  /// there is nothing left to move.
   Future<void> moveEmiPostingsToPayments() => transaction(() async {
         const self = AppConstants.selfPersonId;
         const cols = 'id, emi_id, installment_number, amount, paid_on, payment_method, note, created_at, updated_at';

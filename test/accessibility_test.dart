@@ -133,7 +133,7 @@ void main() {
       await settle(tester);
       await checkGuidelines(tester, 'Home');
 
-      for (final tab in ['People', 'Expenses', 'EMIs', 'Activity']) {
+      for (final tab in ['People', 'Expenses', 'Activity']) {
         await tester.tap(find.byTooltip(tab));
         await settle(tester);
         await checkGuidelines(tester, tab);
@@ -167,6 +167,10 @@ void main() {
 
       await tester.tap(find.byTooltip('Expenses'));
       await settle(tester);
+      await tester.tap(find.text('EMIs & loans'));
+      await settle(tester);
+      await checkGuidelines(tester, 'EMIs');
+      await back();
       await tester.tap(find.byTooltip('Trends and categories'));
       await settle(tester);
       await checkGuidelines(tester, 'Spending trends');

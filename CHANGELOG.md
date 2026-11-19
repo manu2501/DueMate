@@ -10,8 +10,7 @@ Versions are `major.minor.patch+build`, the same as `version:` in `pubspec.yaml`
 ## 1.2.0+3 · 2026-11-19
 
 ### New
-- EMIs and loans have their own tab. It starts with what is due this month and what is left to pay in all.
-- Optionally count what you bought on EMI in your spending, once, when you add it.
+- EMIs and loans have their own page (from Expenses or Home), starting with what is due this month.
 
 ### Improved
 - EMI and loan installments are repayments, so they no longer count as spending or against your monthly budget. Your spending, trends and budget now show only what you actually spent.

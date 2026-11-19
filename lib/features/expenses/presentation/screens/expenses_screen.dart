@@ -41,6 +41,7 @@ class ExpensesScreen extends ConsumerWidget {
       ),
       slivers: [
         SliverToBoxAdapter(child: _MonthHeader(symbol: symbol, onEditBudget: () => editMonthlyBudget(context, ref))),
+        const SliverToBoxAdapter(child: _EmisLink()),
         ..._spendingSlivers(context, ref, symbol),
       ],
     );
@@ -61,12 +62,10 @@ class ExpensesScreen extends ConsumerWidget {
     ];
   }
 
-  /// Category, how it was added (monthly repeat or an EMI purchase) and how
-  /// it was paid.
+  /// Category, whether a monthly repeat added it, and how it was paid.
   static String _expenseSubtitle(PersonalExpense e) => [
         e.category.label,
         if (e.recurringId != null) 'Monthly',
-        if (e.isEmiPurchase) 'On EMI',
         e.paymentMethod.label,
       ].join(' · ');
 
@@ -150,6 +149,36 @@ class ExpensesScreen extends ConsumerWidget {
   }
 }
 
+
+/// One row to the EMIs page. Installments are repayments, so they are not in
+/// the total above; this says what they need this month.
+class _EmisLink extends ConsumerWidget {
+  const _EmisLink();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final hasEmis = (ref.watch(allEmisProvider).value ?? const []).any((e) => !e.isCancelled);
+    final due = ref.watch(emiOutlookProvider).dueThisMonth;
+    return Padding(
+      padding: const EdgeInsets.only(top: AppSpace.lg),
+      child: GroupCard(
+        children: [
+          ListTile(
+            onTap: () => context.push('/emis'),
+            leading: const IconBadge(Icons.credit_card_outlined),
+            title: const Text('EMIs & loans'),
+            subtitle: Text(!hasEmis
+                ? 'Track card EMIs and loans'
+                : due > 0
+                    ? '${ref.watch(displayMoneyProvider)(due)} due this month · not counted above'
+                    : 'Nothing due this month'),
+            trailing: const Icon(Icons.chevron_right_rounded),
+          ),
+        ],
+      ),
+    );
+  }
+}
 
 class _MonthHeader extends ConsumerWidget {
   final String symbol;

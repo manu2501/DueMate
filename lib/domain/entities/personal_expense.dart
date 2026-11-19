@@ -11,10 +11,6 @@ class PersonalExpense {
 
   /// The recurring rule that posted it, if any.
   final String? recurringId;
-
-  /// Your own EMI or loan whose purchase this is ("Count the purchase in
-  /// spending"). Installments are never expenses: see `EmiPayment`.
-  final String? emiId;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -27,13 +23,9 @@ class PersonalExpense {
     required this.paymentMethod,
     this.notes,
     this.recurringId,
-    this.emiId,
     required this.createdAt,
     required this.updatedAt,
   });
-
-  /// The purchase of one of your EMIs or loans.
-  bool get isEmiPurchase => emiId != null;
 
   PersonalExpense copyWith({
     String? id,
@@ -55,7 +47,6 @@ class PersonalExpense {
       paymentMethod: paymentMethod ?? this.paymentMethod,
       notes: notes ?? this.notes,
       recurringId: recurringId,
-      emiId: emiId,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );

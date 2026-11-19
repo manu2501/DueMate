@@ -64,7 +64,7 @@ void main() {
   );
 
   testWidgets(
-    'EMIs & loans on Home opens the EMIs tab',
+    'EMIs & loans on Home opens the EMIs page',
     (tester) async {
       SharedPreferences.setMockInitialValues({
         'duemate_last_run_version': AppConstants.appVersionString,
@@ -99,7 +99,7 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 500));
 
-      // Landed on the EMIs tab (its FAB adds an EMI).
+      // Landed on the EMIs page (its FAB adds an EMI).
       expect(find.text('Add EMI or loan'), findsOneWidget);
       expect(find.text('Phone'), findsWidgets);
 
